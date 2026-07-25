@@ -6,7 +6,7 @@
 <title>One Piece Card Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Special+Elite&family=Rye&display=swap" rel="stylesheet">
 <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("opct_theme")||"light")}catch(e){}</script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -118,7 +118,27 @@
   .header button:hover{background:#fff;border-color:#fff}
   .header button.primary{background:var(--sea);color:#fff;border-color:var(--sea-deep)}
   .header button.primary:hover{background:var(--sea-deep)}
-  #curPicker{font-size:12px;background:rgba(255,255,255,.94);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
+  #curPicker,#themePicker{font-size:12px;background:rgba(255,255,255,.94);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
+  /* --- Wanted Poster theme: aged parchment, sepia ink, vintage red --- */
+  :root[data-theme="wanted"]{
+    --sea:#3f6b8f; --sea-deep:#2c4d6b;
+    --red:#9e3b2a; --red-deep:#7a2a1c;
+    --gold:#b58a3c; --gold-deep:#8a6526;
+    --page-bg:radial-gradient(ellipse at 50% 28%, #e8d7b1 0%, #d7c091 55%, #b69869 100%);
+    --surface:#ece0c2; --surface-head:#ddc9a2;
+    --row-alt:#e6d9b8; --row-hover:#ddcaa1;
+    --ink:#3a2414; --muted:#7c6244; --line:#94734a;
+    --btn-bg:#f0e6ca; --btn-hover:#e4d3ab; --input-bg:#f4ecd5;
+    --head-text:#8f2f1c; --sub-head:#5a3a1e;
+    --good:#3f6b34; --bad:#9e3220;
+    --shadow:0 4px 0 rgba(148,115,74,.35), 0 10px 22px rgba(80,50,20,.22);
+  }
+  :root[data-theme="wanted"] body{color:#3a2414}
+  [data-theme="wanted"] .card,[data-theme="wanted"] table,[data-theme="wanted"] .panel{border-width:2.5px}
+  [data-theme="wanted"] h1,[data-theme="wanted"] .card h3,[data-theme="wanted"] .panel h3,
+  [data-theme="wanted"] th,[data-theme="wanted"] .big{
+    font-family:'Special Elite','Fredoka',Georgia,serif;letter-spacing:.3px}
+  [data-theme="wanted"] .header h1{font-family:'Rye','Special Elite',Georgia,serif;letter-spacing:1px}
 </style>
 </head>
 <body>
@@ -128,7 +148,11 @@
       <div class="sub" id="sub">loading…</div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
-      <button class="mini" id="themeBtn" onclick="toggleTheme()" title="Light / Dark theme">🌙</button>
+      <select id="themePicker" onchange="applyTheme(this.value)" title="Theme">
+        <option value="light">☀️ Light</option>
+        <option value="dark">🌙 Dark</option>
+        <option value="wanted">📜 Wanted Poster</option>
+      </select>
       <select id="curPicker" onchange="setCurrency(this.value)" title="Reporting currency"></select>
       <button class="primary" onclick="toggleAdd()">+ Add card</button>
       <button onclick="load(true)">Refresh</button>
@@ -215,12 +239,8 @@ async function post(path, body) {
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t);
   try{ localStorage.setItem('opct_theme', t); }catch(e){}
-  const b = document.getElementById('themeBtn');
-  if(b) b.textContent = t === 'dark' ? '☀️' : '🌙';
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  applyTheme(cur === 'dark' ? 'light' : 'dark');
+  const sel = document.getElementById('themePicker');
+  if(sel) sel.value = t;
 }
 
 /* ---------- currency ---------- */
