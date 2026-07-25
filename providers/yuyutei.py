@@ -75,9 +75,20 @@ class YuyuteiProvider(PriceProvider):
         self.name = f"yuyutei-{self.mode}"
         self._session = requests.Session()
         self._session.headers.update({
-            # Their pages 403 without a normal browser UA.
-            "User-Agent": "Mozilla/5.0 (compatible; tcg-tracker/1.0)",
-            "Accept-Language": "ja,en;q=0.8",
+            # Present as a real desktop Chrome. A bot-ish UA gets 403; a datacenter
+            # host (e.g. Railway) is more likely to be let through with a full,
+            # browser-like header set. (If the block is purely by IP, none of this
+            # helps and the requests need a residential/JP proxy instead.)
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                      "image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+            "Referer": "https://yuyu-tei.jp/",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Ch-Ua": '"Chromium";v="125", "Not.A/Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
         })
         self._cards: dict[str, list[Printing]] = {}
         self._last_fetch = 0.0
