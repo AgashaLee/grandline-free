@@ -7,20 +7,35 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("opct_theme")||"light")}catch(e){}</script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
     --sea:#1799d6; --sea-deep:#0d6ea3;
     --red:#e23b3b; --red-deep:#c62828;
     --gold:#f6b93b; --gold-deep:#e58e26;
-    --cream:#fffaf0;
+    --page-bg:linear-gradient(180deg,#bfe9fb 0%,#e7f6fd 20%,#fff6e6 60%);
+    --surface:#fffaf0; --surface-head:#f7ead0;
+    --row-alt:#fffdf7; --row-hover:#fff4d9;
     --ink:#3a2a1e; --muted:#9c8a76; --line:#ecdcc2;
+    --btn-bg:#ffffff; --btn-hover:#fff4d9; --input-bg:#ffffff;
+    --head-text:#c62828; --sub-head:#0d6ea3;
     --good:#159a5b; --bad:#e23b3b;
+    --shadow:0 6px 18px rgba(20,80,120,.09);
+  }
+  :root[data-theme="dark"]{
+    --page-bg:linear-gradient(180deg,#0b1626 0%,#0e1a2b 40%,#111a26 100%);
+    --surface:#182234; --surface-head:#1e2a3f;
+    --row-alt:#1b2537; --row-hover:#243350;
+    --ink:#ede3d0; --muted:#93a1b5; --line:#2c3a4f;
+    --btn-bg:#1e2a3f; --btn-hover:#26344c; --input-bg:#0f1826;
+    --head-text:#f6b93b; --sub-head:#5bb8e6;
+    --good:#34d399; --bad:#f87171;
+    --shadow:0 8px 22px rgba(0,0,0,.4);
   }
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
        color:var(--ink);font-size:13px;padding:0 0 48px;min-height:100vh;
-       background:linear-gradient(180deg,#bfe9fb 0%,#e7f6fd 20%,#fff6e6 60%) no-repeat;
-       background-attachment:fixed}
+       background:var(--page-bg) no-repeat;background-attachment:fixed}
   h1,.big,.card h3,.panel h3,th{font-family:'Fredoka',-apple-system,'Segoe UI',sans-serif}
   .header{background:linear-gradient(180deg,var(--red),var(--red-deep));
           border-bottom:4px solid var(--gold);padding:14px 22px;
@@ -31,69 +46,65 @@
   .sub{color:#ffe9c7;font-size:11px;margin-top:2px}
   .wrap{max-width:1120px;margin:22px auto;padding:0 18px}
   .cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-  .card{background:var(--cream);border:2px solid var(--line);border-radius:16px;
-        padding:16px 20px;flex:1;min-width:200px;box-shadow:0 6px 18px rgba(20,80,120,.09)}
+  .card{background:var(--surface);border:2px solid var(--line);border-radius:16px;
+        padding:16px 20px;flex:1;min-width:200px;box-shadow:var(--shadow)}
   .card h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;
-           color:var(--sea-deep);margin-bottom:10px;font-weight:600}
+           color:var(--sub-head);margin-bottom:10px;font-weight:600}
   .big{font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.2px}
   .card .note{color:var(--muted);font-size:11px;margin-top:5px}
-  table{width:100%;border-collapse:collapse;background:var(--cream);
-        border:2px solid var(--line);border-radius:16px;overflow:hidden;
-        box-shadow:0 6px 18px rgba(20,80,120,.09)}
-  th,td{padding:10px 11px;text-align:right;border-bottom:1px solid #f1e6d2;white-space:nowrap}
-  th{background:#f7ead0;color:var(--red-deep);font-size:11px;text-transform:uppercase;
+  table{width:100%;border-collapse:collapse;background:var(--surface);
+        border:2px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:10px 11px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{background:var(--surface-head);color:var(--head-text);font-size:11px;text-transform:uppercase;
      cursor:pointer;user-select:none;letter-spacing:.03em;font-weight:600}
-  th:hover{background:#f3e0bf}
+  th:hover{filter:brightness(.97)}
   td.card-name{text-align:left;font-weight:600;color:var(--ink)}
   th.left{text-align:left}
-  tbody tr:nth-child(even){background:#fffdf7}
-  tbody tr:hover{background:#fff4d9}
+  tbody tr:nth-child(even){background:var(--row-alt)}
+  tbody tr:hover{background:var(--row-hover)}
   tr:last-child td{border-bottom:none}
-  tfoot td{background:#fbeecd;font-weight:700;border-top:2px solid var(--gold)}
+  tfoot td{background:var(--surface-head);font-weight:700;border-top:2px solid var(--gold)}
   .good{color:var(--good);font-weight:700}.bad{color:var(--bad);font-weight:700}
-  .pill{font-size:10px;padding:2px 8px;border-radius:20px;background:#f3e6cf;
-        color:#8a6d3b;margin-left:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
-  .pill.par{background:#d6f2e0;color:#1a7d4b}
-  .pill.rg{background:#d3edfb;color:var(--sea-deep)}
-  .pill.grd{background:#fde7c0;color:#9a6a00}
-  .err{background:#fde0e0;color:var(--red-deep);font-weight:700;padding:2px 8px;
+  .pill{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(246,185,59,.16);
+        color:var(--gold-deep);margin-left:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .pill.par{background:rgba(21,154,91,.16);color:var(--good)}
+  .pill.rg{background:rgba(23,153,214,.16);color:var(--sea)}
+  .pill.grd{background:rgba(246,185,59,.22);color:var(--gold-deep)}
+  .err{background:rgba(226,59,59,.15);color:var(--bad);font-weight:700;padding:2px 8px;
        border-radius:20px;font-size:11px}
   .id{color:var(--muted);font-size:12px}
-  .warm{background:var(--cream);border:2px dashed var(--gold);border-radius:16px;
+  .warm{background:var(--surface);border:2px dashed var(--gold);border-radius:16px;
         padding:34px;text-align:center;color:var(--muted);font-size:14px}
-  .spin{display:inline-block;width:15px;height:15px;border:3px solid #f1e2c6;
+  .spin{display:inline-block;width:15px;height:15px;border:3px solid var(--line);
         border-top-color:var(--gold-deep);border-radius:50%;animation:s 1s linear infinite;
         vertical-align:middle;margin-right:8px}
   @keyframes s{to{transform:rotate(360deg)}}
-  button{background:#fff;color:var(--ink);border:2px solid var(--line);
+  button{background:var(--btn-bg);color:var(--ink);border:2px solid var(--line);
          border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;
          font-family:inherit;font-weight:600}
-  button:hover{background:#fff4d9;border-color:var(--gold)}
-  button.primary{background:var(--sea);border-color:var(--sea-deep);color:#fff;
-         box-shadow:0 3px 0 var(--sea-deep)}
+  button:hover{background:var(--btn-hover);border-color:var(--gold)}
+  button.primary{background:var(--sea);border-color:var(--sea-deep);color:#fff;box-shadow:0 3px 0 var(--sea-deep)}
   button.primary:hover{background:var(--sea-deep)}
-  button.danger{background:#fff0f0;border-color:#f3c0c0;color:var(--red-deep)}
+  button.danger{background:rgba(226,59,59,.12);border-color:rgba(226,59,59,.4);color:var(--bad)}
   button.danger:hover{background:var(--red);border-color:var(--red-deep);color:#fff}
   button.mini{padding:4px 9px;font-size:11px}
   button:disabled{opacity:.5;cursor:not-allowed}
   .table-scroll{overflow-x:auto}
-  input[type=text],input[type=number],select{background:#fff;color:var(--ink);
+  input[type=text],input[type=number],select{background:var(--input-bg);color:var(--ink);
        border:2px solid var(--line);border-radius:8px;padding:6px 9px;
        font-size:12px;font-family:inherit;width:120px}
   select{width:auto;cursor:pointer}
   input:focus,select:focus{outline:none;border-color:var(--sea)}
-  .pill.rg{background:#d3edfb;color:var(--sea-deep)}
-  .pill.grd{background:#fde7c0;color:#9a6a00}
-  .panel{background:var(--cream);border:2px solid var(--line);border-radius:16px;
-         padding:18px 20px;margin-bottom:20px;box-shadow:0 6px 18px rgba(20,80,120,.09)}
-  .panel h3{font-size:15px;color:var(--red-deep);margin-bottom:12px;font-weight:700}
+  .panel{background:var(--surface);border:2px solid var(--line);border-radius:16px;
+         padding:18px 20px;margin-bottom:20px;box-shadow:var(--shadow)}
+  .panel h3{font-size:15px;color:var(--head-text);margin-bottom:12px;font-weight:700}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .row label{color:var(--muted);font-size:11px;font-weight:600}
   .versions{margin:12px 0;display:flex;flex-direction:column;gap:6px}
   .ver{display:flex;align-items:center;gap:10px;padding:8px 11px;
-       border:2px solid var(--line);border-radius:10px;cursor:pointer;background:#fff}
-  .ver:hover{background:#fff4d9}
-  .ver.sel{border-color:var(--sea);background:#e7f4fc}
+       border:2px solid var(--line);border-radius:10px;cursor:pointer;background:var(--btn-bg)}
+  .ver:hover{background:var(--btn-hover)}
+  .ver.sel{border-color:var(--sea);background:rgba(23,153,214,.14)}
   .ver .lab{flex:1;font-weight:600}
   .ver .pr{color:var(--good);font-weight:600}
   .msg{margin-top:10px;font-size:12px}
@@ -103,7 +114,11 @@
   button.close{background:none;border:none;color:var(--muted);font-size:24px;
        line-height:1;padding:0 4px;cursor:pointer;font-weight:400}
   button.close:hover{color:var(--red);background:none;border:none}
-  #curPicker{font-size:12px;background:rgba(255,255,255,.92)}
+  .header button{background:rgba(255,255,255,.92);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
+  .header button:hover{background:#fff;border-color:#fff}
+  .header button.primary{background:var(--sea);color:#fff;border-color:var(--sea-deep)}
+  .header button.primary:hover{background:var(--sea-deep)}
+  #curPicker{font-size:12px;background:rgba(255,255,255,.94);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
 </style>
 </head>
 <body>
@@ -113,6 +128,7 @@
       <div class="sub" id="sub">loading…</div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
+      <button class="mini" id="themeBtn" onclick="toggleTheme()" title="Light / Dark theme">🌙</button>
       <select id="curPicker" onchange="setCurrency(this.value)" title="Reporting currency"></select>
       <button class="primary" onclick="toggleAdd()">+ Add card</button>
       <button onclick="load(true)">Refresh</button>
@@ -183,6 +199,18 @@ async function post(path, body) {
   const data = await res.json().catch(() => ({ok: false, error: 'Bad response from tracker.'}));
   if (!data.ok) throw new Error(data.error || 'Something went wrong.');
   return data;
+}
+
+/* ---------- theme ---------- */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('opct_theme', t); }catch(e){}
+  const b = document.getElementById('themeBtn');
+  if(b) b.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
 }
 
 /* ---------- currency ---------- */
@@ -443,6 +471,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('addPanel').style.display !== 'none') toggleAdd();
 });
 
+applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
 load(false);
 // Don't let the background refresh yank a half-finished edit out from under you.
 setInterval(() => {
