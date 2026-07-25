@@ -300,8 +300,8 @@ function renderAddBody() {
       ${gradeSelect('addGrade', 'raw')}
       <button class="primary" onclick="saveAdd()">Save card</button>
     </div>
-    <div class="hint">Leave Grade as “Raw” unless the card is in a PSA/BGS slab. Graded cards
-      need a graded-price source (PriceCharting) to show a value.</div>`;
+    <div class="hint">Leave Grade as “Raw” unless the card is in a PSA/BGS slab.
+      Graded-card pricing is coming soon.</div>`;
   document.getElementById('addBuy').focus();
 }
 
@@ -431,7 +431,7 @@ function render() {
 
     if (!r.ok) {
       // A graded card can't be auto-priced yet — say so, don't just show "no price".
-      const why = r.grade ? 'graded — needs PriceCharting' : 'no price found';
+      const why = r.grade ? 'graded — price coming soon' : 'no price found';
       return `<tr>${name}<td>${r.qty}</td><td>${fmtIDR(r.buy)}</td>
         <td colspan="4" style="text-align:center"><span class="err">${why}</span></td>${actions}</tr>`;
     }
