@@ -119,6 +119,21 @@
   .header button.primary{background:var(--sea);color:#fff;border-color:var(--sea-deep)}
   .header button.primary:hover{background:var(--sea-deep)}
   #curPicker,#themePicker{font-size:12px;background:rgba(255,255,255,.94);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
+  /* Let the header wrap instead of overflowing narrow screens */
+  .header{flex-wrap:wrap;row-gap:10px}
+  .header>div:last-child{flex-wrap:wrap;justify-content:flex-end}
+  @media (max-width:640px){
+    .header{padding:12px 14px}
+    .header h1{font-size:16px}
+    .header .sub{font-size:10px}
+    /* Controls drop to their own full-width row below the title */
+    .header>div:last-child{width:100%;justify-content:flex-start;gap:8px!important}
+    .header>div:last-child button,.header>div:last-child select{padding:6px 9px;font-size:12px}
+    #gen{display:none}
+    .wrap{padding:0 13px;margin-top:16px}
+    .big{font-size:22px}
+    th,td{padding:8px 8px}
+  }
   /* --- Wanted Poster theme: aged parchment, sepia ink, vintage red --- */
   :root[data-theme="wanted"]{
     --sea:#3f6b8f; --sea-deep:#2c4d6b;

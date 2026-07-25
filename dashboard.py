@@ -56,6 +56,20 @@ def _invalidate() -> None:
         _CACHE["payload"], _CACHE["built_at"] = None, 0.0
 
 
+def _meta() -> dict:
+    """Settings the page needs regardless of whether there are any cards yet
+    (currency list, grades, regions) -- so the pickers work even when empty."""
+    return {
+        "regions": sorted(config.PROVIDER_BY_REGION),
+        "default_region": config.DEFAULT_REGION,
+        "grades": list(config.GRADE_CHOICES),
+        "display_currency": config.DISPLAY_CURRENCY,
+        "currencies": sorted(config.CURRENCY_FORMAT),
+        "currency_symbol": config.currency_format(config.DISPLAY_CURRENCY)[0],
+        "currency_decimals": config.currency_format(config.DISPLAY_CURRENCY)[1],
+    }
+
+
 def build_payload() -> dict:
     """Price the collection and return everything the page needs."""
     try:
@@ -65,11 +79,11 @@ def build_payload() -> dict:
         # error; invite the first card instead of showing a scary file path.
         holdings = []
     except ValueError as exc:
-        return {"error": str(exc), "rows": [], "totals": None, "empty": True}
+        return {"error": str(exc), "rows": [], "totals": None, "empty": True, **_meta()}
 
     if not holdings:
         return {"error": "No cards yet — click “+ Add card” to add your first one.",
-                "rows": [], "totals": None, "empty": True}
+                "rows": [], "totals": None, "empty": True, **_meta()}
 
     cache = JsonCache(config.CACHE_FILE, config.CACHE_TTL_HOURS)
     providers, rates = ProviderPool(cache), fx.RateBook(cache)
@@ -108,13 +122,7 @@ def build_payload() -> dict:
     return {
         "error": None,
         "rows": rows,
-        "regions": sorted(config.PROVIDER_BY_REGION),
-        "default_region": config.DEFAULT_REGION,
-        "grades": list(config.GRADE_CHOICES),
-        "display_currency": config.DISPLAY_CURRENCY,
-        "currencies": sorted(config.CURRENCY_FORMAT),
-        "currency_symbol": config.currency_format(config.DISPLAY_CURRENCY)[0],
-        "currency_decimals": config.currency_format(config.DISPLAY_CURRENCY)[1],
+        **_meta(),
         "totals": {
             "invested": round(totals.invested, 2),
             "value": round(totals.value, 2),
