@@ -181,6 +181,16 @@ const fmtNative = (n, cur) => {
 const fmtPct = n => n === null || n === undefined ? '–' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
 const cls    = n => n === null || n === undefined ? '' : (n >= 0 ? 'good' : 'bad');
 const esc    = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Turn the internal FX source words into something a customer understands.
+// "identity" (same currency, no conversion) is dropped entirely.
+function fxLabel(src){
+  const parts = String(src || '').split(',').map(x => x.trim()).filter(x => x && x !== 'identity');
+  if(!parts.length) return '';
+  if(parts.includes('stale')) return 'using an older rate (offline)';
+  if(parts.includes('live'))  return 'rates just updated';
+  if(parts.includes('cache')) return 'rates updated today';
+  return '';
+}
 const gradeLabel = g => g === 'raw' ? 'Raw (ungraded)' : g.replace('-', ' ').toUpperCase();
 const gradeSelect = (id, selected) => `<select id="${id}">` +
   (DATA?.grades || ['raw']).map(g =>
@@ -376,7 +386,7 @@ function render() {
         <div class="note">${Object.entries(d.rates || {})
           .filter(([c]) => c !== d.display_currency)   // a currency's rate to itself is 1
           .map(([c, r]) => `${c}/${d.display_currency} ${r < 1 ? r.toPrecision(3) : r.toLocaleString('en-US')}`)
-          .join(' · ') || esc(d.display_currency)} · ${esc(d.fx_source)}</div></div>
+          .join(' · ') || esc(d.display_currency)}${(() => { const l = fxLabel(d.fx_source); return l ? ' · ' + l : ''; })()}</div></div>
       <div class="card"><h3>Profit / Loss</h3>
         <div class="big ${cls(t.pl)}">${fmtPL(t.pl)}</div>
         <div class="note ${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</div></div>
