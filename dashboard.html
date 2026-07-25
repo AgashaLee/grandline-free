@@ -3,94 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TCG Portfolio</title>
+<title>One Piece Card Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --sea:#1799d6; --sea-deep:#0d6ea3;
+    --red:#e23b3b; --red-deep:#c62828;
+    --gold:#f6b93b; --gold-deep:#e58e26;
+    --cream:#fffaf0;
+    --ink:#3a2a1e; --muted:#9c8a76; --line:#ecdcc2;
+    --good:#159a5b; --bad:#e23b3b;
+  }
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-       background:#0f0f13;color:#e2e2e8;font-size:13px;padding:0 0 40px}
-  .header{background:#18181f;border-bottom:1px solid #2a2a38;padding:14px 22px;
+       color:var(--ink);font-size:13px;padding:0 0 48px;min-height:100vh;
+       background:linear-gradient(180deg,#bfe9fb 0%,#e7f6fd 20%,#fff6e6 60%) no-repeat;
+       background-attachment:fixed}
+  h1,.big,.card h3,.panel h3,th{font-family:'Fredoka',-apple-system,'Segoe UI',sans-serif}
+  .header{background:linear-gradient(180deg,var(--red),var(--red-deep));
+          border-bottom:4px solid var(--gold);padding:14px 22px;
           display:flex;align-items:center;justify-content:space-between;
-          position:sticky;top:0;z-index:10}
-  .header h1{font-size:16px;font-weight:600}
-  .sub{color:#6b6b80;font-size:11px;margin-top:2px}
-  .wrap{max-width:1120px;margin:20px auto;padding:0 18px}
-  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-  .card{background:#18181f;border:1px solid #2a2a38;border-radius:10px;
-        padding:14px 18px;flex:1;min-width:200px}
-  .card h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;
-           color:#6b6b80;margin-bottom:10px}
-  .big{font-size:22px;font-weight:700;color:#fff;letter-spacing:-.01em}
-  .card .note{color:#6b6b80;font-size:11px;margin-top:4px}
-  table{width:100%;border-collapse:collapse;background:#18181f;
-        border:1px solid #2a2a38;border-radius:10px;overflow:hidden}
-  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid #23232e;
-        white-space:nowrap}
-  th{background:#1d1d26;color:#8a8a9a;font-size:11px;text-transform:uppercase;
-     cursor:pointer;user-select:none}
-  th:hover{color:#e2e2e8}
-  td.card-name{text-align:left;font-weight:600}
+          position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(198,40,40,.25)}
+  .header h1{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px;
+             text-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .sub{color:#ffe9c7;font-size:11px;margin-top:2px}
+  .wrap{max-width:1120px;margin:22px auto;padding:0 18px}
+  .cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .card{background:var(--cream);border:2px solid var(--line);border-radius:16px;
+        padding:16px 20px;flex:1;min-width:200px;box-shadow:0 6px 18px rgba(20,80,120,.09)}
+  .card h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+           color:var(--sea-deep);margin-bottom:10px;font-weight:600}
+  .big{font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.2px}
+  .card .note{color:var(--muted);font-size:11px;margin-top:5px}
+  table{width:100%;border-collapse:collapse;background:var(--cream);
+        border:2px solid var(--line);border-radius:16px;overflow:hidden;
+        box-shadow:0 6px 18px rgba(20,80,120,.09)}
+  th,td{padding:10px 11px;text-align:right;border-bottom:1px solid #f1e6d2;white-space:nowrap}
+  th{background:#f7ead0;color:var(--red-deep);font-size:11px;text-transform:uppercase;
+     cursor:pointer;user-select:none;letter-spacing:.03em;font-weight:600}
+  th:hover{background:#f3e0bf}
+  td.card-name{text-align:left;font-weight:600;color:var(--ink)}
   th.left{text-align:left}
+  tbody tr:nth-child(even){background:#fffdf7}
+  tbody tr:hover{background:#fff4d9}
   tr:last-child td{border-bottom:none}
-  tfoot td{background:#1d1d26;font-weight:700;border-top:1px solid #2a2a38}
-  .good{color:#6ee7b7}.bad{color:#f87171}
-  .pill{font-size:10px;padding:2px 7px;border-radius:5px;background:#23232e;
-        color:#cbd5e1;margin-left:6px;text-transform:uppercase;
-        letter-spacing:.04em}
-  .pill.par{background:#0a2e20;color:#6ee7b7}
-  .err{background:#2e0a0a;color:#f87171;font-weight:700;padding:2px 7px;
-       border-radius:5px;font-size:11px}
-  .id{color:#8a8a9a;font-size:12px}
-  .warm{background:#1d1d26;border:1px solid #2a2a38;border-radius:10px;
-        padding:30px;text-align:center;color:#8a8a9a}
-  .spin{display:inline-block;width:14px;height:14px;border:2px solid #3a3a48;
-        border-top-color:#6ee7b7;border-radius:50%;animation:s 1s linear infinite;
+  tfoot td{background:#fbeecd;font-weight:700;border-top:2px solid var(--gold)}
+  .good{color:var(--good);font-weight:700}.bad{color:var(--bad);font-weight:700}
+  .pill{font-size:10px;padding:2px 8px;border-radius:20px;background:#f3e6cf;
+        color:#8a6d3b;margin-left:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .pill.par{background:#d6f2e0;color:#1a7d4b}
+  .pill.rg{background:#d3edfb;color:var(--sea-deep)}
+  .pill.grd{background:#fde7c0;color:#9a6a00}
+  .err{background:#fde0e0;color:var(--red-deep);font-weight:700;padding:2px 8px;
+       border-radius:20px;font-size:11px}
+  .id{color:var(--muted);font-size:12px}
+  .warm{background:var(--cream);border:2px dashed var(--gold);border-radius:16px;
+        padding:34px;text-align:center;color:var(--muted);font-size:14px}
+  .spin{display:inline-block;width:15px;height:15px;border:3px solid #f1e2c6;
+        border-top-color:var(--gold-deep);border-radius:50%;animation:s 1s linear infinite;
         vertical-align:middle;margin-right:8px}
   @keyframes s{to{transform:rotate(360deg)}}
-  button{background:#23232e;color:#e2e2e8;border:1px solid #2a2a38;
-         border-radius:7px;padding:7px 12px;font-size:12px;cursor:pointer;
-         font-family:inherit}
-  button:hover{background:#2a2a38}
-  button.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
-  button.primary:hover{background:#2563eb}
-  button.danger{background:#3f1414;border-color:#5b1d1d;color:#fca5a5}
-  button.danger:hover{background:#5b1d1d}
-  button.mini{padding:3px 8px;font-size:11px}
+  button{background:#fff;color:var(--ink);border:2px solid var(--line);
+         border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;
+         font-family:inherit;font-weight:600}
+  button:hover{background:#fff4d9;border-color:var(--gold)}
+  button.primary{background:var(--sea);border-color:var(--sea-deep);color:#fff;
+         box-shadow:0 3px 0 var(--sea-deep)}
+  button.primary:hover{background:var(--sea-deep)}
+  button.danger{background:#fff0f0;border-color:#f3c0c0;color:var(--red-deep)}
+  button.danger:hover{background:var(--red);border-color:var(--red-deep);color:#fff}
+  button.mini{padding:4px 9px;font-size:11px}
   button:disabled{opacity:.5;cursor:not-allowed}
   .table-scroll{overflow-x:auto}
-  input[type=text],input[type=number],select{background:#0f0f13;color:#e2e2e8;
-       border:1px solid #2a2a38;border-radius:6px;padding:6px 8px;
-       font-size:12px;font-family:inherit;width:110px}
+  input[type=text],input[type=number],select{background:#fff;color:var(--ink);
+       border:2px solid var(--line);border-radius:8px;padding:6px 9px;
+       font-size:12px;font-family:inherit;width:120px}
   select{width:auto;cursor:pointer}
-  input:focus,select:focus{outline:none;border-color:#1d4ed8}
-  .pill.rg{background:#1e293b;color:#93c5fd}
-  .pill.grd{background:#3b1e3b;color:#f0abfc}
-  .panel{background:#18181f;border:1px solid #2a2a38;border-radius:10px;
-         padding:16px 18px;margin-bottom:18px}
-  .panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;
-            color:#8a8a9a;margin-bottom:12px}
+  input:focus,select:focus{outline:none;border-color:var(--sea)}
+  .pill.rg{background:#d3edfb;color:var(--sea-deep)}
+  .pill.grd{background:#fde7c0;color:#9a6a00}
+  .panel{background:var(--cream);border:2px solid var(--line);border-radius:16px;
+         padding:18px 20px;margin-bottom:20px;box-shadow:0 6px 18px rgba(20,80,120,.09)}
+  .panel h3{font-size:15px;color:var(--red-deep);margin-bottom:12px;font-weight:700}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .row label{color:#6b6b80;font-size:11px}
+  .row label{color:var(--muted);font-size:11px;font-weight:600}
   .versions{margin:12px 0;display:flex;flex-direction:column;gap:6px}
-  .ver{display:flex;align-items:center;gap:10px;padding:7px 10px;
-       border:1px solid #2a2a38;border-radius:7px;cursor:pointer}
-  .ver:hover{background:#1d1d26}
-  .ver.sel{border-color:#1d4ed8;background:#141b34}
+  .ver{display:flex;align-items:center;gap:10px;padding:8px 11px;
+       border:2px solid var(--line);border-radius:10px;cursor:pointer;background:#fff}
+  .ver:hover{background:#fff4d9}
+  .ver.sel{border-color:var(--sea);background:#e7f4fc}
   .ver .lab{flex:1;font-weight:600}
-  .ver .pr{color:#6ee7b7}
+  .ver .pr{color:var(--good);font-weight:600}
   .msg{margin-top:10px;font-size:12px}
-  .msg.bad{color:#f87171}.msg.good{color:#6ee7b7}
+  .msg.bad{color:var(--bad)}.msg.good{color:var(--good)}
   td.act{text-align:right;white-space:nowrap}
-  .hint{color:#6b6b80;font-size:11px;margin-top:6px}
-  button.close{background:none;border:none;color:#8a8a9a;font-size:22px;
-       line-height:1;padding:0 4px;cursor:pointer}
-  button.close:hover{color:#fff;background:none}
-  #curPicker{font-size:12px}
+  .hint{color:var(--muted);font-size:11px;margin-top:6px}
+  button.close{background:none;border:none;color:var(--muted);font-size:24px;
+       line-height:1;padding:0 4px;cursor:pointer;font-weight:400}
+  button.close:hover{color:var(--red);background:none;border:none}
+  #curPicker{font-size:12px;background:rgba(255,255,255,.92)}
 </style>
 </head>
 <body>
   <div class="header">
     <div>
-      <h1>🏴‍☠️ TCG Portfolio</h1>
+      <h1>👒 One Piece TCG Portfolio</h1>
       <div class="sub" id="sub">loading…</div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
