@@ -60,11 +60,16 @@ def build_payload() -> dict:
     """Price the collection and return everything the page needs."""
     try:
         holdings = load_collection(config.COLLECTION_FILE)
-    except (FileNotFoundError, ValueError) as exc:
-        return {"error": str(exc), "rows": [], "totals": None}
+    except FileNotFoundError:
+        # No collection yet -- a fresh install or a fresh Railway deploy. Not an
+        # error; invite the first card instead of showing a scary file path.
+        holdings = []
+    except ValueError as exc:
+        return {"error": str(exc), "rows": [], "totals": None, "empty": True}
 
     if not holdings:
-        return {"error": "Your collection is empty. Add cards first.", "rows": [], "totals": None}
+        return {"error": "No cards yet — click “+ Add card” to add your first one.",
+                "rows": [], "totals": None, "empty": True}
 
     cache = JsonCache(config.CACHE_FILE, config.CACHE_TTL_HOURS)
     providers, rates = ProviderPool(cache), fx.RateBook(cache)

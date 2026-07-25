@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import shutil
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import config
@@ -50,8 +50,9 @@ class Holding:
     region: str = config.DEFAULT_REGION
     grade: str = RAW_GRADE
     #: What the buyer actually paid in. Stored per row so that changing the
-    #: display currency later never rewrites purchase history.
-    buy_currency: str = config.DISPLAY_CURRENCY
+    #: display currency later never rewrites purchase history. Resolved when the
+    #: Holding is built (not frozen at import), so it tracks the live setting.
+    buy_currency: str = field(default_factory=lambda: config.DISPLAY_CURRENCY)
 
     @property
     def total_buy(self) -> float:
@@ -77,7 +78,7 @@ class PricedHolding:
     currency: str
     market_rate: float          # source currency -> display currency
     buy_rate: float = 1.0       # buy currency -> display currency
-    display_currency: str = config.DISPLAY_CURRENCY
+    display_currency: str = field(default_factory=lambda: config.DISPLAY_CURRENCY)
 
     @property
     def ok(self) -> bool:
@@ -118,7 +119,7 @@ class PortfolioTotals:
     invested: float
     value: float
     error_count: int
-    display_currency: str = config.DISPLAY_CURRENCY
+    display_currency: str = field(default_factory=lambda: config.DISPLAY_CURRENCY)
 
     @property
     def pl(self) -> float:

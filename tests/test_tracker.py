@@ -16,10 +16,24 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import config  # noqa: E402
 import fx  # noqa: E402
 from cache import JsonCache  # noqa: E402
 from portfolio import Holding, PricedHolding, compute_totals, load_collection, price_collection  # noqa: E402
 from providers.base import CachedPriceProvider, PriceProvider, get_provider  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _isolate_settings(monkeypatch, tmp_path):
+    """Every test runs in a clean IDR world with its own settings file.
+
+    The display currency is a mutable global persisted to settings.json, so
+    without this a test that switches currency -- or a developer's saved
+    preference -- would silently change the outcome of unrelated tests.
+    """
+    monkeypatch.setattr(config, "DISPLAY_CURRENCY", "IDR")
+    monkeypatch.setattr(config, "FX_TARGET_CURRENCY", "IDR")
+    monkeypatch.setattr(config, "SETTINGS_FILE", tmp_path / "settings.json")
 
 
 # --- test doubles -------------------------------------------------------
