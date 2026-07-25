@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCG Portfolio</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:#0f0f13;color:#e2e2e8;font-size:13px;padding:0 0 40px}
+  .header{background:#18181f;border-bottom:1px solid #2a2a38;padding:14px 22px;
+          display:flex;align-items:center;justify-content:space-between;
+          position:sticky;top:0;z-index:10}
+  .header h1{font-size:16px;font-weight:600}
+  .sub{color:#6b6b80;font-size:11px;margin-top:2px}
+  .wrap{max-width:1120px;margin:20px auto;padding:0 18px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .card{background:#18181f;border:1px solid #2a2a38;border-radius:10px;
+        padding:14px 18px;flex:1;min-width:200px}
+  .card h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+           color:#6b6b80;margin-bottom:10px}
+  .big{font-size:22px;font-weight:700;color:#fff;letter-spacing:-.01em}
+  .card .note{color:#6b6b80;font-size:11px;margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:#18181f;
+        border:1px solid #2a2a38;border-radius:10px;overflow:hidden}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid #23232e;
+        white-space:nowrap}
+  th{background:#1d1d26;color:#8a8a9a;font-size:11px;text-transform:uppercase;
+     cursor:pointer;user-select:none}
+  th:hover{color:#e2e2e8}
+  td.card-name{text-align:left;font-weight:600}
+  th.left{text-align:left}
+  tr:last-child td{border-bottom:none}
+  tfoot td{background:#1d1d26;font-weight:700;border-top:1px solid #2a2a38}
+  .good{color:#6ee7b7}.bad{color:#f87171}
+  .pill{font-size:10px;padding:2px 7px;border-radius:5px;background:#23232e;
+        color:#cbd5e1;margin-left:6px;text-transform:uppercase;
+        letter-spacing:.04em}
+  .pill.par{background:#0a2e20;color:#6ee7b7}
+  .err{background:#2e0a0a;color:#f87171;font-weight:700;padding:2px 7px;
+       border-radius:5px;font-size:11px}
+  .id{color:#8a8a9a;font-size:12px}
+  .warm{background:#1d1d26;border:1px solid #2a2a38;border-radius:10px;
+        padding:30px;text-align:center;color:#8a8a9a}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #3a3a48;
+        border-top-color:#6ee7b7;border-radius:50%;animation:s 1s linear infinite;
+        vertical-align:middle;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  button{background:#23232e;color:#e2e2e8;border:1px solid #2a2a38;
+         border-radius:7px;padding:7px 12px;font-size:12px;cursor:pointer;
+         font-family:inherit}
+  button:hover{background:#2a2a38}
+  button.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+  button.primary:hover{background:#2563eb}
+  button.danger{background:#3f1414;border-color:#5b1d1d;color:#fca5a5}
+  button.danger:hover{background:#5b1d1d}
+  button.mini{padding:3px 8px;font-size:11px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .table-scroll{overflow-x:auto}
+  input[type=text],input[type=number],select{background:#0f0f13;color:#e2e2e8;
+       border:1px solid #2a2a38;border-radius:6px;padding:6px 8px;
+       font-size:12px;font-family:inherit;width:110px}
+  select{width:auto;cursor:pointer}
+  input:focus,select:focus{outline:none;border-color:#1d4ed8}
+  .pill.rg{background:#1e293b;color:#93c5fd}
+  .pill.grd{background:#3b1e3b;color:#f0abfc}
+  .panel{background:#18181f;border:1px solid #2a2a38;border-radius:10px;
+         padding:16px 18px;margin-bottom:18px}
+  .panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+            color:#8a8a9a;margin-bottom:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row label{color:#6b6b80;font-size:11px}
+  .versions{margin:12px 0;display:flex;flex-direction:column;gap:6px}
+  .ver{display:flex;align-items:center;gap:10px;padding:7px 10px;
+       border:1px solid #2a2a38;border-radius:7px;cursor:pointer}
+  .ver:hover{background:#1d1d26}
+  .ver.sel{border-color:#1d4ed8;background:#141b34}
+  .ver .lab{flex:1;font-weight:600}
+  .ver .pr{color:#6ee7b7}
+  .msg{margin-top:10px;font-size:12px}
+  .msg.bad{color:#f87171}.msg.good{color:#6ee7b7}
+  td.act{text-align:right;white-space:nowrap}
+  .hint{color:#6b6b80;font-size:11px;margin-top:6px}
+  button.close{background:none;border:none;color:#8a8a9a;font-size:22px;
+       line-height:1;padding:0 4px;cursor:pointer}
+  button.close:hover{color:#fff;background:none}
+  #curPicker{font-size:12px}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>🏴‍☠️ TCG Portfolio</h1>
+      <div class="sub" id="sub">loading…</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <select id="curPicker" onchange="setCurrency(this.value)" title="Reporting currency"></select>
+      <button class="primary" onclick="toggleAdd()">+ Add card</button>
+      <button onclick="load(true)">Refresh</button>
+      <div class="sub" id="gen"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="panel" id="addPanel" style="display:none">
+      <h3 style="display:flex;align-items:center;justify-content:space-between">
+        <span>Add a card</span>
+        <button class="close" onclick="toggleAdd()" title="Close (Esc)">&times;</button>
+      </h3>
+      <div class="row">
+        <input type="text" id="addCode" placeholder="OP15-118" autocomplete="off"
+               onkeydown="if(event.key==='Enter')lookup()">
+        <label>Version</label>
+        <select id="addRegion" onchange="LOOKUP=null;document.getElementById('addBody').innerHTML=''">
+          <option value="jp">🇯🇵 Japanese (¥)</option>
+          <option value="en">🇺🇸 English ($)</option>
+        </select>
+        <button class="primary" id="lookupBtn" onclick="lookup()">Look up</button>
+        <button onclick="toggleAdd()">Cancel</button>
+      </div>
+      <div class="hint">The code is printed at the bottom-left of the card.
+        Japanese and English printings are different products with different prices.</div>
+      <div id="addBody"></div>
+      <div class="msg" id="addMsg"></div>
+    </div>
+
+    <div id="content" class="warm"><span class="spin"></span>Pricing your collection…</div>
+  </div>
+
+<script>
+// Display currency comes from the server, so the page works in any currency.
+const curSym = () => (DATA && DATA.currency_symbol) || '';
+const curDec = () => (DATA && DATA.currency_decimals !== undefined) ? DATA.currency_decimals : 0;
+const nfmt = n => n.toLocaleString('en-US', {minimumFractionDigits: curDec(), maximumFractionDigits: curDec()});
+const fmtIDR = n => n === null || n === undefined ? '–' : curSym() + nfmt(n);
+// Sign always leads, so gains and losses line up: +$137.92 / -Rp 38,101
+const fmtPL  = n => n === null || n === undefined ? '–'
+                  : (n >= 0 ? '+' : '-') + curSym() + nfmt(Math.abs(n));
+// Native price: yen has no minor unit, dollars do.
+const fmtNative = (n, cur) => {
+  if (n === null || n === undefined) return '–';
+  if (cur === 'JPY') return '¥' + Math.round(n).toLocaleString('en-US');
+  if (cur === 'USD') return '$' + n.toFixed(2);
+  return (cur || '') + ' ' + n.toLocaleString('en-US');
+};
+const fmtPct = n => n === null || n === undefined ? '–' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+const cls    = n => n === null || n === undefined ? '' : (n >= 0 ? 'good' : 'bad');
+const esc    = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const gradeLabel = g => g === 'raw' ? 'Raw (ungraded)' : g.replace('-', ' ').toUpperCase();
+const gradeSelect = (id, selected) => `<select id="${id}">` +
+  (DATA?.grades || ['raw']).map(g =>
+    `<option value="${g}"${g === selected ? ' selected' : ''}>${gradeLabel(g)}</option>`).join('') +
+  '</select>';
+
+let DATA = null, sortKey = 'pl', sortDir = -1;
+let LOOKUP = null, PICKED = null, EDITING = null, SELLING = null;
+
+async function post(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({ok: false, error: 'Bad response from tracker.'}));
+  if (!data.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+/* ---------- currency ---------- */
+async function setCurrency(code) {
+  try {
+    await post('/api/settings', {display_currency: code});
+    await load(true);            // every figure is now in a different currency
+  } catch (e) { alert(e.message); }
+}
+
+function renderCurrencyPicker() {
+  const sel = document.getElementById('curPicker');
+  if (!sel || !DATA || !DATA.currencies) return;
+  // Only rebuild when the option set changes, so it doesn't fight the user.
+  if (sel.dataset.built !== String(DATA.currencies.length)) {
+    sel.innerHTML = DATA.currencies.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.dataset.built = String(DATA.currencies.length);
+  }
+  sel.value = DATA.display_currency;
+}
+
+/* ---------- add ---------- */
+function toggleAdd() {
+  const p = document.getElementById('addPanel');
+  const open = p.style.display === 'none';
+  p.style.display = open ? '' : 'none';
+  if (open) { document.getElementById('addCode').focus(); }
+  else { LOOKUP = PICKED = null; document.getElementById('addBody').innerHTML = ''; setMsg('addMsg', ''); }
+}
+
+function setMsg(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text || '';
+  el.className = 'msg' + (kind ? ' ' + kind : '');
+}
+
+async function lookup() {
+  const code = document.getElementById('addCode').value.trim().toUpperCase();
+  if (!code) return;
+  const btn = document.getElementById('lookupBtn');
+  btn.disabled = true; setMsg('addMsg', 'Looking up…');
+  try {
+    LOOKUP = await post('/api/lookup', {card_id: code, region: document.getElementById('addRegion').value});
+    PICKED = LOOKUP.printings[0].variant;
+    renderAddBody();
+    setMsg('addMsg', '');
+  } catch (e) {
+    LOOKUP = null;
+    document.getElementById('addBody').innerHTML = '';
+    setMsg('addMsg', e.message, 'bad');
+  } finally { btn.disabled = false; }
+}
+
+function pick(v) { PICKED = v; renderAddBody(); }
+
+function renderAddBody() {
+  if (!LOOKUP) return;
+  const many = LOOKUP.printings.length > 1;
+  const vers = LOOKUP.printings.map(p => `
+    <div class="ver ${p.variant === PICKED ? 'sel' : ''}" onclick="pick('${p.variant}')">
+      <span class="lab">${esc(p.label)}</span>
+      <span class="pr">${p.price === null ? 'no price'
+        : fmtNative(p.price, LOOKUP.currency) + ' = ' + fmtIDR(Math.round(p.price * LOOKUP.rate))}</span>
+    </div>`).join('');
+
+  document.getElementById('addBody').innerHTML = `
+    <div class="versions">
+      ${many ? `<div class="hint">${esc(LOOKUP.card_id)} has ${LOOKUP.printings.length} versions — pick the one you own:</div>` : ''}
+      ${vers}
+    </div>
+    <div class="row">
+      <label>Paid per card (${(DATA&&DATA.display_currency)||''})</label>
+      <input type="text" id="addBuy" placeholder="220000" onkeydown="if(event.key==='Enter')saveAdd()">
+      <label>Quantity</label>
+      <input type="number" id="addQty" value="1" min="1" style="width:80px">
+      <label>Grade</label>
+      ${gradeSelect('addGrade', 'raw')}
+      <button class="primary" onclick="saveAdd()">Save card</button>
+    </div>
+    <div class="hint">Leave Grade as “Raw” unless the card is in a PSA/BGS slab. Graded cards
+      need a graded-price source (PriceCharting) to show a value.</div>`;
+  document.getElementById('addBuy').focus();
+}
+
+async function saveAdd() {
+  try {
+    setMsg('addMsg', 'Saving…');
+    await post('/api/add', {
+      card_id: LOOKUP.card_id,
+      region: LOOKUP.region,
+      variant: PICKED,
+      grade: document.getElementById('addGrade').value,
+      buy_price: document.getElementById('addBuy').value,
+      quantity: document.getElementById('addQty').value,
+    });
+    setMsg('addMsg', 'Saved.', 'good');
+    document.getElementById('addCode').value = '';
+    document.getElementById('addBody').innerHTML = '';
+    LOOKUP = PICKED = null;
+    await load(true);
+  } catch (e) { setMsg('addMsg', e.message, 'bad'); }
+}
+
+/* ---------- edit / sell ---------- */
+function startEdit(i) { EDITING = i; SELLING = null; render(); }
+function startSell(i) { SELLING = i; EDITING = null; render(); }
+function cancelRow()  { EDITING = SELLING = null; render(); }
+
+async function saveEdit(index, cardId, variant) {
+  try {
+    await post('/api/update', {
+      index, card_id: cardId, variant,
+      buy_price: document.getElementById('editBuy').value,
+      quantity: document.getElementById('editQty').value,
+      grade: document.getElementById('editGrade').value,
+    });
+    EDITING = null;
+    await load(true);
+  } catch (e) { alert(e.message); if (/refresh/i.test(e.message)) load(true); }
+}
+
+async function confirmSell(index, cardId, variant) {
+  try {
+    await post('/api/remove', {
+      index, card_id: cardId, variant,
+      quantity: document.getElementById('sellQty').value,
+    });
+    SELLING = null;
+    await load(true);
+  } catch (e) { alert(e.message); if (/refresh/i.test(e.message)) load(true); }
+}
+
+function sortBy(key) {
+  if (sortKey === key) { sortDir = -sortDir; } else { sortKey = key; sortDir = -1; }
+  render();
+}
+
+function render() {
+  const d = DATA;
+  if (!d) return;
+  renderCurrencyPicker();
+
+  if (d.error) {
+    document.getElementById('content').className = 'warm';
+    document.getElementById('content').textContent = d.error;
+    document.getElementById('sub').textContent = 'nothing to show';
+    return;
+  }
+
+  const t = d.totals;
+  const rows = [...d.rows].sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (x === null || x === undefined) return 1;
+    if (y === null || y === undefined) return -1;
+    return typeof x === 'string' ? sortDir * x.localeCompare(y) : sortDir * (x - y);
+  });
+
+  const cards = `
+    <div class="cards">
+      <div class="card"><h3>Invested</h3><div class="big">${fmtIDR(t.invested)}</div>
+        <div class="note">${t.cards} card${t.cards === 1 ? '' : 's'}</div></div>
+      <div class="card"><h3>Current value</h3><div class="big">${fmtIDR(t.value)}</div>
+        <div class="note">${Object.entries(d.rates || {})
+          .filter(([c]) => c !== d.display_currency)   // a currency's rate to itself is 1
+          .map(([c, r]) => `${c}/${d.display_currency} ${r < 1 ? r.toPrecision(3) : r.toLocaleString('en-US')}`)
+          .join(' · ') || esc(d.display_currency)} · ${esc(d.fx_source)}</div></div>
+      <div class="card"><h3>Profit / Loss</h3>
+        <div class="big ${cls(t.pl)}">${fmtPL(t.pl)}</div>
+        <div class="note ${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</div></div>
+    </div>`;
+
+  const head = [
+    ['name', 'Card', 'left'], ['card_id', 'ID', 'left'], ['qty', 'Qty', ''],
+    ['buy', 'Buy', ''], ['market_price', 'Market', ''],
+    ['market_value', 'Value', ''], ['pl', 'P/L', ''], ['pl_pct', 'P/L %', ''],
+  ].map(([k, label, c]) => `<th class="${c}" onclick="sortBy('${k}')">${label}${sortKey === k ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
+
+  const body = rows.map(r => {
+    const variant = r.variant ? `<span class="pill par">${esc(r.variant)}</span>` : '';
+    const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
+    const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
+    const name = `<td class="card-name">${esc(r.name)}${region}${grade}${variant}</td>
+                  <td class="id" style="text-align:left">${esc(r.card_id)}</td>`;
+    const ref = `${r.index}, '${esc(r.card_id)}', '${esc(r.variant_key)}'`;
+
+    if (EDITING === r.index) {
+      return `<tr>${name}
+        <td><input type="number" id="editQty" value="${r.qty}" min="1" style="width:70px"></td>
+        <td><input type="text" id="editBuy" value="${r.buy_price}" title="price per card"></td>
+        <td colspan="2" style="text-align:left">${gradeSelect('editGrade', r.grade || 'raw')}</td>
+        <td colspan="2" class="hint" style="text-align:left">price paid per card · grade</td>
+        <td class="act">
+          <button class="mini primary" onclick="saveEdit(${ref})">Save</button>
+          <button class="mini" onclick="cancelRow()">Cancel</button></td></tr>`;
+    }
+    if (SELLING === r.index) {
+      return `<tr>${name}
+        <td><input type="number" id="sellQty" value="${r.qty}" min="1" max="${r.qty}" style="width:70px"></td>
+        <td colspan="5" class="hint" style="text-align:left">how many did you sell? (you own ${r.qty})</td>
+        <td class="act">
+          <button class="mini danger" onclick="confirmSell(${ref})">Remove</button>
+          <button class="mini" onclick="cancelRow()">Cancel</button></td></tr>`;
+    }
+
+    const actions = `<td class="act">
+        <button class="mini" onclick="startEdit(${r.index})">Edit</button>
+        <button class="mini danger" onclick="startSell(${r.index})">Sold</button></td>`;
+
+    if (!r.ok) {
+      // A graded card can't be auto-priced yet — say so, don't just show "no price".
+      const why = r.grade ? 'graded — needs PriceCharting' : 'no price found';
+      return `<tr>${name}<td>${r.qty}</td><td>${fmtIDR(r.buy)}</td>
+        <td colspan="4" style="text-align:center"><span class="err">${why}</span></td>${actions}</tr>`;
+    }
+    return `<tr>${name}
+      <td>${r.qty}</td>
+      <td>${fmtIDR(r.buy)}</td>
+      <td>${fmtNative(r.market_price, r.currency)}</td>
+      <td>${fmtIDR(r.market_value)}</td>
+      <td class="${cls(r.pl)}">${fmtPL(r.pl)}</td>
+      <td class="${cls(r.pl_pct)}">${fmtPct(r.pl_pct)}</td>${actions}</tr>`;
+  }).join('');
+
+  const foot = `<tfoot><tr><td class="card-name">TOTAL</td><td></td><td>${t.cards}</td>
+      <td>${fmtIDR(t.invested)}</td><td></td><td>${fmtIDR(t.value)}</td>
+      <td class="${cls(t.pl)}">${fmtPL(t.pl)}</td>
+      <td class="${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</td><td></td></tr></tfoot>`;
+
+  document.getElementById('content').className = '';
+  document.getElementById('content').innerHTML = cards +
+    `<div class="table-scroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>` +
+    (t.errors ? `<div class="sub" style="margin-top:10px">${t.errors} card(s) could not be priced — excluded from totals.</div>` : '');
+
+  const regionLabel = {jp: 'Japanese', en: 'English'};
+  const langs = [...new Set(d.rows.map(r => regionLabel[r.region] || r.region))].join(' + ');
+  document.getElementById('sub').textContent =
+    `${d.rows.length} row${d.rows.length === 1 ? '' : 's'}${langs ? ' · ' + langs + ' prices' : ''}`;
+  document.getElementById('gen').textContent =
+    'updated ' + new Date(d.built_at * 1000).toLocaleTimeString();
+}
+
+async function load(force) {
+  try {
+    const res = await fetch('/api/data' + (force ? '?refresh=1' : ''));
+    DATA = await res.json();
+    render();
+  } catch (e) {
+    document.getElementById('content').className = 'warm';
+    document.getElementById('content').textContent = 'Could not reach the tracker. Is it still running?';
+  }
+}
+
+// Esc backs out of whatever is open: the add panel, or an in-progress
+// Edit/Sold row. Without this there is no keyboard way out.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (EDITING !== null || SELLING !== null) { cancelRow(); return; }
+  if (document.getElementById('addPanel').style.display !== 'none') toggleAdd();
+});
+
+load(false);
+// Don't let the background refresh yank a half-finished edit out from under you.
+setInterval(() => {
+  const busy = EDITING !== null || SELLING !== null ||
+               document.getElementById('addPanel').style.display !== 'none';
+  if (!busy) load(false);
+}, 60000);
+</script>
+</body>
+</html>

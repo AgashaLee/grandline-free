@@ -1,0 +1,6 @@
+requests>=2.31
+rich>=13.7
+python-dotenv>=1.0
+
+# dev / tests
+pytest>=8.0

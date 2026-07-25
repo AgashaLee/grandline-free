@@ -1,0 +1,12 @@
+.env
+# Your personal collection stays out of version control, so it can never be
+# accidentally published if this repo is pushed to GitHub / Railway. It lives
+# safely on disk; collection.sample.csv is the committed template.
+collection.csv
+cache.json
+portfolio.csv
+backups/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+settings.json
