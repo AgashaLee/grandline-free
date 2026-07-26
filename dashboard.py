@@ -286,12 +286,41 @@ def api_settings(payload: dict) -> dict:
     return {"display_currency": code}
 
 
+def api_image(payload: dict) -> dict:
+    """Return a card's picture URL, fetched on demand when a name is clicked.
+
+    The URL is cached so repeat clicks don't re-hit the source. Grade doesn't
+    change the art, so it's ignored -- we look up by card + variant only.
+    """
+    code = str(payload.get("card_id", "")).strip().upper()
+    if not _looks_like_card_code(code):
+        raise ValueError("That doesn't look like a card code.")
+    region = str(payload.get("region") or config.DEFAULT_REGION).lower()
+    variant = str(payload.get("variant") or BASE_VARIANT)
+
+    cache = JsonCache(config.CACHE_FILE, config.CACHE_TTL_HOURS)
+    provider = get_provider_for(region, cache)
+    key = f"img:{provider.name}:{code}:{variant}"
+
+    cached = cache.get(key) or cache.get_stale(key)  # image URLs rarely change
+    if isinstance(cached, str):
+        return {"card_id": code, "variant": variant, "image": cached}
+
+    printings = provider.list_printings(code)
+    match = next((p for p in printings if p.variant == variant), None)
+    image = (match.image_url if match else None) or (printings[0].image_url if printings else None)
+    if image:
+        cache.set(key, image)
+    return {"card_id": code, "variant": variant, "image": image}
+
+
 ROUTES = {
     "/api/lookup": api_lookup,
     "/api/add": api_add,
     "/api/update": api_update,
     "/api/remove": api_remove,
     "/api/settings": api_settings,
+    "/api/image": api_image,
 }
 
 

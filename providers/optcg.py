@@ -103,7 +103,9 @@ class OPTCGProvider(PriceProvider):
             except (KeyError, TypeError, ValueError):
                 price = None
 
-            printings.append(Printing(variant=variant, label=label, price_usd=price, name=name or variant))
+            image = str(entry.get("card_image") or "").strip() or None
+            printings.append(Printing(variant=variant, label=label, price_usd=price,
+                                      name=name or variant, image_url=image))
 
         return printings
 

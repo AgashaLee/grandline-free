@@ -42,6 +42,8 @@ class Printing:
     label: str
     price_usd: float | None
     name: str
+    #: URL of the card's picture on the source's CDN, if it exposes one.
+    image_url: str | None = None
 
 
 class PriceProvider(ABC):

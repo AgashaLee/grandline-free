@@ -33,11 +33,11 @@ import requests
 
 from providers.base import BASE_VARIANT, PriceProvider, Printing
 
-#: One card block on a search results page. The image alt carries
-#: "<code> <rarity> <name>", then a badge repeats the code, an <h4> the name,
-#: and a <strong> the price. Anchored on the alt so rarity is always captured.
+#: One card block on a search results page. The card <img> carries the picture
+#: URL (src) then "<code> <rarity> <name>" (alt); a badge repeats the code, an
+#: <h4> the name, and a <strong> the price. Anchored on src+alt of the image.
 _CARD_BLOCK = re.compile(
-    r'alt="([A-Z0-9\-]+)\s+([A-Z\-]+)\s+[^"]*"'      # OP01-073, SP  (from img alt)
+    r'src="([^"]+)"[^>]*alt="([A-Z0-9\-]+)\s+([A-Z\-]+)\s+[^"]*"'  # image URL, code, rarity
     r'.*?text-center my-2">\s*([A-Z0-9\-]+)\s*</span>'  # badge code (must match)
     r'.*?<h4[^>]*>\s*([^<]+?)\s*</h4>'               # ドンキホーテ・ドフラミンゴ(パラレル)
     r'.*?<strong[^>]*>\s*([\d,]+)\s*円',             # 5,980 円
@@ -126,7 +126,7 @@ class YuyuteiProvider(PriceProvider):
         cards: dict[str, list[Printing]] = {}
         seen: dict[tuple[str, str], int] = {}
 
-        for alt_code, rarity, badge_code, name, price_text in _CARD_BLOCK.findall(html):
+        for image, alt_code, rarity, badge_code, name, price_text in _CARD_BLOCK.findall(html):
             if alt_code.upper() != badge_code.upper():
                 continue  # image/badge mismatch: skip rather than mis-pair
             code = badge_code.upper()
@@ -143,7 +143,8 @@ class YuyuteiProvider(PriceProvider):
                 price = None
 
             cards.setdefault(code, []).append(
-                Printing(variant=variant, label=f"{label} [{rarity}]", price_usd=price, name=name)
+                Printing(variant=variant, label=f"{label} [{rarity}]", price_usd=price,
+                         name=name, image_url=(image.strip() or None))
             )
         return cards
 

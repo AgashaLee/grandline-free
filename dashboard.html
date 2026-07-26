@@ -119,6 +119,18 @@
   .header button.primary{background:var(--sea);color:#fff;border-color:var(--sea-deep)}
   .header button.primary:hover{background:var(--sea-deep)}
   #curPicker,#themePicker{font-size:12px;background:rgba(255,255,255,.94);color:#3a2a1e;border-color:rgba(255,255,255,.55)}
+  /* Clickable card name + image popup */
+  .cardlink{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;
+            text-underline-offset:2px}
+  .cardlink:hover{color:var(--sea-deep)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;
+         display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal-box{background:var(--surface);border:2px solid var(--line);border-radius:16px;
+             padding:16px;max-width:340px;width:100%;text-align:center;box-shadow:var(--shadow)}
+  .modal-box h4{font-size:14px;color:var(--ink);margin-bottom:10px;font-weight:700}
+  .modal-box img{max-width:100%;border-radius:10px;display:block;margin:0 auto}
+  .modal-box .mnote{color:var(--muted);font-size:12px;margin-top:10px}
+  .modal-box .mclose{margin-top:12px}
   /* Let the header wrap instead of overflowing narrow screens */
   .header{flex-wrap:wrap;row-gap:10px}
   .header>div:last-child{flex-wrap:wrap;justify-content:flex-end}
@@ -201,6 +213,15 @@
     <div id="content" class="warm"><span class="spin"></span>Pricing your collection…</div>
   </div>
 
+  <!-- Card image popup (hidden until a card name is clicked) -->
+  <div id="imgModal" class="modal" style="display:none" onclick="if(event.target===this)closeImage()">
+    <div class="modal-box">
+      <h4 id="imgTitle"></h4>
+      <div id="imgBody"></div>
+      <div class="mclose"><button onclick="closeImage()">Close</button></div>
+    </div>
+  </div>
+
 <script>
 // Display currency comes from the server, so the page works in any currency.
 const curSym = () => (DATA && DATA.currency_symbol) || '';
@@ -249,6 +270,25 @@ async function post(path, body) {
   if (!data.ok) throw new Error(data.error || 'Something went wrong.');
   return data;
 }
+
+/* ---------- card image popup ---------- */
+async function showImage(idx){
+  const r = (DATA && DATA.rows || []).find(x => x.index === idx);
+  if(!r) return;
+  document.getElementById('imgTitle').textContent = r.name;
+  document.getElementById('imgBody').innerHTML = '<div class="mnote"><span class="spin"></span>Loading image…</div>';
+  document.getElementById('imgModal').style.display = 'flex';
+  try{
+    const res = await post('/api/image', {card_id: r.card_id, region: r.region, variant: r.variant_key});
+    document.getElementById('imgBody').innerHTML = res.image
+      ? `<img src="${res.image}" alt="${esc(r.name)}" loading="lazy"
+             onerror="this.parentNode.innerHTML='<div class=&quot;mnote&quot;>Image could not be loaded.</div>'">`
+      : '<div class="mnote">No image available for this card.</div>';
+  }catch(e){
+    document.getElementById('imgBody').innerHTML = '<div class="mnote">Could not load the image.</div>';
+  }
+}
+function closeImage(){ document.getElementById('imgModal').style.display = 'none'; }
 
 /* ---------- theme ---------- */
 function applyTheme(t){
@@ -437,7 +477,7 @@ function render() {
     const variant = r.variant ? `<span class="pill par">${esc(r.variant)}</span>` : '';
     const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
     const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
-    const name = `<td class="card-name">${esc(r.name)}${region}${grade}${variant}</td>
+    const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${variant}</td>
                   <td class="id" style="text-align:left">${esc(r.card_id)}</td>`;
     const ref = `${r.index}, '${esc(r.card_id)}', '${esc(r.variant_key)}'`;
 
@@ -512,6 +552,7 @@ async function load(force) {
 // Edit/Sold row. Without this there is no keyboard way out.
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (document.getElementById('imgModal').style.display !== 'none') { closeImage(); return; }
   if (EDITING !== null || SELLING !== null) { cancelRow(); return; }
   if (document.getElementById('addPanel').style.display !== 'none') toggleAdd();
 });
