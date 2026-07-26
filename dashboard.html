@@ -183,6 +183,7 @@
       <select id="curPicker" onchange="setCurrency(this.value)" title="Reporting currency"></select>
       <button class="primary" onclick="toggleAdd()">+ Add card</button>
       <button onclick="load(true)">Refresh</button>
+      <a id="logoutLink" href="/whop/logout" style="display:none"><button>Log out</button></a>
       <div class="sub" id="gen"></div>
     </div>
   </div>
@@ -267,6 +268,7 @@ async function post(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({ok: false, error: 'Bad response from tracker.'}));
+  if (res.status === 401 || data.login) { window.location = '/whop/login'; throw new Error('Please log in.'); }
   if (!data.ok) throw new Error(data.error || 'Something went wrong.');
   return data;
 }
@@ -309,6 +311,14 @@ async function setCurrency(code) {
 function renderCurrencyPicker() {
   const sel = document.getElementById('curPicker');
   if (!sel || !DATA || !DATA.currencies) return;
+  // Multi-user (hosted) mode: currency is server-wide, so hide the picker and
+  // show a Log out link instead.
+  if (DATA.multi_user) {
+    sel.style.display = 'none';
+    const out = document.getElementById('logoutLink');
+    if (out) { out.style.display = ''; out.title = DATA.username ? ('Logged in as ' + DATA.username) : ''; }
+    return;
+  }
   // Only rebuild when the option set changes, so it doesn't fight the user.
   if (sel.dataset.built !== String(DATA.currencies.length)) {
     sel.innerHTML = DATA.currencies.map(c => `<option value="${c}">${c}</option>`).join('');

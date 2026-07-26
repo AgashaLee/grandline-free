@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 import webbrowser
@@ -21,6 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import config
 import fx
+import auth
 from cache import JsonCache
 from cli import _parse_idr, _looks_like_card_code
 from portfolio import (
@@ -45,15 +47,39 @@ PAYLOAD_TTL_SECONDS = 60
 MAX_BODY_BYTES = 64 * 1024
 
 _LOCK = threading.Lock()
-_CACHE: dict[str, object] = {"payload": None, "built_at": 0.0}
-#: Serialises writes to collection.csv (ThreadingHTTPServer handles requests
+#: Payload cache, keyed by user (so one customer never sees another's data).
+#: In single-user mode there is one key, "".
+_CACHE: dict[str, dict] = {}
+#: Serialises writes to a collection file (ThreadingHTTPServer handles requests
 #: concurrently, and read-modify-write on a CSV is not atomic).
 _WRITE_LOCK = threading.Lock()
 
+#: Per-request context: which user's data this request operates on. Set by the
+#: Handler from the session cookie before any endpoint runs.
+_ctx = threading.local()
+
+
+def _collection_file_for(user_id: str):
+    """Where a given Whop user's collection lives (a private folder per user)."""
+    safe = re.sub(r"[^A-Za-z0-9_-]", "", user_id) or "anon"
+    return config.COLLECTION_FILE.parent / "users" / safe / "collection.csv"
+
+
+def _current_collection_file():
+    """The collection file for the request in flight -- the logged-in user's in
+    multi-user mode, or the single shared file locally."""
+    return getattr(_ctx, "collection_file", None) or config.COLLECTION_FILE
+
+
+def _current_user_key() -> str:
+    """Cache/identity key for the request: the user id, or "" single-user."""
+    return getattr(_ctx, "user_key", "") or ""
+
 
 def _invalidate() -> None:
+    """Drop the cached payload for the current user (after they change data)."""
     with _LOCK:
-        _CACHE["payload"], _CACHE["built_at"] = None, 0.0
+        _CACHE.pop(_current_user_key(), None)
 
 
 def _meta() -> dict:
@@ -67,13 +93,15 @@ def _meta() -> dict:
         "currencies": sorted(config.CURRENCY_FORMAT),
         "currency_symbol": config.currency_format(config.DISPLAY_CURRENCY)[0],
         "currency_decimals": config.currency_format(config.DISPLAY_CURRENCY)[1],
+        "multi_user": auth.WHOP_ENABLED,
+        "username": getattr(_ctx, "username", "") or "",
     }
 
 
 def build_payload() -> dict:
     """Price the collection and return everything the page needs."""
     try:
-        holdings = load_collection(config.COLLECTION_FILE)
+        holdings = load_collection(_current_collection_file())
     except FileNotFoundError:
         # No collection yet -- a fresh install or a fresh Railway deploy. Not an
         # error; invite the first card instead of showing a scary file path.
@@ -140,15 +168,16 @@ def build_payload() -> dict:
 
 
 def cached_payload(force: bool = False) -> dict:
+    key = _current_user_key()
     with _LOCK:
-        payload, built = _CACHE["payload"], float(_CACHE["built_at"])
-        if payload is not None and not force and (time.time() - built) < PAYLOAD_TTL_SECONDS:
-            return dict(payload, built_at=built)
+        entry = _CACHE.get(key)
+        if entry and not force and (time.time() - entry["built_at"]) < PAYLOAD_TTL_SECONDS:
+            return dict(entry["payload"], built_at=entry["built_at"])
 
     fresh = build_payload()  # built outside the lock: pricing can be slow
     with _LOCK:
-        _CACHE["payload"], _CACHE["built_at"] = fresh, time.time()
-        return dict(fresh, built_at=float(_CACHE["built_at"]))
+        _CACHE[key] = {"payload": fresh, "built_at": time.time()}
+        return dict(fresh, built_at=_CACHE[key]["built_at"])
 
 
 def _provider(region: str | None = None):
@@ -225,7 +254,7 @@ def api_add(payload: dict) -> dict:
     grade = _grade(payload)
 
     with _WRITE_LOCK:
-        append_holding(config.COLLECTION_FILE,
+        append_holding(_current_collection_file(),
                        Holding(name, code, buy, quantity, variant, region, grade, config.DISPLAY_CURRENCY))
     _invalidate()
     return {"added": {"card_id": code, "variant": variant, "region": region, "grade": grade, "quantity": quantity}}
@@ -249,7 +278,7 @@ def api_update(payload: dict) -> dict:
 
     with _WRITE_LOCK:
         updated = update_holding(
-            config.COLLECTION_FILE,
+            _current_collection_file(),
             index,
             str(payload.get("card_id", "")),
             str(payload.get("variant") or BASE_VARIANT),
@@ -269,7 +298,7 @@ def api_remove(payload: dict) -> dict:
 
     with _WRITE_LOCK:
         kept = remove_holding(
-            config.COLLECTION_FILE,
+            _current_collection_file(),
             index,
             str(payload.get("card_id", "")),
             str(payload.get("variant") or BASE_VARIANT),
@@ -281,6 +310,10 @@ def api_remove(payload: dict) -> dict:
 
 def api_settings(payload: dict) -> dict:
     """Change the reporting currency. Takes effect on the next refresh."""
+    if auth.WHOP_ENABLED:
+        # Currency is a server-wide global; letting one logged-in user change it
+        # would change it for everyone. Per-user currency is a later feature.
+        raise ValueError("The display currency is set by the site.")
     code = config.set_display_currency(str(payload.get("display_currency", "")))
     _invalidate()  # every figure on the page is now in a different currency
     return {"display_currency": code}
@@ -325,15 +358,127 @@ ROUTES = {
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send(self, status: int, body: bytes, content_type: str) -> None:
+    def _send(self, status: int, body: bytes, content_type: str, extra_headers=None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        for k, v in (extra_headers or []):
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
+    def _redirect(self, url: str, extra_headers=None) -> None:
+        self.send_response(302)
+        self.send_header("Location", url)
+        self.send_header("Content-Length", "0")
+        for k, v in (extra_headers or []):
+            self.send_header(k, v)
+        self.end_headers()
+
+    def _cookie(self, name: str) -> str | None:
+        from http.cookies import SimpleCookie
+        raw = self.headers.get("Cookie", "")
+        if not raw:
+            return None
+        try:
+            jar = SimpleCookie()
+            jar.load(raw)
+        except Exception:
+            return None
+        m = jar.get(name)
+        return m.value if m else None
+
+    def _bind_context(self) -> dict | None:
+        """Point this request at the right user's data. Returns the session
+        (or None). Resets to single-user defaults first so a reused worker
+        thread never leaks the previous request's user."""
+        _ctx.collection_file = None
+        _ctx.user_key = ""
+        _ctx.username = ""
+        if not auth.WHOP_ENABLED:
+            return None  # single-user / local mode
+        session = auth.get_session(self._cookie(auth.COOKIE_SESSION))
+        if session:
+            _ctx.collection_file = _collection_file_for(session["user_id"])
+            _ctx.user_key = session["user_id"]
+            _ctx.username = session.get("username", "")
+        return session
+
+    def _gate(self) -> None:
+        body = auth.gate_page(
+            "Members only",
+            "This One Piece card tracker is for active members. "
+            "Subscribe on Whop to unlock it, or log in if you already have.",
+            "Subscribe on Whop", auth.WHOP_PRODUCT_URL,
+            "I already subscribed — log in", "/whop/login")
+        self._send(200, body, "text/html; charset=utf-8")
+
+    # --- Whop OAuth ------------------------------------------------------
+    def _login(self) -> None:
+        if not auth.WHOP_ENABLED:
+            return self._send(503, b"Login not configured", "text/plain")
+        state, _nonce, verifier, url = auth.new_login_state()
+        secure = "; Secure" if os.environ.get("PORT") else ""
+        self._redirect(url, extra_headers=[
+            ("Set-Cookie", f"{auth.COOKIE_STATE}={state}; Path=/; HttpOnly; Max-Age=600; SameSite=Lax{secure}"),
+            ("Set-Cookie", f"{auth.COOKIE_VERIFIER}={verifier}; Path=/; HttpOnly; Max-Age=600; SameSite=Lax{secure}"),
+        ])
+
+    def _callback(self, query: str) -> None:
+        from urllib.parse import parse_qs
+        if not auth.WHOP_ENABLED:
+            return self._send(503, b"Login not configured", "text/plain")
+        params = parse_qs(query)
+        if params.get("error"):
+            return self._send(400, f"Login error: {params.get('error')[0]}".encode(), "text/plain")
+        code = (params.get("code") or [""])[0]
+        state = (params.get("state") or [""])[0]
+        if not code or state != self._cookie(auth.COOKIE_STATE):
+            return self._send(403, b"Login check failed - please try again.", "text/plain")
+        verifier = self._cookie(auth.COOKIE_VERIFIER)
+        try:
+            tokens = auth.exchange_code(code, verifier)
+            user = auth.user_info(tokens["access_token"])
+        except Exception as exc:  # surface the failure rather than a blank page
+            return self._send(500, f"Login failed: {exc}".encode(), "text/plain; charset=utf-8")
+
+        user_id, username = auth.extract_identity(user)
+        if not user_id:
+            return self._send(500, b"Could not read your Whop identity.", "text/plain")
+        if not auth.has_active_membership(user_id, tokens.get("access_token")):
+            return self._send(200, auth.gate_page(
+                f"Welcome, {username}",
+                "We couldn't find an active subscription on your Whop account. "
+                "If you just subscribed, wait a few seconds and try again.",
+                "Subscribe on Whop", auth.WHOP_PRODUCT_URL, "Try again", "/whop/login"),
+                "text/html; charset=utf-8")
+
+        sid = auth.new_session(user_id, username)
+        secure = "; Secure" if os.environ.get("PORT") else ""
+        self._redirect("/", extra_headers=[
+            ("Set-Cookie", f"{auth.COOKIE_SESSION}={sid}; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax{secure}"),
+            ("Set-Cookie", f"{auth.COOKIE_STATE}=; Path=/; Max-Age=0"),
+            ("Set-Cookie", f"{auth.COOKIE_VERIFIER}=; Path=/; Max-Age=0"),
+        ])
+
+    def _logout(self) -> None:
+        auth.drop_session(self._cookie(auth.COOKIE_SESSION))
+        self._redirect("/", extra_headers=[("Set-Cookie", f"{auth.COOKIE_SESSION}=; Path=/; Max-Age=0")])
+
     def do_GET(self) -> None:  # noqa: N802 - stdlib naming
         path, _, query = self.path.partition("?")
+
+        if path == "/whop/login":
+            return self._login()
+        if path == "/whop/callback":
+            return self._callback(query)
+        if path == "/whop/logout":
+            return self._logout()
+
+        session = self._bind_context()
+        if auth.WHOP_ENABLED and not session:
+            return self._gate()
 
         if path.startswith("/api/data"):
             payload = cached_payload(force="refresh=1" in query)
@@ -370,6 +515,11 @@ class Handler(BaseHTTPRequestHandler):
 
         if not self._origin_is_local():
             return self._json(403, {"ok": False, "error": "Cross-site request refused."})
+
+        # A write only makes sense for a logged-in user (in multi-user mode).
+        session = self._bind_context()
+        if auth.WHOP_ENABLED and not session:
+            return self._json(401, {"ok": False, "error": "Please log in.", "login": True})
 
         try:
             length = int(self.headers.get("Content-Length") or 0)

@@ -872,6 +872,59 @@ def test_dashboard_requires_a_real_variant(monkeypatch, tmp_path):
     assert (saved.variant, saved.buy_price, saved.quantity) == ("parallel", 83_000, 2)
 
 
+# --- multi-user / Whop gating -------------------------------------------
+def test_whop_disabled_without_env():
+    """No WHOP_* env in tests -> single-user, open mode."""
+    import auth
+
+    assert auth.WHOP_ENABLED is False
+
+
+def test_each_user_gets_a_separate_collection_path():
+    import dashboard
+
+    a = dashboard._collection_file_for("user_AAA")
+    b = dashboard._collection_file_for("user_BBB")
+    assert a != b
+    assert "user_AAA" in str(a) and "user_BBB" in str(b)
+    assert a.name == "collection.csv"
+
+
+def test_malicious_user_id_cannot_escape_the_users_folder():
+    """A crafted Whop id must not path-traverse out of the per-user area."""
+    import dashboard
+
+    p = dashboard._collection_file_for("../../../etc/passwd")
+    parts = str(p).replace("\\", "/").split("/")
+    folder = parts[parts.index("users") + 1]  # the segment used as the user dir
+    assert ".." not in folder and "/" not in folder
+    assert folder == "etcpasswd"  # sanitised to safe characters
+
+
+def test_two_users_collections_do_not_leak(tmp_path, monkeypatch):
+    import config
+    import dashboard
+    from portfolio import Holding, append_holding
+
+    monkeypatch.setattr(config, "COLLECTION_FILE", tmp_path / "collection.csv")
+    for user, code in [("user_ALICE", "OP15-118"), ("user_BOB", "OP01-001")]:
+        append_holding(dashboard._collection_file_for(user), Holding("x", code, 1000, 1))
+
+    alice = load_collection(dashboard._collection_file_for("user_ALICE"))
+    bob = load_collection(dashboard._collection_file_for("user_BOB"))
+    assert [h.card_id for h in alice] == ["OP15-118"]
+    assert [h.card_id for h in bob] == ["OP01-001"]
+
+
+def test_currency_change_blocked_in_multi_user(monkeypatch):
+    import auth
+    import dashboard
+
+    monkeypatch.setattr(auth, "WHOP_ENABLED", True)
+    with pytest.raises(ValueError, match="set by the site"):
+        dashboard.api_settings({"display_currency": "USD"})
+
+
 # --- switching the reporting currency -----------------------------------
 def test_set_display_currency_switches_and_persists(tmp_path, monkeypatch):
     import config
