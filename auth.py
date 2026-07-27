@@ -77,29 +77,45 @@ def authorize_url(state: str, challenge: str, nonce: str) -> str:
 
 
 def exchange_code(code: str, verifier: str) -> dict:
-    """Trade the auth code for tokens. Tries Basic auth, falls back to JSON body
-    (Whop's docs and reality have differed)."""
+    """Trade the auth code for tokens.
+
+    Whop's token endpoint expects an ``application/x-www-form-urlencoded`` body.
+    We try three client-authentication styles in order -- credentials in the
+    form body (the OAuth2 standard), HTTP Basic auth, then a JSON body -- so we
+    work regardless of how Whop expects confidential clients to authenticate.
+    If every style fails we raise with the server's actual response text, so a
+    misconfiguration is diagnosable instead of a bare 401.
+    """
+    base = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": WHOP_REDIRECT_URI,
+        "code_verifier": verifier,
+    }
     basic = base64.b64encode(f"{WHOP_CLIENT_ID}:{WHOP_CLIENT_SECRET}".encode()).decode()
-    try:
-        r = requests.post(
-            _TOKEN_URL,
-            data={"grant_type": "authorization_code", "code": code,
-                  "redirect_uri": WHOP_REDIRECT_URI, "code_verifier": verifier},
-            headers={"Accept": "application/json", "Authorization": f"Basic {basic}"},
-            timeout=15,
-        )
-        r.raise_for_status()
-        return r.json()
-    except requests.RequestException as exc:
-        r2 = requests.post(
-            _TOKEN_URL,
-            json={"grant_type": "authorization_code", "code": code,
-                  "redirect_uri": WHOP_REDIRECT_URI, "client_id": WHOP_CLIENT_ID,
-                  "client_secret": WHOP_CLIENT_SECRET, "code_verifier": verifier},
-            timeout=15,
-        )
-        r2.raise_for_status()
-        return r2.json()
+    attempts = (
+        # 1) client id + secret in the form body (standard OAuth2)
+        dict(data={**base, "client_id": WHOP_CLIENT_ID, "client_secret": WHOP_CLIENT_SECRET},
+             headers={"Accept": "application/json"}),
+        # 2) HTTP Basic auth, credentials in the header
+        dict(data=base,
+             headers={"Accept": "application/json", "Authorization": f"Basic {basic}"}),
+        # 3) JSON body (some older Whop deployments accepted this)
+        dict(json={**base, "client_id": WHOP_CLIENT_ID, "client_secret": WHOP_CLIENT_SECRET},
+             headers={"Accept": "application/json"}),
+    )
+
+    last = ""
+    for kw in attempts:
+        try:
+            r = requests.post(_TOKEN_URL, timeout=15, **kw)
+        except requests.RequestException as exc:
+            last = str(exc)
+            continue
+        if r.ok:
+            return r.json()
+        last = f"{r.status_code}: {r.text[:300]}"
+    raise RuntimeError(f"token exchange rejected by Whop ({last})")
 
 
 def user_info(access_token: str) -> dict:
