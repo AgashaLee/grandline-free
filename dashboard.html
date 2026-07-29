@@ -90,6 +90,11 @@
   button.mini{padding:4px 9px;font-size:11px}
   button:disabled{opacity:.5;cursor:not-allowed}
   .table-scroll{overflow-x:auto}
+  .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+  .toolbar input{min-width:220px;width:auto}
+  .toolbar .cnt{color:var(--muted);font-size:12px}
+  .pager{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .pager .pageinfo{color:var(--muted);font-size:12px;min-width:96px;text-align:center}
   input[type=text],input[type=number],select{background:var(--input-bg);color:var(--ink);
        border:2px solid var(--line);border-radius:8px;padding:6px 9px;
        font-size:12px;font-family:inherit;width:120px}
@@ -211,6 +216,12 @@
       <div class="msg" id="addMsg"></div>
     </div>
 
+    <div id="toolbar" class="toolbar" style="display:none">
+      <input type="text" id="search" placeholder="🔎 Search name or code…"
+             autocomplete="off" oninput="setQuery(this.value)">
+      <span class="cnt" id="toolCount"></span>
+    </div>
+
     <div id="content" class="warm"><span class="spin"></span>Pricing your collection…</div>
   </div>
 
@@ -260,6 +271,24 @@ const gradeSelect = (id, selected) => `<select id="${id}">` +
 
 let DATA = null, sortKey = 'pl', sortDir = -1;
 let LOOKUP = null, PICKED = null, EDITING = null, SELLING = null;
+let PAGE = 1, QUERY = '';
+const PAGE_SIZE = 20;
+
+function setQuery(v) { QUERY = v; PAGE = 1; render(); }
+function gotoPage(p) { PAGE = p; render(); }
+
+function pager(page, pages) {
+  if (pages <= 1) return '';
+  const btn = (label, p, disabled, title) =>
+    `<button class="mini" ${disabled ? 'disabled' : ''} onclick="gotoPage(${p})"${title ? ` title="${title}"` : ''}>${label}</button>`;
+  return `<div class="pager">
+      ${btn('« First', 1, page <= 1, 'First page')}
+      ${btn('‹ Prev', page - 1, page <= 1)}
+      <span class="pageinfo">Page ${page} of ${pages}</span>
+      ${btn('Next ›', page + 1, page >= pages)}
+      ${btn('Last »', pages, page >= pages, 'Last page')}
+    </div>`;
+}
 
 async function post(path, body) {
   const res = await fetch(path, {
@@ -440,6 +469,7 @@ async function confirmSell(index, cardId, variant) {
 
 function sortBy(key) {
   if (sortKey === key) { sortDir = -sortDir; } else { sortKey = key; sortDir = -1; }
+  PAGE = 1;
   render();
 }
 
@@ -483,7 +513,18 @@ function render() {
     ['market_value', 'Value', ''], ['pl', 'P/L', ''], ['pl_pct', 'P/L %', ''],
   ].map(([k, label, c]) => `<th class="${c}" onclick="sortBy('${k}')">${label}${sortKey === k ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
 
-  const body = rows.map(r => {
+  const q = QUERY.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter(r => (r.name && r.name.toLowerCase().includes(q)) ||
+                       (r.card_id && r.card_id.toLowerCase().includes(q)))
+    : rows;
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (PAGE > pages) PAGE = pages;
+  if (PAGE < 1) PAGE = 1;
+  const start = (PAGE - 1) * PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+
+  const body = pageRows.map(r => {
     const variant = r.variant ? `<span class="pill par">${esc(r.variant)}</span>` : '';
     const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
     const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
@@ -534,10 +575,25 @@ function render() {
       <td class="${cls(t.pl)}">${fmtPL(t.pl)}</td>
       <td class="${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</td><td></td></tr></tfoot>`;
 
+  const bodyHtml = body ||
+    `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:26px">No cards match “${esc(QUERY)}”.</td></tr>`;
+
   document.getElementById('content').className = '';
   document.getElementById('content').innerHTML = cards +
-    `<div class="table-scroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>` +
+    `<div class="table-scroll"><table><thead><tr>${head}</tr></thead><tbody>${bodyHtml}</tbody>${foot}</table></div>` +
+    pager(PAGE, pages) +
     (t.errors ? `<div class="sub" style="margin-top:10px">${t.errors} card(s) could not be priced — excluded from totals.</div>` : '');
+
+  // Search toolbar (lives outside #content so typing keeps focus)
+  const tb = document.getElementById('toolbar');
+  if (tb) {
+    tb.style.display = d.rows.length ? 'flex' : 'none';
+    const from = filtered.length ? start + 1 : 0;
+    const to = start + pageRows.length;
+    document.getElementById('toolCount').textContent = d.rows.length
+      ? `Showing ${from}–${to} of ${filtered.length}` + (q ? ` matching “${QUERY}” · ${rows.length} total` : '')
+      : '';
+  }
 
   const regionLabel = {jp: 'Japanese', en: 'English'};
   const langs = [...new Set(d.rows.map(r => regionLabel[r.region] || r.region))].join(' + ');
