@@ -218,7 +218,9 @@
 
     <div id="toolbar" class="toolbar" style="display:none">
       <input type="text" id="search" placeholder="🔎 Search name or code…"
-             autocomplete="off" oninput="setQuery(this.value)">
+             autocomplete="off" oninput="setQuery(this.value)"
+             onkeydown="if(event.key==='Escape')clearSearch()">
+      <button id="clearSearch" class="mini" style="display:none" onclick="clearSearch()">✕ Clear search</button>
       <span class="cnt" id="toolCount"></span>
     </div>
 
@@ -276,6 +278,12 @@ const PAGE_SIZE = 20;
 
 function setQuery(v) { QUERY = v; PAGE = 1; render(); }
 function gotoPage(p) { PAGE = p; render(); }
+function clearSearch() {
+  const s = document.getElementById('search');
+  if (s) s.value = '';
+  QUERY = ''; PAGE = 1; render();
+  if (s) s.focus();
+}
 
 function pager(page, pages) {
   if (pages <= 1) return '';
@@ -588,6 +596,8 @@ function render() {
   const tb = document.getElementById('toolbar');
   if (tb) {
     tb.style.display = d.rows.length ? 'flex' : 'none';
+    const clr = document.getElementById('clearSearch');
+    if (clr) clr.style.display = q ? '' : 'none';
     const from = filtered.length ? start + 1 : 0;
     const to = start + pageRows.length;
     document.getElementById('toolCount').textContent = d.rows.length
