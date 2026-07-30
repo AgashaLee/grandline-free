@@ -82,17 +82,45 @@ def _invalidate() -> None:
         _CACHE.pop(_current_user_key(), None)
 
 
+def _prefs_file_for(user_id: str):
+    """Per-user preferences (e.g. chosen display currency), beside their cards."""
+    safe = re.sub(r"[^A-Za-z0-9_-]", "", user_id) or "anon"
+    return config.COLLECTION_FILE.parent / "users" / safe / "prefs.json"
+
+
+def _read_user_currency(user_id: str) -> str | None:
+    try:
+        with _prefs_file_for(user_id).open(encoding="utf-8") as fh:
+            return (json.load(fh).get("display_currency") or "").upper() or None
+    except (OSError, ValueError):
+        return None
+
+
+def _write_user_currency(user_id: str, code: str) -> None:
+    path = _prefs_file_for(user_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump({"display_currency": code}, fh)
+
+
+def _current_display_currency() -> str:
+    """Currency for the request in flight -- the logged-in user's own choice in
+    multi-user mode, or the site-wide setting locally."""
+    return getattr(_ctx, "display_currency", None) or config.DISPLAY_CURRENCY
+
+
 def _meta() -> dict:
     """Settings the page needs regardless of whether there are any cards yet
     (currency list, grades, regions) -- so the pickers work even when empty."""
+    cur = _current_display_currency()
     return {
         "regions": sorted(config.PROVIDER_BY_REGION),
         "default_region": config.DEFAULT_REGION,
         "grades": list(config.GRADE_CHOICES),
-        "display_currency": config.DISPLAY_CURRENCY,
+        "display_currency": cur,
         "currencies": sorted(config.CURRENCY_FORMAT),
-        "currency_symbol": config.currency_format(config.DISPLAY_CURRENCY)[0],
-        "currency_decimals": config.currency_format(config.DISPLAY_CURRENCY)[1],
+        "currency_symbol": config.currency_format(cur)[0],
+        "currency_decimals": config.currency_format(cur)[1],
         "multi_user": auth.WHOP_ENABLED,
         "username": getattr(_ctx, "username", "") or "",
     }
@@ -113,14 +141,15 @@ def build_payload() -> dict:
         return {"error": "No cards yet — click “+ Add card” to add your first one.",
                 "rows": [], "totals": None, "empty": True, **_meta()}
 
+    cur = _current_display_currency()
     cache = JsonCache(config.CACHE_FILE, config.CACHE_TTL_HOURS)
-    providers, rates = ProviderPool(cache), fx.RateBook(cache)
+    providers, rates = ProviderPool(cache), fx.RateBook(cache, cur)
 
     try:
-        priced = price_collection(holdings, providers, rates)
+        priced = price_collection(holdings, providers, rates, display_currency=cur)
     except fx.FxError as exc:
         return {"error": str(exc), "rows": [], "totals": None}
-    totals = compute_totals(priced)
+    totals = compute_totals(priced, display_currency=cur)
 
     rows = []
     for i, p in enumerate(priced):
@@ -309,12 +338,19 @@ def api_remove(payload: dict) -> dict:
 
 
 def api_settings(payload: dict) -> dict:
-    """Change the reporting currency. Takes effect on the next refresh."""
+    """Change the reporting currency. Takes effect on the next refresh.
+
+    In multi-user mode the choice is saved per-user (each member sees their own
+    currency); locally it sets the single site-wide currency."""
+    code = config.normalize_currency(str(payload.get("display_currency", "")))
     if auth.WHOP_ENABLED:
-        # Currency is a server-wide global; letting one logged-in user change it
-        # would change it for everyone. Per-user currency is a later feature.
-        raise ValueError("The display currency is set by the site.")
-    code = config.set_display_currency(str(payload.get("display_currency", "")))
+        user_id = _current_user_key()
+        if not user_id:
+            raise ValueError("Please log in to change your currency.")
+        _write_user_currency(user_id, code)
+        _ctx.display_currency = code
+    else:
+        config.set_display_currency(code)
     _invalidate()  # every figure on the page is now in a different currency
     return {"display_currency": code}
 
@@ -396,6 +432,7 @@ class Handler(BaseHTTPRequestHandler):
         _ctx.collection_file = None
         _ctx.user_key = ""
         _ctx.username = ""
+        _ctx.display_currency = None
         if not auth.WHOP_ENABLED:
             return None  # single-user / local mode
         session = auth.get_session(self._cookie(auth.COOKIE_SESSION))
@@ -403,6 +440,7 @@ class Handler(BaseHTTPRequestHandler):
             _ctx.collection_file = _collection_file_for(session["user_id"])
             _ctx.user_key = session["user_id"]
             _ctx.username = session.get("username", "")
+            _ctx.display_currency = _read_user_currency(session["user_id"])
         return session
 
     def _gate(self) -> None:

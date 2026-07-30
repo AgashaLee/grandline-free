@@ -916,13 +916,41 @@ def test_two_users_collections_do_not_leak(tmp_path, monkeypatch):
     assert [h.card_id for h in bob] == ["OP01-001"]
 
 
-def test_currency_change_blocked_in_multi_user(monkeypatch):
+def test_currency_is_per_user_in_multi_user(tmp_path, monkeypatch):
+    """In hosted mode each member picks their own display currency: it's saved
+    to their own prefs, isolated from other members, and never touches the
+    site-wide global. A logged-out request is refused."""
     import auth
+    import config
     import dashboard
 
     monkeypatch.setattr(auth, "WHOP_ENABLED", True)
-    with pytest.raises(ValueError, match="set by the site"):
-        dashboard.api_settings({"display_currency": "USD"})
+    monkeypatch.setattr(config, "COLLECTION_FILE", tmp_path / "collection.csv")
+    site_default = config.DISPLAY_CURRENCY
+    try:
+        dashboard._ctx.user_key = "user_ALICE"
+        dashboard._ctx.display_currency = None
+
+        # Alice switches to USD -- allowed, saved to her prefs, applied to her ctx
+        assert dashboard.api_settings({"display_currency": "usd"}) == {"display_currency": "USD"}
+        assert dashboard._ctx.display_currency == "USD"
+        assert dashboard._read_user_currency("user_ALICE") == "USD"
+
+        # Bob is untouched, and the site-wide global never changed
+        assert dashboard._read_user_currency("user_BOB") is None
+        assert config.DISPLAY_CURRENCY == site_default
+
+        # Nonsense codes are still rejected
+        with pytest.raises(ValueError):
+            dashboard.api_settings({"display_currency": "nope"})
+
+        # A request with no logged-in user cannot change currency
+        dashboard._ctx.user_key = ""
+        with pytest.raises(ValueError, match="log in"):
+            dashboard.api_settings({"display_currency": "EUR"})
+    finally:
+        dashboard._ctx.user_key = ""
+        dashboard._ctx.display_currency = None
 
 
 # --- switching the reporting currency -----------------------------------

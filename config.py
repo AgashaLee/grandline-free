@@ -123,6 +123,18 @@ DISPLAY_CURRENCY: str = str(
 FX_TARGET_CURRENCY: str = DISPLAY_CURRENCY
 
 
+def normalize_currency(code: str) -> str:
+    """Validate a 3-letter currency code and return it upper-cased.
+
+    Shared by the site-wide switch and per-user currency so both reject the
+    same nonsense (empty, ``US``, ``DOLLAR``, ``$`` ...).
+    """
+    code = str(code or "").strip().upper()
+    if not code.isalpha() or len(code) != 3:
+        raise ValueError(f"{code!r} is not a 3-letter currency code.")
+    return code
+
+
 def set_display_currency(code: str) -> str:
     """Switch the reporting currency at runtime and remember the choice.
 
@@ -131,10 +143,7 @@ def set_display_currency(code: str) -> str:
     """
     global DISPLAY_CURRENCY, FX_TARGET_CURRENCY
 
-    code = str(code or "").strip().upper()
-    if not code.isalpha() or len(code) != 3:
-        raise ValueError(f"{code!r} is not a 3-letter currency code.")
-
+    code = normalize_currency(code)
     DISPLAY_CURRENCY = FX_TARGET_CURRENCY = code
     _SETTINGS["display_currency"] = code
     try:

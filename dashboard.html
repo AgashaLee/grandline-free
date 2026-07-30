@@ -349,13 +349,11 @@ async function setCurrency(code) {
 function renderCurrencyPicker() {
   const sel = document.getElementById('curPicker');
   if (!sel || !DATA || !DATA.currencies) return;
-  // Multi-user (hosted) mode: currency is server-wide, so hide the picker and
-  // show a Log out link instead.
+  // Multi-user (hosted) mode: also show the Log out link. The currency picker
+  // stays visible -- each member picks their own currency (saved per-user).
   if (DATA.multi_user) {
-    sel.style.display = 'none';
     const out = document.getElementById('logoutLink');
     if (out) { out.style.display = ''; out.title = DATA.username ? ('Logged in as ' + DATA.username) : ''; }
-    return;
   }
   // Only rebuild when the option set changes, so it doesn't fight the user.
   if (sel.dataset.built !== String(DATA.currencies.length)) {

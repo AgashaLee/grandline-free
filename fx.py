@@ -77,16 +77,17 @@ def fetch_rate(base: str = "USD", target: str | None = None, timeout: float | No
     return parser(payload, target)
 
 
-def get_rate(cache: JsonCache, base: str = "USD") -> tuple[float, str]:
+def get_rate(cache: JsonCache, base: str = "USD", target: str | None = None) -> tuple[float, str]:
     """Return ``(rate, source)`` converting ``base`` into the target currency.
 
+    ``target`` defaults to the site-wide :data:`config.FX_TARGET_CURRENCY`; a
+    caller (e.g. a logged-in user viewing in their own currency) may override it.
     ``source`` is ``cache``, ``live`` or ``stale``. Applies the same TTL rules
     as prices and falls back to the last known rate if the network is down.
-    Raises :class:`FxError` only when there is no rate at all -- without one no
-    IDR figure would be meaningful.
+    Raises :class:`FxError` only when there is no rate at all.
     """
     base = base.upper()
-    target = config.FX_TARGET_CURRENCY
+    target = (target or config.FX_TARGET_CURRENCY).upper()
     if base == target:
         return 1.0, "identity"
 
@@ -96,7 +97,7 @@ def get_rate(cache: JsonCache, base: str = "USD") -> tuple[float, str]:
     if isinstance(cached, (int, float)) and cached > 0:
         return float(cached), "cache"
 
-    rate = fetch_rate(base)
+    rate = fetch_rate(base, target)
     if rate is not None:
         cache.set(key, rate)
         return rate, "live"
@@ -118,14 +119,15 @@ def get_usd_idr(cache: JsonCache) -> tuple[float, str]:
 class RateBook:
     """Lazily fetches and remembers one rate per currency, per run."""
 
-    def __init__(self, cache: JsonCache):
+    def __init__(self, cache: JsonCache, target: str | None = None):
         self.cache = cache
+        self.target = target            # None -> site-wide FX_TARGET_CURRENCY
         self.rates: dict[str, float] = {}
         self.sources: dict[str, str] = {}
 
     def __call__(self, currency: str) -> float:
         currency = currency.upper()
         if currency not in self.rates:
-            rate, source = get_rate(self.cache, currency)
+            rate, source = get_rate(self.cache, currency, self.target)
             self.rates[currency], self.sources[currency] = rate, source
         return self.rates[currency]

@@ -337,6 +337,7 @@ def price_collection(
     provider_for,
     rate_for,
     on_priced=None,
+    display_currency: str | None = None,
 ) -> list[PricedHolding]:
     """Value every holding, routing each to the source for its region.
 
@@ -345,6 +346,7 @@ def price_collection(
         rate_for: ``(currency) -> float`` giving that currency's rate to IDR.
         on_priced: optional callback ``(PricedHolding) -> None`` for progress UI.
     """
+    dc = display_currency or config.DISPLAY_CURRENCY
     priced: list[PricedHolding] = []
     for holding in holdings:
         try:
@@ -371,7 +373,7 @@ def price_collection(
 
         result = PricedHolding(
             holding=holding, market_native=price, currency=currency,
-            market_rate=rate, buy_rate=buy_rate, display_currency=config.DISPLAY_CURRENCY,
+            market_rate=rate, buy_rate=buy_rate, display_currency=dc,
         )
         priced.append(result)
         if on_priced:
@@ -379,10 +381,11 @@ def price_collection(
     return priced
 
 
-def compute_totals(priced: list[PricedHolding]) -> PortfolioTotals:
+def compute_totals(priced: list[PricedHolding], display_currency: str | None = None) -> PortfolioTotals:
     """Sum successfully priced rows; ERROR rows are excluded from both sides."""
     invested = sum(p.invested for p in priced if p.ok)
     value = sum(p.value or 0.0 for p in priced if p.ok)
     errors = sum(1 for p in priced if not p.ok)
+    dc = display_currency or (priced[0].display_currency if priced else config.DISPLAY_CURRENCY)
     return PortfolioTotals(invested=invested, value=value, error_count=errors,
-                           display_currency=config.DISPLAY_CURRENCY)
+                           display_currency=dc)
