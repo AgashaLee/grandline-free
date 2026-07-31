@@ -150,7 +150,23 @@
     #gen{display:none}
     .wrap{padding:0 13px;margin-top:16px}
     .big{font-size:22px}
-    th,td{padding:8px 8px}
+    /* Stacked "card" layout: a wide grid can't fit a phone, so each row becomes
+       its own card with labelled lines instead of a squished, 1-char column. */
+    .table-scroll{overflow-x:visible}
+    table{min-width:0;border:none;box-shadow:none;background:transparent}
+    thead,tfoot{display:none}                  /* col headers + TOTAL (shown in the cards above) */
+    table,tbody,tr,td{display:block;width:auto}
+    tbody tr{background:var(--surface);border:2px solid var(--line);border-radius:14px;
+      margin:0 0 12px;padding:8px 6px;box-shadow:var(--shadow)}
+    tbody tr:nth-child(even),tbody tr:hover{background:var(--surface)}
+    td{border:none;display:flex;justify-content:space-between;align-items:center;gap:14px;
+      text-align:right;padding:5px 10px;white-space:normal}
+    td::before{content:attr(data-label);color:var(--muted);font-size:11px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.03em;text-align:left;flex:0 0 auto}
+    td.card-name{display:block;text-align:left;font-size:1.05em;max-width:none;
+      border-bottom:1px solid var(--line);margin:2px 4px 6px;padding-bottom:8px}
+    td.card-name::before,td.act::before{content:none}
+    td.act{justify-content:flex-end;padding-top:8px;gap:8px}
   }
   /* --- Wanted Poster theme: aged parchment, sepia ink, vintage red --- */
   :root[data-theme="wanted"]{
@@ -536,7 +552,7 @@ function render() {
     const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
     const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
     const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${variant}</td>
-                  <td class="id" style="text-align:left">${esc(r.card_id)}</td>`;
+                  <td class="id" data-label="ID" style="text-align:left">${esc(r.card_id)}</td>`;
     const ref = `${r.index}, '${esc(r.card_id)}', '${esc(r.variant_key)}'`;
 
     if (EDITING === r.index) {
@@ -565,16 +581,16 @@ function render() {
     if (!r.ok) {
       // A graded card can't be auto-priced yet — say so, don't just show "no price".
       const why = r.grade ? 'graded — price coming soon' : 'no price found';
-      return `<tr>${name}<td>${r.qty}</td><td>${fmtIDR(r.buy)}</td>
-        <td colspan="4" style="text-align:center"><span class="err">${why}</span></td>${actions}</tr>`;
+      return `<tr>${name}<td data-label="Qty">${r.qty}</td><td data-label="Buy">${fmtIDR(r.buy)}</td>
+        <td colspan="4" data-label="Market" style="text-align:center"><span class="err">${why}</span></td>${actions}</tr>`;
     }
     return `<tr>${name}
-      <td>${r.qty}</td>
-      <td>${fmtIDR(r.buy)}</td>
-      <td>${fmtNative(r.market_price, r.currency)}</td>
-      <td>${fmtIDR(r.market_value)}</td>
-      <td class="${cls(r.pl)}">${fmtPL(r.pl)}</td>
-      <td class="${cls(r.pl_pct)}">${fmtPct(r.pl_pct)}</td>${actions}</tr>`;
+      <td data-label="Qty">${r.qty}</td>
+      <td data-label="Buy">${fmtIDR(r.buy)}</td>
+      <td data-label="Market">${fmtNative(r.market_price, r.currency)}</td>
+      <td data-label="Value">${fmtIDR(r.market_value)}</td>
+      <td data-label="P/L" class="${cls(r.pl)}">${fmtPL(r.pl)}</td>
+      <td data-label="P/L %" class="${cls(r.pl_pct)}">${fmtPct(r.pl_pct)}</td>${actions}</tr>`;
   }).join('');
 
   const foot = `<tfoot><tr><td class="card-name">TOTAL</td><td></td><td>${t.cards}</td>
