@@ -545,6 +545,71 @@ def test_sell_and_buy_modes_are_cached_separately():
     assert YuyuteiProvider(mode="sell").name != YuyuteiProvider(mode="buy").name
 
 
+# --- trade-in (買取) + stock -------------------------------------------------
+def _yuyutei_card_stocked(code, rarity, name, price, stock):
+    """A search-result card block including Yuyu-tei's 在庫 (stock) label."""
+    return (
+        f'<img src="x.jpg" alt="{code} {rarity} {name}" class="card img-fluid"/>'
+        f'<span class="d-block border border-dark p-1 w-100 text-center my-2">{code}</span>'
+        f'<a href="#"><h4 class="text-primary fw-bold">{name}</h4></a>'
+        f'<strong class="d-block text-end "> {price} 円 </strong>'
+        f'<div class="form-check p-0"><label class="form-check-label fw-bold float-start '
+        f'cart_sell_zaiko" for="flexRadioDefault1"> 在庫 : {stock} </label></div>'
+    )
+
+
+def test_yuyutei_parses_stock_flag():
+    from providers.yuyutei import YuyuteiProvider
+
+    assert YuyuteiProvider._parse_stock("×") is False
+    assert YuyuteiProvider._parse_stock("2 点") is True
+    assert YuyuteiProvider._parse_stock("") is None
+
+
+def test_yuyutei_reads_in_stock_from_search():
+    from providers.yuyutei import YuyuteiProvider
+
+    html = (_yuyutei_card_stocked("OP01-001", "L", "ゾロ", "120", "2 点")
+            + _yuyutei_card_stocked("OP01-001", "P-L", "ゾロ(パラレル)", "24,800", "×"))
+    by = {p.variant: p.in_stock for p in YuyuteiProvider._parse(html)["OP01-001"]}
+    assert by["base"] is True        # 2 点 in stock
+    assert by["parallel"] is False   # × sold out
+
+
+def test_stockless_blocks_still_parse_with_unknown_stock():
+    """The old snippet (no 在庫 label) must still parse; stock is just None."""
+    from providers.yuyutei import YuyuteiProvider
+
+    cards = YuyuteiProvider._parse(YUYUTEI_SNIPPET)["OP01-073"]
+    assert {p.variant for p in cards} == {"parallel", "base", "no-holo", "sp"}
+    assert all(p.in_stock is None for p in cards)
+
+
+def test_buyback_value_and_realistic_sell_total(monkeypatch):
+    import config
+    from portfolio import Holding, PricedHolding, compute_totals
+
+    monkeypatch.setattr(config, "DISPLAY_CURRENCY", "IDR")
+    h = Holding("Zoro", "OP01-001", 1000, 2, buy_currency="IDR")
+    priced = PricedHolding(holding=h, market_native=100.0, currency="JPY", market_rate=110.0,
+                           buy_rate=1.0, display_currency="IDR", buyback_native=60.0, in_stock=True)
+    assert priced.value == 100.0 * 110.0 * 2        # 22,000 retail
+    assert priced.buyback_value == 60.0 * 110.0 * 2  # 13,200 trade-in
+    # A card with no buy side contributes nothing to the sell total.
+    none_bb = PricedHolding(holding=h, market_native=5.0, currency="USD", market_rate=16000.0,
+                            buy_rate=1.0, display_currency="IDR")
+    assert none_bb.buyback_value is None
+    assert compute_totals([priced, none_bb]).sell_value == 13200.0
+
+
+def test_sources_without_a_buy_side_return_none(cache):
+    from providers.base import get_provider_for
+
+    en = get_provider_for("en", cache)  # optcg: raw EN, no 買取
+    assert en.get_buyback("OP01-001") is None
+    assert en.get_stock("OP01-001") is None
+
+
 # --- region routing ------------------------------------------------------
 def test_each_region_routes_to_its_own_source(cache):
     from providers.base import get_provider_for

@@ -174,6 +174,10 @@ def build_payload() -> dict:
             "market_value": None if not p.ok else round(p.value, 2),
             "pl": None if not p.ok else round(p.pl, 2),
             "pl_pct": None if p.pl_pct is None else round(p.pl_pct, 2),
+            # Trade-in (買取) value in the display currency, and the source's
+            # stock flag (False = sold out = a demand signal). Both may be None.
+            "buyback": None if p.buyback_value is None else round(p.buyback_value, 2),
+            "in_stock": p.in_stock,
         })
 
     return {
@@ -187,6 +191,9 @@ def build_payload() -> dict:
             "pl_pct": None if totals.pl_pct is None else round(totals.pl_pct, 2),
             "cards": sum(r["qty"] for r in rows if r["ok"]),
             "errors": totals.error_count,
+            # Realistic "sell it all today" figure: sum of trade-in values for
+            # the cards that have one (0 when no source offers a buy side).
+            "sell_value": round(totals.sell_value, 2),
         },
         # Keep small rates meaningful: IDR->USD is ~0.0000589, which rounds to
         # zero at 4dp. Significant figures preserve it whatever the pair.

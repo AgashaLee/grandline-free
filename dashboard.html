@@ -71,6 +71,12 @@
   .pill.par{background:rgba(21,154,91,.16);color:var(--good)}
   .pill.rg{background:rgba(23,153,214,.16);color:var(--sea)}
   .pill.grd{background:rgba(246,185,59,.22);color:var(--gold-deep)}
+  /* Sold-out at source = a demand/scarcity signal. */
+  .pill.sold{background:rgba(226,59,59,.16);color:var(--bad)}
+  /* Trade-in (買取) value shown under the market value. */
+  .valwrap{display:inline-block;text-align:right}
+  .tradein{display:block;color:var(--muted);font-size:10px;font-weight:600;white-space:nowrap}
+  .tradein-sum{margin-top:3px}
   .err{background:rgba(226,59,59,.15);color:var(--bad);font-weight:700;padding:2px 8px;
        border-radius:20px;font-size:11px}
   .id{color:var(--muted);font-size:12px}
@@ -524,7 +530,7 @@ function render() {
         <div class="note">${Object.entries(d.rates || {})
           .filter(([c]) => c !== d.display_currency)   // a currency's rate to itself is 1
           .map(([c, r]) => `${c}/${d.display_currency} ${r < 1 ? r.toPrecision(3) : r.toLocaleString('en-US')}`)
-          .join(' · ') || esc(d.display_currency)}${(() => { const l = fxLabel(d.fx_source); return l ? ' · ' + l : ''; })()}</div></div>
+          .join(' · ') || esc(d.display_currency)}${(() => { const l = fxLabel(d.fx_source); return l ? ' · ' + l : ''; })()}</div>${t.sell_value > 0 ? `<div class="note tradein-sum">↩ ${fmtIDR(t.sell_value)} <span style="opacity:.7">if sold today (trade-in)</span></div>` : ''}</div>
       <div class="card"><h3>Profit / Loss</h3>
         <div class="big ${cls(t.pl)}">${fmtPL(t.pl)}</div>
         <div class="note ${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</div></div>
@@ -551,7 +557,9 @@ function render() {
     const variant = r.variant ? `<span class="pill par">${esc(r.variant)}</span>` : '';
     const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
     const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
-    const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${variant}</td>
+    const stock = (r.in_stock === false)
+      ? `<span class="pill sold" title="Sold out at the source — a demand / scarcity signal">SOLD OUT</span>` : '';
+    const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${variant}${stock}</td>
                   <td class="id" data-label="ID" style="text-align:left">${esc(r.card_id)}</td>`;
     const ref = `${r.index}, '${esc(r.card_id)}', '${esc(r.variant_key)}'`;
 
@@ -588,7 +596,7 @@ function render() {
       <td data-label="Qty">${r.qty}</td>
       <td data-label="Buy">${fmtIDR(r.buy)}</td>
       <td data-label="Market">${fmtNative(r.market_price, r.currency)}</td>
-      <td data-label="Value">${fmtIDR(r.market_value)}</td>
+      <td data-label="Value"><span class="valwrap">${fmtIDR(r.market_value)}${r.buyback != null ? `<span class="tradein" title="Trade-in / buyback value (what a shop would pay)">↩ ${fmtIDR(r.buyback)}</span>` : ''}</span></td>
       <td data-label="P/L" class="${cls(r.pl)}">${fmtPL(r.pl)}</td>
       <td data-label="P/L %" class="${cls(r.pl_pct)}">${fmtPct(r.pl_pct)}</td>${actions}</tr>`;
   }).join('');

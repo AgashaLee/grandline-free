@@ -40,7 +40,11 @@ _CARD_BLOCK = re.compile(
     r'src="([^"]+)"[^>]*alt="([A-Z0-9\-]+)\s+([A-Z\-]+)\s+[^"]*"'  # image URL, code, rarity
     r'.*?text-center my-2">\s*([A-Z0-9\-]+)\s*</span>'  # badge code (must match)
     r'.*?<h4[^>]*>\s*([^<]+?)\s*</h4>'               # ドンキホーテ・ドフラミンゴ(パラレル)
-    r'.*?<strong[^>]*>\s*([\d,]+)\s*円',             # 5,980 円
+    r'.*?<strong[^>]*>\s*([\d,]+)\s*円'              # 5,980 円
+    # Stock label sits right after the price in the same card block: "在庫 : ×"
+    # (sold out) or "在庫 : 2 点" (in stock). Optional so a markup change or the
+    # buy-side page (no stock notion) still parses; lazy .*? keeps it in-block.
+    r'(?:.*?cart_sell_zaiko"[^>]*>\s*在庫[:：\s]*([^<]+?)\s*</label>)?',
     re.S,
 )
 
@@ -90,13 +94,17 @@ class YuyuteiProvider(PriceProvider):
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
         })
-        self._cards: dict[str, list[Printing]] = {}
+        self._pages: dict[tuple[str, str], list[Printing]] = {}
         self._last_fetch = 0.0
 
     # --- helpers --------------------------------------------------------
-    def _url(self, card_id: str) -> str:
+    def _url_for(self, card_id: str, mode: str) -> str:
         query = urllib.parse.urlencode({"search_word": card_id, "rare": "", "type": "", "kizu": "0"})
-        return f"{self.base_url}/{self.mode}/opc/s/search?{query}"
+        return f"{self.base_url}/{mode}/opc/s/search?{query}"
+
+    def _url(self, card_id: str) -> str:
+        """The search URL for this provider's own side (kept for callers/tests)."""
+        return self._url_for(card_id, self.mode)
 
     @staticmethod
     def _variant_of(rarity: str, name: str) -> tuple[str, str]:
@@ -120,13 +128,25 @@ class YuyuteiProvider(PriceProvider):
             return "parallel", "パラレル"
         return BASE_VARIANT, "通常 (Normal)"
 
+    @staticmethod
+    def _parse_stock(text: str) -> bool | None:
+        """'×' -> sold out (False); a count like '2 点' -> in stock (True)."""
+        text = (text or "").strip()
+        if not text:
+            return None
+        if "×" in text or "✕" in text or "x" in text.lower():
+            return False
+        if any(ch.isdigit() for ch in text):
+            return True
+        return None
+
     @classmethod
     def _parse(cls, html: str) -> dict[str, list[Printing]]:
         """Turn a search-results page into ``{card_id: [Printing, ...]}``."""
         cards: dict[str, list[Printing]] = {}
         seen: dict[tuple[str, str], int] = {}
 
-        for image, alt_code, rarity, badge_code, name, price_text in _CARD_BLOCK.findall(html):
+        for image, alt_code, rarity, badge_code, name, price_text, stock_text in _CARD_BLOCK.findall(html):
             if alt_code.upper() != badge_code.upper():
                 continue  # image/badge mismatch: skip rather than mis-pair
             code = badge_code.upper()
@@ -144,15 +164,18 @@ class YuyuteiProvider(PriceProvider):
 
             cards.setdefault(code, []).append(
                 Printing(variant=variant, label=f"{label} [{rarity}]", price_usd=price,
-                         name=name, image_url=(image.strip() or None))
+                         name=name, image_url=(image.strip() or None),
+                         in_stock=cls._parse_stock(stock_text))
             )
         return cards
 
-    def _fetch_card(self, card_id: str) -> list[Printing]:
-        """Fetch every printing of one card via search. Never raises; [] on failure."""
+    def _page(self, card_id: str, mode: str) -> list[Printing]:
+        """Every printing of one card from one side (sell or buy), cached per
+        (code, mode). Never raises; [] on failure (not memoised, so retryable)."""
         code = card_id.upper()
-        if code in self._cards:
-            return self._cards[code]
+        ck = (code, mode)
+        if ck in self._pages:
+            return self._pages[ck]
 
         # Be a polite scraper: space out requests.
         elapsed = time.monotonic() - self._last_fetch
@@ -160,7 +183,7 @@ class YuyuteiProvider(PriceProvider):
             time.sleep(self.delay_seconds - elapsed)
 
         try:
-            response = self._session.get(self._url(code), timeout=self.timeout)
+            response = self._session.get(self._url_for(code, mode), timeout=self.timeout)
             self._last_fetch = time.monotonic()
             response.raise_for_status()
             response.encoding = response.encoding or "utf-8"
@@ -169,11 +192,19 @@ class YuyuteiProvider(PriceProvider):
         except (requests.RequestException, ValueError):
             return []  # not memoised: a transient failure may be retried
 
-        self._cards[code] = printings
+        self._pages[ck] = printings
         return printings
 
     def _printings(self, card_id: str) -> list[Printing]:
-        return self._fetch_card(card_id)
+        """This provider's own side (sell, for market price + in-stock)."""
+        return self._page(card_id, self.mode)
+
+    def _buyback_of(self, card_id: str, variant: str) -> float | None:
+        """Buyback (買取) price for one variant, from the /buy/ side."""
+        for printing in self._page(card_id, "buy"):
+            if printing.variant == variant:
+                return printing.price_usd
+        return None
 
     # --- PriceProvider --------------------------------------------------
     def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> float | None:
@@ -191,3 +222,18 @@ class YuyuteiProvider(PriceProvider):
     def get_card_name(self, card_id: str) -> str | None:
         printings = self._printings(card_id)
         return printings[0].name if printings else None
+
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> float | None:
+        """Yuyu-tei's 買取 (trade-in) price for one printing, in JPY."""
+        if grade != "raw":
+            return None
+        return self._buyback_of(card_id, variant)
+
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> bool | None:
+        """Whether Yuyu-tei currently stocks this printing (sold out = demand)."""
+        if grade != "raw":
+            return None
+        for printing in self._printings(card_id):
+            if printing.variant == variant:
+                return printing.in_stock
+        return None

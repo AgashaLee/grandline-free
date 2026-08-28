@@ -79,6 +79,10 @@ class PricedHolding:
     market_rate: float          # source currency -> display currency
     buy_rate: float = 1.0       # buy currency -> display currency
     display_currency: str = field(default_factory=lambda: config.DISPLAY_CURRENCY)
+    #: Trade-in / buyback price per card in the source currency (JP only), and
+    #: whether the source currently stocks it. Both optional (None = unknown).
+    buyback_native: float | None = None
+    in_stock: bool | None = None
 
     @property
     def ok(self) -> bool:
@@ -101,6 +105,15 @@ class PricedHolding:
         return None if unit is None else unit * self.holding.quantity
 
     @property
+    def buyback_value(self) -> float | None:
+        """Realistic trade-in value of the whole lot, in the display currency
+        (source buyback price -> display, via the market rate). None if the
+        source has no buy side for this printing."""
+        if self.buyback_native is None:
+            return None
+        return self.buyback_native * self.market_rate * self.holding.quantity
+
+    @property
     def pl(self) -> float | None:
         value = self.value
         return None if value is None else value - self.invested
@@ -120,6 +133,9 @@ class PortfolioTotals:
     value: float
     error_count: int
     display_currency: str = field(default_factory=lambda: config.DISPLAY_CURRENCY)
+    #: Sum of trade-in (buyback) values for the cards that have one -- the
+    #: realistic "sell it all today" figure. 0 when no source has a buy side.
+    sell_value: float = 0.0
 
     @property
     def pl(self) -> float:
@@ -371,9 +387,21 @@ def price_collection(
         except Exception:
             buy_rate = 0.0
 
+        # Trade-in (買取) price and in-stock flag, when the source has a buy side
+        # (Yuyu-tei does; the EN source doesn't). Guarded so it can never break
+        # the run, and only attempted for a card that actually priced.
+        buyback = in_stock = None
+        if price is not None:
+            try:
+                buyback = provider.get_buyback(holding.card_id, holding.variant, holding.grade)
+                in_stock = provider.get_stock(holding.card_id, holding.variant, holding.grade)
+            except Exception:
+                buyback = in_stock = None
+
         result = PricedHolding(
             holding=holding, market_native=price, currency=currency,
             market_rate=rate, buy_rate=buy_rate, display_currency=dc,
+            buyback_native=buyback, in_stock=in_stock,
         )
         priced.append(result)
         if on_priced:
@@ -386,6 +414,7 @@ def compute_totals(priced: list[PricedHolding], display_currency: str | None = N
     invested = sum(p.invested for p in priced if p.ok)
     value = sum(p.value or 0.0 for p in priced if p.ok)
     errors = sum(1 for p in priced if not p.ok)
+    sell_value = sum(p.buyback_value for p in priced if p.ok and p.buyback_value is not None)
     dc = display_currency or (priced[0].display_currency if priced else config.DISPLAY_CURRENCY)
     return PortfolioTotals(invested=invested, value=value, error_count=errors,
-                           display_currency=dc)
+                           display_currency=dc, sell_value=sell_value)

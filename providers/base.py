@@ -44,6 +44,13 @@ class Printing:
     name: str
     #: URL of the card's picture on the source's CDN, if it exposes one.
     image_url: str | None = None
+    #: The price the source would PAY for this printing (trade-in / 買取), if it
+    #: has a buy side. Always <= price in practice (that spread is the point).
+    buyback_price: float | None = None
+    #: Whether the source currently has this printing in stock. True in stock,
+    #: False sold out, None if the source has no such notion. A sold-out card at
+    #: a busy shop is a demand/scarcity signal.
+    in_stock: bool | None = None
 
 
 class PriceProvider(ABC):
@@ -104,6 +111,16 @@ class PriceProvider(ABC):
         """
         return None
 
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
+        """The trade-in / buyback price (what the source would PAY), in
+        ``self.currency``. Optional: sources with no buy side return None."""
+        return None
+
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> bool | None:
+        """Whether the source currently stocks this printing (True in stock,
+        False sold out, None if it has no such notion). Optional."""
+        return None
+
 
 class CachedPriceProvider(PriceProvider):
     """Wraps any :class:`PriceProvider` with a TTL cache and stale fallback.
@@ -161,6 +178,32 @@ class CachedPriceProvider(PriceProvider):
     def get_card_name(self, card_id: str) -> str | None:
         """Delegate to the wrapped provider (names are not worth caching)."""
         return self.inner.get_card_name(card_id)
+
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
+        """Trade-in price, cached under its own key (a different number from the
+        sell price) with the same fresh -> live -> stale fallback as get_price."""
+        key = self.cache_key(card_id, variant, grade) + ":buyback"
+        cached = self.cache.get(key)
+        if isinstance(cached, (int, float)) and not isinstance(cached, bool):
+            return float(cached)
+        val = self.inner.get_buyback(card_id, variant, grade)
+        if val is not None:
+            self.cache.set(key, float(val))
+            return float(val)
+        stale = self.cache.get_stale(key)
+        return float(stale) if isinstance(stale, (int, float)) and not isinstance(stale, bool) else None
+
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> bool | None:
+        """In-stock flag, cached (bool) under its own key. Unknown (None) is not
+        cached, so it is re-checked next time rather than sticking."""
+        key = self.cache_key(card_id, variant, grade) + ":stock"
+        cached = self.cache.get(key)
+        if isinstance(cached, bool):
+            return cached
+        val = self.inner.get_stock(card_id, variant, grade)
+        if val is not None:
+            self.cache.set(key, bool(val))
+        return val
 
 
 # --- factory ------------------------------------------------------------
