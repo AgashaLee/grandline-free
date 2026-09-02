@@ -18,7 +18,7 @@ from pathlib import Path
 from rich.prompt import Confirm, IntPrompt, Prompt
 
 import config
-from portfolio import Holding, append_holding, load_collection, save_collection
+from portfolio import Holding, append_holding, load_collection, remove_holding
 from providers.base import BASE_VARIANT, PriceProvider, Printing
 from report import _money, console
 
@@ -146,10 +146,8 @@ def _price_text(price: float | None, rate: float, currency: str) -> str:
 
 def add_cards(provider_for, rate_for, path: Path | str | None = None) -> int:
     """Interactive add loop. Returns how many cards were added."""
-    path = Path(path or config.COLLECTION_FILE)
-
     try:
-        existing = {h.card_id for h in load_collection(path)}
+        existing = {h.card_id for h in load_collection("")}
     except (FileNotFoundError, ValueError):
         existing = set()
 
@@ -206,7 +204,7 @@ def add_cards(provider_for, rate_for, path: Path | str | None = None) -> int:
             continue
 
         append_holding(
-            path,
+            "",
             Holding(name=name or code, card_id=code, buy_price=buy_amount,
                     quantity=quantity, variant=variant, region=region),
         )
@@ -224,7 +222,7 @@ def add_cards(provider_for, rate_for, path: Path | str | None = None) -> int:
         else:
             console.print("  [bold]Saved.[/]")
 
-    console.print(f"\n[bold]{added}[/] card(s) added to {path.name}.")
+    console.print(f"\n[bold]{added}[/] card(s) added.")
     return added
 
 
@@ -240,14 +238,9 @@ def _show_collection(holdings: list[Holding]) -> None:
 
 
 def remove_cards(path: Path | str | None = None) -> int:
-    """Remove sold cards. Returns how many entries were changed.
-
-    Selling part of a lot reduces the quantity; selling all of it drops the row.
-    """
-    path = Path(path or config.COLLECTION_FILE)
-
+    """Remove sold cards. Returns how many entries were changed."""
     try:
-        holdings = load_collection(path)
+        holdings = load_collection("")
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]Could not read your collection:[/] {exc}")
         return 0
@@ -293,17 +286,17 @@ def remove_cards(path: Path | str | None = None) -> int:
             continue
 
         if remaining:
-            # dataclass is frozen, so replace the entry rather than mutate it.
-            holdings[index - 1] = replace(holding, quantity=remaining)
             console.print(f"  [bold]Removed.[/] {holding.quantity} -> {remaining} left.")
         else:
-            holdings.pop(index - 1)
             console.print("  [bold]Removed.[/]")
 
-        save_collection(path, holdings)  # written immediately, so a crash can't lose it
+        remove_holding("", index - 1, holding.card_id, holding.variant, sold)
+        
+        # reload for next loop iteration to keep indexes synced
+        holdings = load_collection("")
         changed += 1
 
     if not holdings:
         console.print("\n[dim]Your collection is now empty.[/]")
-    console.print(f"[bold]{changed}[/] change(s) saved to {path.name}.")
+    console.print(f"[bold]{changed}[/] change(s) saved.")
     return changed

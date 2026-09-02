@@ -148,3 +148,8 @@ class PriceChartingProvider(PriceProvider):
                 out.append(Printing(variant=grade, label=label, price_usd=price,
                                     name=str(product.get("product-name") or card_id)))
         return out
+
+    def get_buy_url(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> str | None:
+        """Return a PriceCharting affiliate search URL for this card."""
+        query = urllib.parse.quote_plus(f"one piece {card_id}")
+        return f"{self.base_url}/search-products?q={query}&affiliate_id=YOUR_ID_HERE"

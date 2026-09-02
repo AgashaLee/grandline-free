@@ -12,6 +12,7 @@ currency conversion. Adding it required no change to the business logic.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import os
 import re
@@ -39,6 +40,18 @@ from providers.base import BASE_VARIANT, ProviderPool, get_provider_for
 
 HTML_PATH = config.BASE_DIR / "dashboard.html"
 
+# --- Free site -> paid tracker funnel ---------------------------------------
+#: The free pages (home, database, meta) are public and ad/affiliate supported;
+#: they exist to send visitors to the paid tracker. Both links are
+#: env-overridable so a deploy can retarget them without a code change.
+TRACKER_URL = os.environ.get("TRACKER_URL", "https://optcg-app.up.railway.app")
+WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-store")
+
+#: Pages anyone may read without a Whop membership. Everything else (the
+#: tracker itself and the collection APIs) stays behind the gate.
+PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market"}
+PUBLIC_API = {"/api/database", "/api/meta", "/api/news", "/api/market"}
+
 #: Rebuilding hits the price cache, not the network, but there is no reason to
 #: redo it for every browser poll.
 PAYLOAD_TTL_SECONDS = 60
@@ -59,17 +72,7 @@ _WRITE_LOCK = threading.Lock()
 _ctx = threading.local()
 
 
-def _collection_file_for(user_id: str):
-    """Where a given Whop user's collection lives (a private folder per user)."""
-    safe = re.sub(r"[^A-Za-z0-9_-]", "", user_id) or "anon"
-    return config.COLLECTION_FILE.parent / "users" / safe / "collection.csv"
-
-
-def _current_collection_file():
-    """The collection file for the request in flight -- the logged-in user's in
-    multi-user mode, or the single shared file locally."""
-    return getattr(_ctx, "collection_file", None) or config.COLLECTION_FILE
-
+from database import get_db
 
 def _current_user_key() -> str:
     """Cache/identity key for the request: the user id, or "" single-user."""
@@ -82,25 +85,16 @@ def _invalidate() -> None:
         _CACHE.pop(_current_user_key(), None)
 
 
-def _prefs_file_for(user_id: str):
-    """Per-user preferences (e.g. chosen display currency), beside their cards."""
-    safe = re.sub(r"[^A-Za-z0-9_-]", "", user_id) or "anon"
-    return config.COLLECTION_FILE.parent / "users" / safe / "prefs.json"
-
-
 def _read_user_currency(user_id: str) -> str | None:
-    try:
-        with _prefs_file_for(user_id).open(encoding="utf-8") as fh:
-            return (json.load(fh).get("display_currency") or "").upper() or None
-    except (OSError, ValueError):
-        return None
+    db = get_db()
+    row = db.execute("SELECT display_currency FROM users WHERE id = ?", (user_id,)).fetchone()
+    return (row["display_currency"] or "").upper() if row and row["display_currency"] else None
 
 
 def _write_user_currency(user_id: str, code: str) -> None:
-    path = _prefs_file_for(user_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump({"display_currency": code}, fh)
+    db = get_db()
+    db.execute("INSERT INTO users (id, display_currency) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET display_currency=excluded.display_currency", (user_id, code))
+    db.commit()
 
 
 def _current_display_currency() -> str:
@@ -126,15 +120,27 @@ def _meta() -> dict:
     }
 
 
+def _static(name: str) -> bytes:
+    """Read a file from disk."""
+    return (config.BASE_DIR / name).read_bytes()
+
+
+def _page(name: str) -> bytes:
+    """Read an HTML page, filling in the site-wide funnel links.
+
+    Keeps the Whop/tracker URLs in one place (and env-overridable) instead of
+    hard-coded into three templates.
+    """
+    html = (config.BASE_DIR / name).read_text(encoding="utf-8")
+    return (html.replace("{{TRACKER_URL}}", TRACKER_URL)
+                .replace("{{WHOP_URL}}", WHOP_STORE_URL)).encode("utf-8")
+
+
 def build_payload() -> dict:
     """Price the collection and return everything the page needs."""
     try:
-        holdings = load_collection(_current_collection_file())
-    except FileNotFoundError:
-        # No collection yet -- a fresh install or a fresh Railway deploy. Not an
-        # error; invite the first card instead of showing a scary file path.
-        holdings = []
-    except ValueError as exc:
+        holdings = load_collection(_current_user_key())
+    except Exception as exc:
         return {"error": str(exc), "rows": [], "totals": None, "empty": True, **_meta()}
 
     if not holdings:
@@ -163,6 +169,7 @@ def build_payload() -> dict:
             "card_id": h.card_id,
             "region": h.region,
             "grade": "" if h.grade == "raw" else h.grade,
+            "condition": h.condition,
             "variant": "" if h.variant == BASE_VARIANT else h.variant,
             "qty": h.quantity,
             "buy": round(p.invested, 2),
@@ -177,7 +184,9 @@ def build_payload() -> dict:
             # Trade-in (買取) value in the display currency, and the source's
             # stock flag (False = sold out = a demand signal). Both may be None.
             "buyback": None if p.buyback_value is None else round(p.buyback_value, 2),
+            "buyback_native": None if p.buyback_native is None else round(p.buyback_native, 2),
             "in_stock": p.in_stock,
+            "buy_url": p.buy_url,
         })
 
     return {
@@ -228,6 +237,13 @@ def _grade(payload: dict) -> str:
     if grade not in config.GRADE_CHOICES:
         raise ValueError(f"Unknown grade {grade!r}.")
     return grade
+
+
+def _condition(payload: dict) -> str:
+    cond = str(payload.get("condition") or "nm").strip().lower()
+    if cond not in ("nm", "played"):
+        raise ValueError(f"Unknown condition {cond!r}.")
+    return cond
 
 
 def _int(payload: dict, key: str, default: int | None = None) -> int | None:
@@ -288,12 +304,13 @@ def api_add(payload: dict) -> dict:
         raise ValueError("Pick which version of the card you own.")
     name = printings[variant].name if variant in printings else code
     grade = _grade(payload)
+    condition = _condition(payload)
 
     with _WRITE_LOCK:
-        append_holding(_current_collection_file(),
-                       Holding(name, code, buy, quantity, variant, region, grade, config.DISPLAY_CURRENCY))
+        append_holding(_current_user_key(),
+                       Holding(name, code, buy, quantity, variant, region, grade, condition, config.DISPLAY_CURRENCY))
     _invalidate()
-    return {"added": {"card_id": code, "variant": variant, "region": region, "grade": grade, "quantity": quantity}}
+    return {"added": {"card_id": code, "variant": variant, "region": region, "grade": grade, "condition": condition, "quantity": quantity}}
 
 
 def api_update(payload: dict) -> dict:
@@ -311,19 +328,21 @@ def api_update(payload: dict) -> dict:
 
     # grade is optional on update: only re-validate it if the field was sent.
     grade = _grade(payload) if "grade" in payload else None
+    condition = _condition(payload) if "condition" in payload else None
 
     with _WRITE_LOCK:
         updated = update_holding(
-            _current_collection_file(),
+            _current_user_key(),
             index,
             str(payload.get("card_id", "")),
             str(payload.get("variant") or BASE_VARIANT),
             buy_price=buy,
             quantity=_int(payload, "quantity"),
             grade=grade,
+            condition=condition,
         )
     _invalidate()
-    return {"updated": {"quantity": updated.quantity, "buy_price": updated.buy_price, "grade": updated.grade}}
+    return {"updated": {"quantity": updated.quantity, "buy_price": updated.buy_price, "grade": updated.grade, "condition": updated.condition}}
 
 
 def api_remove(payload: dict) -> dict:
@@ -334,7 +353,7 @@ def api_remove(payload: dict) -> dict:
 
     with _WRITE_LOCK:
         kept = remove_holding(
-            _current_collection_file(),
+            _current_user_key(),
             index,
             str(payload.get("card_id", "")),
             str(payload.get("variant") or BASE_VARIANT),
@@ -390,6 +409,293 @@ def api_image(payload: dict) -> dict:
     return {"card_id": code, "variant": variant, "image": image}
 
 
+def api_deck_cost(payload: dict) -> dict:
+    """Parse a decklist and calculate the cost to finish it based on the user's collection."""
+    decklist_text = str(payload.get("decklist") or "").strip()
+    if not decklist_text:
+        raise ValueError("Please provide a decklist.")
+        
+    # Accept the common decklist formats: "4x OP01-016", "4 OP01-016",
+    # "OP01-016 x4", and code + quantity on SEPARATE lines (what most deck
+    # exporters and onepiecetopdecks produce).
+    QTY = re.compile(r"^x?(\d+)x?$", re.IGNORECASE)
+    CODE = re.compile(r"^([A-Za-z]{1,4}\d{0,2}-\d{1,4})$")
+    tokens = decklist_text.replace(",", " ").split()
+    required: dict[str, int] = {}
+    pending_qty = None
+    i = 0
+    while i < len(tokens):
+        mc = CODE.match(tokens[i])
+        mq = QTY.match(tokens[i])
+        if mc:
+            code = mc.group(1).upper()
+            if pending_qty is not None:
+                qty, pending_qty = pending_qty, None
+            elif i + 1 < len(tokens) and QTY.match(tokens[i + 1]):
+                qty = int(QTY.match(tokens[i + 1]).group(1)); i += 1
+            else:
+                qty = 1
+            required[code] = required.get(code, 0) + qty
+        elif mq:
+            pending_qty = int(mq.group(1))
+        i += 1
+
+    if not required:
+        raise ValueError("Could not find any cards in the decklist. Use format '4x OP01-016'.")
+
+    owned: dict[str, int] = {}
+    holdings = load_collection(_current_user_key())
+    for h in holdings:
+        owned[h.card_id] = owned.get(h.card_id, 0) + h.quantity
+
+    missing: dict[str, int] = {}
+    for code, req_qty in required.items():
+        own = owned.get(code, 0)
+        if own < req_qty:
+            missing[code] = req_qty - own
+
+    cur = _current_display_currency()
+    cache = JsonCache(config.CACHE_FILE, config.CACHE_TTL_HOURS)
+    providers, rates = ProviderPool(cache), fx.RateBook(cache, cur)
+    
+    region = config.DEFAULT_REGION
+    provider = providers(region)
+    rate = rates(provider.currency)
+
+    def _price_card(item):
+        """Best-effort price for one card; a slow/failed lookup yields no price."""
+        code, qty = item
+        try:
+            price = provider.get_price(code)
+        except Exception:
+            price = None
+        try:
+            buy_url = provider.get_buy_url(code)
+        except Exception:
+            buy_url = None
+        try:
+            name = provider.get_card_name(code) or code
+        except Exception:
+            name = code
+        return {
+            "card_id": code,
+            "name": name,
+            "missing_qty": qty,
+            "unit_price": None if price is None else price * rate,
+            "total_cost": None if price is None else price * rate * qty,
+            "buy_url": buy_url,
+        }
+
+    # Price missing cards in parallel so a full deck finishes fast instead of
+    # timing out ("Failed to fetch") on sequential live scrapes.
+    import concurrent.futures as _cf
+    with _cf.ThreadPoolExecutor(max_workers=8) as ex:
+        missing_details = list(ex.map(_price_card, missing.items()))
+    missing_details.sort(key=lambda r: r["card_id"])
+    total_cost = sum(r["total_cost"] for r in missing_details if r["total_cost"])
+
+    return {
+        "required_cards": sum(required.values()),
+        "owned_cards": sum(required.values()) - sum(missing.values()),
+        "missing_cards_total": sum(missing.values()),
+        "total_cost": total_cost,
+        "missing_details": missing_details,
+    }
+
+def api_database(payload: dict) -> dict:
+    """Return the global card catalog for the public Database page.
+
+    A single ``set=OP-01`` filter narrows it to one set (lighter payload).
+
+    ``card_text`` is included for the click-to-zoom detail view. Prices are NOT
+    sent here: the free site hides them (the Buy button goes to Indonesian
+    marketplaces), and market prices stay a paid-tracker feature only.
+    """
+    db = get_db()
+    set_id = (payload.get("set") or "").strip() if isinstance(payload, dict) else ""
+    cols = ("card_id, name, set_id, set_name, rarity, card_type, card_color, "
+            "card_cost, card_power, card_text, attribute, counter, sub_types, "
+            "life, image_url")
+    if set_id:
+        rows = db.execute(f"SELECT {cols} FROM cards WHERE set_id=? ORDER BY card_id", (set_id,)).fetchall()
+    else:
+        rows = db.execute(f"SELECT {cols} FROM cards ORDER BY set_id, card_id").fetchall()
+    cards = [dict(r) for r in rows]
+
+    # Attach event/bonus alternate artwork (shown in the card's zoom, not the grid).
+    # Table may not exist yet if seed_alt_arts.py hasn't been run -- treat as none.
+    try:
+        alt: dict[str, list[str]] = {}
+        for cid, url in db.execute("SELECT card_id, image_url FROM card_alt_arts"):
+            alt.setdefault(cid, []).append(url)
+        for c in cards:
+            arts = alt.get(c["card_id"])
+            if arts:
+                c["alt_arts"] = arts
+    except Exception:
+        pass
+
+    return {"cards": cards}
+
+def api_meta(payload: dict) -> dict:
+    """Return all meta decks with their cards."""
+    import portfolio
+    decks = portfolio.get_meta_decks()
+    return {"decks": decks}
+
+
+#: Cards below this baseline price are excluded from the movers list: a $0.03 ->
+#: $0.06 penny card is a "+100%" mover that means nothing and would swamp the
+#: real signal. Kept modest so genuine sub-$1 movers still show.
+_MOVER_MIN_PRICE = 0.25
+
+
+def api_market(payload: dict) -> dict:
+    """Biggest price gainers / losers for the free Market Watch page.
+
+    Reads the ``price_history`` log written by ``snapshot_prices.py`` and returns
+    percentage movers over a window (default 7 days). Deliberately returns **no
+    dollar prices** -- only percent change, rank and direction -- because raw
+    prices stay a paid-tracker feature on the free site. Exact prices are the
+    upsell.
+
+    Until at least two distinct snapshot days exist the page has nothing to
+    compare, so we return ``ready: False`` and the frontend shows a
+    "collecting data" state instead of an empty table.
+    """
+    db = get_db()
+    try:
+        window = int((payload or {}).get("window", 7))
+    except (TypeError, ValueError):
+        window = 7
+    window = max(1, min(window, 90))
+    limit = 25
+
+    # No history table yet (snapshot job never ran) -> not ready.
+    try:
+        dates = [r[0] for r in db.execute(
+            "SELECT DISTINCT date FROM price_history ORDER BY date").fetchall()]
+    except Exception:
+        return {"ready": False, "reason": "no-history"}
+
+    if len(dates) < 2:
+        return {"ready": False, "reason": "collecting",
+                "days": len(dates), "latest": dates[-1] if dates else None}
+
+    latest = dates[-1]
+    # Baseline = newest snapshot at or before (latest - window); if the log is
+    # younger than the window, fall back to the earliest snapshot we have.
+    cutoff = (_dt.date.fromisoformat(latest) - _dt.timedelta(days=window)).isoformat()
+    baseline = next((d for d in reversed(dates) if d <= cutoff), dates[0])
+    if baseline == latest:
+        baseline = dates[0]
+
+    rows = db.execute(
+        """SELECT n.card_id, c.name, c.set_id, c.set_name, c.rarity,
+                  c.card_type, c.card_color, c.image_url,
+                  o.price AS old_price, n.price AS new_price
+             FROM price_history n
+             JOIN price_history o ON o.card_id = n.card_id AND o.date = ?
+             JOIN cards c        ON c.card_id = n.card_id
+            WHERE n.date = ? AND o.price >= ? AND o.price > 0""",
+        (baseline, latest, _MOVER_MIN_PRICE),
+    ).fetchall()
+
+    movers = []
+    for r in rows:
+        old, new = r["old_price"], r["new_price"]
+        pct = round((new - old) / old * 100, 1)
+        if pct == 0:
+            continue
+        movers.append({
+            "card_id": r["card_id"], "name": r["name"],
+            "set_id": r["set_id"], "set_name": r["set_name"],
+            "rarity": r["rarity"], "card_type": r["card_type"],
+            "card_color": r["card_color"], "image_url": r["image_url"],
+            "pct": pct,
+        })
+
+    movers.sort(key=lambda m: m["pct"], reverse=True)
+    gainers = [m for m in movers if m["pct"] > 0][:limit]
+    losers = [m for m in movers if m["pct"] < 0]
+    losers.sort(key=lambda m: m["pct"])
+    losers = losers[:limit]
+
+    return {
+        "ready": True,
+        "latest": latest,
+        "baseline": baseline,
+        "window": window,
+        "compared": len(movers),
+        "gainers": gainers,
+        "losers": losers,
+    }
+
+
+#: Aggregated One Piece TCG news via Google News RSS (free, no key, legal to
+#: syndicate headlines). Cached in memory so we hit Google at most twice an hour.
+_NEWS_CACHE: dict = {"at": 0.0, "items": []}
+_NEWS_TTL = 1800  # seconds
+_NEWS_URL = ("https://news.google.com/rss/search?"
+             "q=%22one+piece+card+game%22&hl=en-US&gl=US&ceid=US:en")
+
+
+_NEWS_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+
+def _own_posts() -> list:
+    """The site's own featured posts, from an editable own_posts.json.
+    Read fresh each call so edits show up immediately (no 30-min wait)."""
+    try:
+        p = config.BASE_DIR / "own_posts.json"
+        if p.exists():
+            text = (p.read_text(encoding="utf-8")
+                    .replace("{{WHOP_URL}}", WHOP_STORE_URL)
+                    .replace("{{TRACKER_URL}}", TRACKER_URL))
+            data = json.loads(text)
+            return data if isinstance(data, list) else []
+    except Exception:
+        pass
+    return []
+
+
+def api_news(payload: dict | None = None) -> dict:
+    """Return the site's own featured posts + recent OP TCG news headlines
+    (title, source, date, link, thumbnail image)."""
+    featured = _own_posts()
+    now = time.time()
+    if _NEWS_CACHE["items"] and now - _NEWS_CACHE["at"] < _NEWS_TTL:
+        return {"featured": featured, "items": _NEWS_CACHE["items"], "cached": True}
+
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    try:
+        req = urllib.request.Request(_NEWS_URL, headers={"User-Agent": _NEWS_UA})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            root = ET.fromstring(resp.read())
+        items = []
+        for it in root.findall(".//item")[:18]:
+            title = (it.findtext("title") or "").strip()
+            src = it.find("source")
+            source = (src.text or "").strip() if src is not None else ""
+            if source and title.endswith(f" - {source}"):
+                title = title[: -(len(source) + 3)].strip()
+            items.append({
+                "title": title,
+                "link": (it.findtext("link") or "").strip(),
+                "source": source,
+                "date": (it.findtext("pubDate") or "").strip(),
+            })
+        if items:
+            _NEWS_CACHE["items"], _NEWS_CACHE["at"] = items, now
+        return {"featured": featured, "items": items}
+    except Exception:
+        if _NEWS_CACHE["items"]:
+            return {"featured": featured, "items": _NEWS_CACHE["items"], "stale": True}
+        return {"featured": featured, "items": [], "error": "News is unavailable right now — try again soon."}
+
+
 ROUTES = {
     "/api/lookup": api_lookup,
     "/api/add": api_add,
@@ -397,6 +703,11 @@ ROUTES = {
     "/api/remove": api_remove,
     "/api/settings": api_settings,
     "/api/image": api_image,
+    "/api/deck_cost": api_deck_cost,
+    "/api/database": api_database,
+    "/api/meta": api_meta,
+    "/api/market": api_market,
+    "/api/news": api_news,
 }
 
 
@@ -436,7 +747,6 @@ class Handler(BaseHTTPRequestHandler):
         """Point this request at the right user's data. Returns the session
         (or None). Resets to single-user defaults first so a reused worker
         thread never leaks the previous request's user."""
-        _ctx.collection_file = None
         _ctx.user_key = ""
         _ctx.username = ""
         _ctx.display_currency = None
@@ -444,7 +754,6 @@ class Handler(BaseHTTPRequestHandler):
             return None  # single-user / local mode
         session = auth.get_session(self._cookie(auth.COOKIE_SESSION))
         if session:
-            _ctx.collection_file = _collection_file_for(session["user_id"])
             _ctx.user_key = session["user_id"]
             _ctx.username = session.get("username", "")
             _ctx.display_currency = _read_user_currency(session["user_id"])
@@ -501,7 +810,8 @@ class Handler(BaseHTTPRequestHandler):
 
         sid = auth.new_session(user_id, username)
         secure = "; Secure" if os.environ.get("PORT") else ""
-        self._redirect("/", extra_headers=[
+        # Land members on the tracker itself; "/" is now the free homepage.
+        self._redirect("/tracker", extra_headers=[
             ("Set-Cookie", f"{auth.COOKIE_SESSION}={sid}; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax{secure}"),
             ("Set-Cookie", f"{auth.COOKIE_STATE}=; Path=/; Max-Age=0"),
             ("Set-Cookie", f"{auth.COOKIE_VERIFIER}=; Path=/; Max-Age=0"),
@@ -522,19 +832,46 @@ class Handler(BaseHTTPRequestHandler):
             return self._logout()
 
         session = self._bind_context()
-        if auth.WHOP_ENABLED and not session:
+        is_public = (path in PUBLIC_PAGES or path == "/carddetail.js"
+                     or path.startswith("/assets/"))
+        if auth.WHOP_ENABLED and not session and not is_public:
             return self._gate()
 
-        if path.startswith("/api/data"):
+        if path == "/":
+            self._send(200, _page("home.html"), "text/html; charset=utf-8")
+            return
+        elif path in ("/tracker", "/tracker/"):
+            self._send(200, _page("dashboard.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/carddetail.js":
+            self._send(200, _static("carddetail.js"), "application/javascript; charset=utf-8")
+            return
+        elif path == "/database":
+            self._send(200, _page("database.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/meta":
+            self._send(200, _page("meta.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/news":
+            self._send(200, _page("news.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/market":
+            self._send(200, _page("market.html"), "text/html; charset=utf-8")
+            return
+        elif path.startswith("/assets/"):
+            filename = path.replace("/assets/", "")
+            try:
+                body = _static(f"assets/{filename}")
+                self._send(200, body, "image/jpeg")
+            except OSError:
+                self._send(404, b"404 Not Found", "text/plain")
+            return
+        elif path.startswith("/api/data"):
             payload = cached_payload(force="refresh=1" in query)
             self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
             return
 
-        try:
-            body = HTML_PATH.read_bytes()
-        except FileNotFoundError:
-            body = b"<h1>dashboard.html missing</h1>"
-        self._send(200, body, "text/html; charset=utf-8")
+        self._send(404, b"404 Not Found", "text/plain")
 
     def _json(self, status: int, obj: dict) -> None:
         self._send(status, json.dumps(obj).encode("utf-8"), "application/json")
@@ -563,7 +900,7 @@ class Handler(BaseHTTPRequestHandler):
 
         # A write only makes sense for a logged-in user (in multi-user mode).
         session = self._bind_context()
-        if auth.WHOP_ENABLED and not session:
+        if auth.WHOP_ENABLED and not session and path not in PUBLIC_API:
             return self._json(401, {"ok": False, "error": "Please log in.", "login": True})
 
         try:
@@ -606,6 +943,15 @@ def serve(open_browser: bool = True) -> int:
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"TCG portfolio dashboard -> {url}")
     print("Ctrl+C to stop.")
+
+    # When hosted, run the daily price snapshot in-process (see scheduler.py).
+    # Skipped locally so a dev run doesn't fire network jobs on startup.
+    if os.environ.get("PORT") and os.environ.get("DAILY_JOBS", "1") != "0":
+        try:
+            import scheduler
+            scheduler.start()
+        except Exception as exc:
+            print(f"[scheduler] not started: {exc}")
 
     if open_browser and not os.environ.get("PORT"):
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()

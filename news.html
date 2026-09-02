@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>One Piece TCG News - Grand Line</title>
+  <meta name="description" content="The latest One Piece Card Game news — new sets, spoilers, tournaments and product announcements, updated daily.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
+    body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: #e4e4e7; min-height: 100vh; overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 3px solid #e74c3c; padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .header .logo h1 { font-family: 'Fredoka'; font-size: 22px; color: #fff; }
+    .header .logo span { color: #a1a1aa; font-size: 12px; }
+    .header .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .header .nav-btns button {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid #333;
+      background: #1c1c1e; color: #e4e4e7; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .2s;
+    }
+    .header .nav-btns button:hover { background: #2a2a2e; border-color: #555; }
+    .header .nav-btns button.primary { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+    .header .nav-btns button.cta { background: #f6b93b; border-color: #f6b93b; color: #1a1a2e; }
+    .header .nav-btns button.cta:hover { background: #ffd06b; border-color: #ffd06b; }
+
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .section-bar {
+      background: #000; color: #fff; text-align: center; padding: 10px 16px; border-radius: 8px;
+      font-weight: 700; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .section-bar small { display: block; font-size: 11px; font-weight: 400; letter-spacing: 1px; color: #a1a1aa; margin-top: 3px; }
+
+    .subhead { font-family:'Fredoka'; color:#f6b93b; font-size:16px; margin:22px 2px 12px; }
+    .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+    /* News card: themed gradient + a big category icon related to the headline */
+    .ncard {
+      position: relative; border: 1px solid #2a2a30; border-radius: 14px; padding: 18px;
+      display: flex; flex-direction: column; justify-content: flex-end; transition: all .2s;
+      min-height: 190px; overflow: hidden;
+    }
+    .ncard:hover { border-color: #e74c3c; transform: translateY(-2px); }
+    .ncard > * { position: relative; z-index: 1; }
+    .ncard .nicon { position: absolute; top: 10px; right: 14px; font-size: 40px; opacity: .9;
+      z-index: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
+    .ncard .src { display: inline-block; align-self: flex-start; background: rgba(0,0,0,.4);
+      color: #ffd06b; border: 1px solid rgba(246,185,59,.4); border-radius: 20px;
+      padding: 3px 10px; font-size: 10.5px; font-weight: 700; margin-bottom: 10px; }
+    .ncard h3 { font-family: 'Inter'; font-size: 15.5px; font-weight: 700; color: #fff; line-height: 1.4;
+      text-shadow: 0 1px 5px rgba(0,0,0,.5); }
+    .ncard .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    .ncard .date { color: #d7d7de; font-size: 11.5px; }
+    .ncard .read { color: #ffd06b; font-size: 12px; font-weight: 700; }
+    /* category themes */
+    .cat-set{background:linear-gradient(140deg,#3a2c6e 0%,#181826 75%)}
+    .cat-meta{background:linear-gradient(140deg,#7a5a1e 0%,#181826 75%)}
+    .cat-product{background:linear-gradient(140deg,#155e63 0%,#181826 75%)}
+    .cat-collab{background:linear-gradient(140deg,#7a1f2b 0%,#181826 75%)}
+    .cat-anniv{background:linear-gradient(140deg,#8a4b12 0%,#181826 75%)}
+    .cat-price{background:linear-gradient(140deg,#1e6b3a 0%,#181826 75%)}
+    .cat-default{background:linear-gradient(140deg,#2b2b3e 0%,#181826 75%)}
+
+    /* Your own featured posts — wider, distinct */
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .fcardp { position: relative; border-radius: 14px; overflow: hidden; min-height: 240px;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 22px;
+      background-size: cover; background-position: center; border: 2px solid #f6b93b; }
+    .fcardp::before { content:''; position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(26,26,46,.35) 0%, rgba(26,26,46,.9) 100%); }
+    .fcardp.nobg { background: linear-gradient(135deg,#1a1a2e,#16213e); }
+    .fcardp > * { position: relative; z-index:1; }
+    .fcardp .tag { align-self:flex-start; background:#f6b93b; color:#1a1a2e; font-weight:700;
+      font-size:10px; letter-spacing:.5px; text-transform:uppercase; padding:3px 9px; border-radius:20px; margin-bottom:10px; }
+    .fcardp h3 { font-family:'Fredoka'; font-size:19px; color:#fff; line-height:1.3; text-shadow:0 1px 6px rgba(0,0,0,.7); }
+    .fcardp p { color:#dcdce4; font-size:12.5px; line-height:1.6; margin-top:8px; text-shadow:0 1px 5px rgba(0,0,0,.7); }
+    .fcardp .date { color:#c9c9d1; font-size:11px; margin-top:12px; }
+
+    .loading, .empty { color: #a1a1aa; text-align: center; padding: 50px 20px; }
+
+    .gl-footer { border-top: 1px solid #26262e; margin-top: 44px; padding: 30px 24px 40px; text-align: center; }
+    .gl-cta { display: inline-block; background: #f6b93b; color: #1a1a2e; font-weight: 700;
+      font-size: 14px; padding: 13px 26px; border-radius: 10px; text-decoration: none; }
+    .gl-cta:hover { background: #ffd06b; }
+    .gl-legal { color: #6f6f7a; font-size: 11.5px; line-height: 1.8; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <h1>🏴‍☠️ Grand Line</h1>
+      <span>One Piece TCG prices, sets &amp; meta</span>
+    </div>
+    <div class="nav-btns">
+      <a href="/"><button>🏠 Home</button></a>
+      <a href="/database"><button>🗃️ Card Database</button></a>
+      <a href="/market"><button>📈 Market Watch</button></a>
+      <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/news"><button class="primary">📰 News</button></a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="section-bar">One Piece TCG News<small>New sets · spoilers · tournaments · products</small></div>
+    <div id="content"><div class="loading">Loading the latest news…</div></div>
+  </div>
+
+  <footer class="gl-footer">
+    <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
+      &#9733; Track your collection with the Grand Line tracker &mdash; $1.99/mo
+    </a>
+    <div class="gl-legal">
+      News headlines are aggregated from public sources; each links to its original publisher.<br>
+      Grand Line is a fan-made project, not endorsed by or affiliated with Bandai Namco or Toei Animation.
+    </div>
+  </footer>
+
+  <script>
+    function esc(s){ return String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // "Wed, 01 Sep 2026 12:00:00 GMT" -> "Sep 1, 2026"
+    function fmtDate(s){
+      const d = new Date(s);
+      if (isNaN(d)) return '';
+      return d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+    }
+
+    function bgStyle(url){ return url ? `style="background-image:url('${esc(url)}')"` : ''; }
+
+    // Pick an icon + colour theme that relates to the headline.
+    function categorize(title){
+      const t = (title || '').toLowerCase();
+      if (/collab|collaborat|crossover/.test(t))              return {icon:'🤝', cls:'cat-collab'};
+      if (/anniversary|celebrat|birthday/.test(t))            return {icon:'🎉', cls:'cat-anniv'};
+      if (/figure|gashapon|capsule|plush|merch|collection 2|product|sleeve|playmat/.test(t))
+                                                              return {icon:'🎁', cls:'cat-product'};
+      if (/tier|meta|tournament|deck|champion|winner|top \d|standings/.test(t))
+                                                              return {icon:'🏆', cls:'cat-meta'};
+      if (/best-selling|price|value|expensive|worth|market|chase|sold/.test(t))
+                                                              return {icon:'💰', cls:'cat-price'};
+      if (/reveal|new set|spoiler|announc|unveil|art from|illustrat|preview|release/.test(t))
+                                                              return {icon:'🎴', cls:'cat-set'};
+      return {icon:'🗞️', cls:'cat-default'};
+    }
+
+    async function load(){
+      try {
+        const res = await fetch('/api/news', {method:'POST', body:'{}'});
+        const data = await res.json();
+        const featured = (data && data.featured) || [];
+        const items = (data && data.items) || [];
+        let html = '';
+
+        // Your own posts first
+        if (featured.length){
+          html += '<div class="subhead">📌 From Grand Line</div><div class="feat-grid">';
+          for (const f of featured){
+            const tag = `<a class="fcardp ${f.image?'':'nobg'}" ${bgStyle(f.image)} href="${esc(f.link||'#')}" target="_blank" rel="noopener">
+              <span class="tag">Grand Line</span>
+              <h3>${esc(f.title)}</h3>
+              ${f.body ? `<p>${esc(f.body)}</p>` : ''}
+              ${f.date ? `<div class="date">${esc(fmtDate(f.date))}</div>` : ''}
+            </a>`;
+            html += f.link ? tag : tag.replace('<a ','<div ').replace('</a>','</div>');
+          }
+          html += '</div>';
+        }
+
+        // Aggregated news
+        if (items.length){
+          html += '<div class="subhead">🗞️ Latest news</div><div class="news-grid">';
+          for (const n of items){
+            const c = categorize(n.title);
+            html += `<a class="ncard ${c.cls}" href="${esc(n.link)}" target="_blank" rel="noopener">
+              <span class="nicon">${c.icon}</span>
+              ${n.source ? `<span class="src">${esc(n.source)}</span>` : ''}
+              <h3>${esc(n.title)}</h3>
+              <div class="meta"><span class="date">${esc(fmtDate(n.date))}</span><span class="read">Read →</span></div>
+            </a>`;
+          }
+          html += '</div>';
+        } else if (!featured.length){
+          html = `<div class="empty">${esc((data && data.error) || 'No news right now — check back soon.')}</div>`;
+        }
+        document.getElementById('content').innerHTML = html;
+      } catch (e) {
+        document.getElementById('content').innerHTML =
+          '<div class="empty">Couldn\'t load news. Please try again later.</div>';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

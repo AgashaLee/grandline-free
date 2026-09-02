@@ -8,6 +8,7 @@ cards, prices or currencies. Both the price layer and the FX layer use it.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ class JsonCache:
         self.path = Path(path)
         self.ttl_seconds = ttl_hours * 3600.0
         self._data: dict[str, dict[str, Any]] = self._load()
+        self._lock = threading.Lock()  # guards concurrent set()/_flush (parallel pricing)
 
     # --- persistence ----------------------------------------------------
     def _load(self) -> dict[str, dict[str, Any]]:
@@ -67,8 +69,9 @@ class JsonCache:
         return entry.get("value") if entry else None
 
     def set(self, key: str, value: Any) -> None:
-        self._data[key] = {"value": value, "timestamp": time.time()}
-        self._flush()
+        with self._lock:
+            self._data[key] = {"value": value, "timestamp": time.time()}
+            self._flush()
 
     def age_seconds(self, key: str) -> float | None:
         """Age of an entry in seconds, or ``None`` if missing/malformed."""

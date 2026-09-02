@@ -7,13 +7,12 @@ provider swap and the (later) Pokemon support drop-in changes.
 
 from __future__ import annotations
 
-import csv
-import shutil
 import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import config
+from database import get_db
 from providers.base import BASE_VARIANT, PriceProvider
 
 REQUIRED_COLUMNS = ("name", "card_id", "quantity")
@@ -21,7 +20,7 @@ REQUIRED_COLUMNS = ("name", "card_id", "quantity")
 #: ones use ``buy_price`` + ``buy_currency``. Both are read; the new pair is
 #: always written.
 LEGACY_PRICE_COLUMN = "buy_price_idr"
-WRITE_COLUMNS = ("name", "card_id", "region", "variant", "grade",
+WRITE_COLUMNS = ("name", "card_id", "region", "variant", "grade", "condition",
                  "buy_price", "buy_currency", "quantity")
 
 #: A card that has not been professionally graded. Anything else ("psa-10",
@@ -49,6 +48,7 @@ class Holding:
     variant: str = BASE_VARIANT
     region: str = config.DEFAULT_REGION
     grade: str = RAW_GRADE
+    condition: str = "nm"
     #: What the buyer actually paid in. Stored per row so that changing the
     #: display currency later never rewrites purchase history. Resolved when the
     #: Holding is built (not frozen at import), so it tracks the live setting.
@@ -83,6 +83,7 @@ class PricedHolding:
     #: whether the source currently stocks it. Both optional (None = unknown).
     buyback_native: float | None = None
     in_stock: bool | None = None
+    buy_url: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -148,204 +149,167 @@ class PortfolioTotals:
         return self.pl / self.invested * 100.0
 
 
-def load_collection(path: Path | str) -> list[Holding]:
-    """Read collection.csv into :class:`Holding` objects.
-
-    Raises:
-        FileNotFoundError: if the file is missing.
-        ValueError: if required columns are absent.
-    """
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Collection file not found: {path}")
-
+def load_collection(user_id: str) -> list[Holding]:
+    """Read holdings from the database."""
+    db = get_db()
+    # Order by ID so the array index is stable
+    rows = db.execute("SELECT * FROM collections WHERE user_id = ? ORDER BY id ASC", (user_id,)).fetchall()
+    
     holdings: list[Holding] = []
-    with path.open("r", encoding="utf-8-sig", newline="") as fh:
-        reader = csv.DictReader(fh)
-        fields = {(f or "").strip().lower() for f in (reader.fieldnames or [])}
-        missing = [c for c in REQUIRED_COLUMNS if c not in fields]
-        if "buy_price" not in fields and LEGACY_PRICE_COLUMN not in fields:
-            missing.append("buy_price")
-        if missing:
-            raise ValueError(f"{path} is missing required column(s): {', '.join(missing)}")
-
-        for line_no, row in enumerate(reader, start=2):
-            clean = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
-            card_id = clean.get("card_id", "")
-            if not card_id:
-                continue  # skip blank/padding rows
-            # A file written before multi-currency used the legacy column and
-            # meant rupiah; honour that rather than silently relabelling it as
-            # whatever the current display currency happens to be.
-            if clean.get("buy_price"):
-                price = clean["buy_price"]
-                paid_in = (clean.get("buy_currency") or config.DISPLAY_CURRENCY).upper()
-            else:
-                price = clean.get(LEGACY_PRICE_COLUMN) or "0"
-                paid_in = (clean.get("buy_currency") or "IDR").upper()
-
-            try:
-                holdings.append(
-                    Holding(
-                        name=clean.get("name") or card_id,
-                        card_id=card_id.upper(),
-                        buy_price=float(price or 0),
-                        buy_currency=paid_in,
-                        quantity=int(float(clean.get("quantity") or 0)),
-                        # Files written before variants existed mean "normal print".
-                        variant=clean.get("variant") or BASE_VARIANT,
-                        # ...and before regions existed, they mean the default.
-                        region=(clean.get("region") or config.DEFAULT_REGION).lower(),
-                        # ...and before grading, every card is raw.
-                        grade=(clean.get("grade") or RAW_GRADE).lower(),
-                    )
-                )
-            except ValueError as exc:
-                raise ValueError(f"{path} line {line_no}: invalid number ({exc})") from None
-
+    for row in rows:
+        holdings.append(
+            Holding(
+                name=row["name"],
+                card_id=row["card_id"],
+                buy_price=row["buy_price"],
+                buy_currency=row["buy_currency"],
+                quantity=row["quantity"],
+                variant=row["variant"],
+                region=row["region"],
+                grade=row["grade"],
+                condition=row["condition"],
+            )
+        )
     return holdings
 
 
-#: How many timestamped backups of collection.csv to keep.
-BACKUP_KEEP = 10
-
-
-def _backup(path: Path) -> None:
-    """Copy the current collection aside before it is overwritten.
-
-    Every write rewrites the whole file, so a bug (or a second process) could
-    otherwise drop rows with no way back. Keeping the last few versions makes
-    that recoverable. Backups live in a ``backups/`` subfolder next to the file.
-    """
-    if not path.exists() or path.stat().st_size == 0:
-        return
-    backups = path.parent / "backups"
-    backups.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    try:
-        shutil.copy2(path, backups / f"{path.stem}-{stamp}{path.suffix}")
-    except OSError:
-        return  # a failed backup must never block the actual save
-
-    # Prune to the newest BACKUP_KEEP so the folder can't grow without bound.
-    saved = sorted(backups.glob(f"{path.stem}-*{path.suffix}"))
-    for old in saved[:-BACKUP_KEEP]:
-        try:
-            old.unlink()
-        except OSError:
-            pass
-
-
-def save_collection(path: Path | str, holdings: list[Holding]) -> None:
-    """Rewrite collection.csv from scratch (used when selling/removing cards)."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    _backup(path)  # snapshot the previous version before replacing it
-    with path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.writer(fh)
-        writer.writerow(WRITE_COLUMNS)
-        for h in holdings:
-            # Currencies with no minor unit (IDR/JPY) round to whole numbers;
-            # dollars and euros keep their cents.
-            decimals = config.currency_format(h.buy_currency)[1]
-            price = round(h.buy_price, decimals) if decimals else round(h.buy_price)
-            writer.writerow([h.name, h.card_id, h.region, h.variant, h.grade,
-                             price, h.buy_currency, h.quantity])
-
-
-def append_holding(path: Path | str, holding: Holding) -> None:
-    """Append one card to collection.csv, creating it with a header if needed."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists() or path.stat().st_size == 0:
-        save_collection(path, [holding])
-        return
-
-    # An older file may lack the variant column; rewrite it so the appended row
-    # lines up with the header instead of silently shifting every field.
-    existing = load_collection(path)
-    save_collection(path, [*existing, holding])
+def append_holding(user_id: str, holding: Holding) -> None:
+    """Append one card to the database."""
+    db = get_db()
+    db.execute("""
+        INSERT INTO collections (user_id, card_id, name, region, variant, grade, condition, buy_price, buy_currency, quantity)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, holding.card_id, holding.name, holding.region, holding.variant, holding.grade, holding.condition, holding.buy_price, holding.buy_currency, holding.quantity))
+    db.commit()
 
 
 class CollectionChanged(RuntimeError):
-    """The targeted row is gone or no longer what the caller thought it was.
-
-    Rows are addressed by position, so a stale browser tab could otherwise
-    edit or delete the wrong card. Every mutation re-checks identity first.
-    """
+    """The targeted row is gone or no longer what the caller thought it was."""
 
 
-def _verify(path: Path | str, index: int, card_id: str, variant: str) -> tuple[list[Holding], Holding]:
-    holdings = load_collection(path)
-    if not 0 <= index < len(holdings):
+def get_market_data(card_id: str, provider: str = "tcgplayer") -> dict:
+    """Return latest market data for a card, or None if not found."""
+    db = get_db()
+    row = db.execute("SELECT * FROM market_data WHERE card_id = ? AND provider = ? ORDER BY date DESC LIMIT 1", (card_id, provider)).fetchone()
+    if not row:
+        return None
+    return dict(row)
+
+# ---------------------------------------------------------
+# META DECKS
+# ---------------------------------------------------------
+
+def save_meta_deck(deck: dict):
+    """Save a meta deck and its cards to the database."""
+    db = get_db()
+    # Insert deck
+    db.execute('''
+        INSERT OR REPLACE INTO meta_decks (id, event_date, country, event_name, event_type, players, winner, leader_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (deck["id"], deck.get("event_date", ""), deck.get("country", ""), deck.get("event_name", ""), 
+          deck.get("event_type", ""), deck.get("players", ""), deck.get("winner", ""), deck.get("leader_id", "")))
+    
+    # Delete old cards for this deck
+    db.execute('DELETE FROM meta_deck_cards WHERE deck_id = ?', (deck["id"],))
+    
+    # Insert new cards
+    for card in deck.get("cards", []):
+        db.execute('''
+            INSERT INTO meta_deck_cards (deck_id, card_id, quantity)
+            VALUES (?, ?, ?)
+        ''', (deck["id"], card["card_id"], card["quantity"]))
+    
+    db.commit()
+
+def get_meta_decks() -> list:
+    """Fetch all meta decks with their card lists."""
+    db = get_db()
+    deck_rows = db.execute("SELECT * FROM meta_decks").fetchall()
+    
+    decks = []
+    for r in deck_rows:
+        deck = dict(r)
+        card_rows = db.execute("SELECT card_id, quantity FROM meta_deck_cards WHERE deck_id = ?", (deck["id"],)).fetchall()
+        deck["cards"] = [dict(cr) for cr in card_rows]
+        decks.append(deck)
+        
+    return decks
+
+
+def _verify_db(user_id: str, index: int, card_id: str, variant: str) -> dict:
+    db = get_db()
+    rows = db.execute("SELECT * FROM collections WHERE user_id = ? ORDER BY id ASC", (user_id,)).fetchall()
+    if not 0 <= index < len(rows):
         raise CollectionChanged("That card is no longer in your collection - refresh the page.")
-    holding = holdings[index]
-    if holding.card_id != card_id.upper() or holding.variant != variant:
+    
+    row = rows[index]
+    if row["card_id"] != card_id.upper() or row["variant"] != variant:
         raise CollectionChanged("Your collection changed since this page loaded - refresh it.")
-    return holdings, holding
+    return row
 
 
 def update_holding(
-    path: Path | str,
+    user_id: str,
     index: int,
     card_id: str,
     variant: str,
     buy_price: float | None = None,
     quantity: int | None = None,
     grade: str | None = None,
+    condition: str | None = None,
     buy_currency: str | None = None,
 ) -> Holding:
-    """Change the buy price, quantity, grade and/or buy currency of one row."""
-    holdings, holding = _verify(path, index, card_id, variant)
+    """Change the buy price, quantity, grade, condition and/or buy currency of one row."""
+    row = _verify_db(user_id, index, card_id, variant)
 
-    new_price = holding.buy_price if buy_price is None else float(buy_price)
-    new_qty = holding.quantity if quantity is None else int(quantity)
+    new_price = row["buy_price"] if buy_price is None else float(buy_price)
+    new_qty = row["quantity"] if quantity is None else int(quantity)
+    new_grade = row["grade"] if grade is None else str(grade).lower()
+    new_cond = row["condition"] if condition is None else str(condition).lower()
+    new_curr = row["buy_currency"] if buy_currency is None else str(buy_currency).upper()
+
     if new_price < 0:
         raise ValueError("Buy price cannot be negative.")
     if new_qty < 1:
         raise ValueError("Quantity must be at least 1. Remove the card instead.")
 
-    # replace() carries every other field across, so region/grade/currency
-    # can never be dropped by forgetting a positional argument.
-    updated = replace(
-        holding,
-        buy_price=new_price,
-        quantity=new_qty,
-        grade=holding.grade if grade is None else str(grade).lower(),
-        buy_currency=holding.buy_currency if buy_currency is None else str(buy_currency).upper(),
-    )
-    holdings[index] = updated
-    save_collection(path, holdings)
-    return updated
+    db = get_db()
+    db.execute("""
+        UPDATE collections
+        SET buy_price = ?, quantity = ?, grade = ?, condition = ?, buy_currency = ?
+        WHERE id = ?
+    """, (new_price, new_qty, new_grade, new_cond, new_curr, row["id"]))
+    db.commit()
+
+    return Holding(row["name"], row["card_id"], new_price, new_qty, variant, row["region"], new_grade, new_cond, new_curr)
 
 
 def remove_holding(
-    path: Path | str,
+    user_id: str,
     index: int,
     card_id: str,
     variant: str,
     quantity: int | None = None,
 ) -> Holding | None:
     """Sell all or part of a row. Returns what remains, or ``None`` if gone."""
-    holdings, holding = _verify(path, index, card_id, variant)
+    row = _verify_db(user_id, index, card_id, variant)
 
-    sold = holding.quantity if quantity is None else int(quantity)
+    sold = row["quantity"] if quantity is None else int(quantity)
     if sold < 1:
         raise ValueError("Sell at least one card.")
-    sold = min(sold, holding.quantity)
+    sold = min(sold, row["quantity"])
 
-    remaining = holding.quantity - sold
-    if remaining:
-        # replace() keeps region/grade/currency; building a new Holding
-        # positionally here used to silently reset them.
-        kept = replace(holding, quantity=remaining)
-        holdings[index] = kept
+    remaining = row["quantity"] - sold
+    db = get_db()
+    
+    if remaining > 0:
+        db.execute("UPDATE collections SET quantity = ? WHERE id = ?", (remaining, row["id"]))
+        db.commit()
+        return Holding(row["name"], row["card_id"], row["buy_price"], remaining, variant, row["region"], row["grade"], row["condition"], row["buy_currency"])
     else:
-        kept = None
-        holdings.pop(index)
-
-    save_collection(path, holdings)
-    return kept
+        db.execute("DELETE FROM collections WHERE id = ?", (row["id"],))
+        db.commit()
+        return None
 
 
 def price_collection(
@@ -373,7 +337,7 @@ def price_collection(
             if holding.grade != RAW_GRADE and not getattr(provider, "grades", False):
                 price = None
             else:
-                price = provider.get_price(holding.card_id, holding.variant, holding.grade)
+                price = provider.get_price(holding.card_id, holding.variant, holding.grade, holding.condition)
             currency, rate = provider.currency, rate_for(provider.currency)
         except Exception:
             # An unknown region or an unavailable rate marks the row ERROR
@@ -393,15 +357,20 @@ def price_collection(
         buyback = in_stock = None
         if price is not None:
             try:
-                buyback = provider.get_buyback(holding.card_id, holding.variant, holding.grade)
-                in_stock = provider.get_stock(holding.card_id, holding.variant, holding.grade)
+                buyback = provider.get_buyback(holding.card_id, holding.variant, holding.grade, holding.condition)
+                in_stock = provider.get_stock(holding.card_id, holding.variant, holding.grade, holding.condition)
             except Exception:
                 buyback = in_stock = None
+
+        try:
+            buy_url = provider.get_buy_url(holding.card_id, holding.variant, holding.grade, holding.condition)
+        except Exception:
+            buy_url = None
 
         result = PricedHolding(
             holding=holding, market_native=price, currency=currency,
             market_rate=rate, buy_rate=buy_rate, display_currency=dc,
-            buyback_native=buyback, in_stock=in_stock,
+            buyback_native=buyback, in_stock=in_stock, buy_url=buy_url,
         )
         priced.append(result)
         if on_priced:

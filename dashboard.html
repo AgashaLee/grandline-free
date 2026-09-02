@@ -202,6 +202,11 @@
       <h1>👒 One Piece TCG Portfolio</h1>
       <div class="sub" id="sub">loading…</div>
     </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a href="/tracker"><button class="primary" style="padding:4px 8px;font-size:11px">🏠 Tracker</button></a>
+      <a href="/database"><button style="padding:4px 8px;font-size:11px">🗃️ Database</button></a>
+      <a href="/meta"><button style="padding:4px 8px;font-size:11px">🏆 Meta</button></a>
+    </div>
     <div style="display:flex;align-items:center;gap:14px">
       <select id="themePicker" onchange="applyTheme(this.value)" title="Theme">
         <option value="light">☀️ Light</option>
@@ -209,6 +214,8 @@
         <option value="wanted">📜 Wanted Poster</option>
       </select>
       <select id="curPicker" onchange="setCurrency(this.value)" title="Reporting currency"></select>
+      <button id="modeBtn" onclick="toggleMode()" title="Toggle pricing mode">🏷️ Market Value</button>
+      <button class="primary" onclick="toggleDeckBuilder()">🔨 Deck Builder</button>
       <button class="primary" onclick="toggleAdd()">+ Add card</button>
       <button onclick="load(true)">Refresh</button>
       <a id="logoutLink" href="/whop/logout" style="display:none"><button>Log out</button></a>
@@ -217,6 +224,18 @@
   </div>
 
   <div class="wrap">
+    <div class="panel" id="deckPanel" style="display:none">
+      <h3 style="display:flex;align-items:center;justify-content:space-between">
+        <span>Deck Builder: Cost to Finish</span>
+        <button class="close" onclick="toggleDeckBuilder()" title="Close (Esc)">&times;</button>
+      </h3>
+      <div class="hint">Paste your decklist to see which cards you are missing and how much it will cost to finish the deck. Format: <code>4x OP01-016</code></div>
+      <textarea id="decklist" rows="10" style="width:100%;margin:10px 0;padding:10px;background:var(--input-bg);color:var(--ink);border:2px solid var(--line);border-radius:8px;font-family:monospace" placeholder="4x OP01-016&#10;4x OP01-120"></textarea>
+      <button class="primary" id="calcDeckBtn" onclick="calcDeckCost()">Calculate Cost</button>
+      <div id="deckBody" style="margin-top:14px"></div>
+      <div class="msg" id="deckMsg"></div>
+    </div>
+
     <div class="panel" id="addPanel" style="display:none">
       <h3 style="display:flex;align-items:center;justify-content:space-between">
         <span>Add a card</span>
@@ -293,11 +312,23 @@ const gradeSelect = (id, selected) => `<select id="${id}">` +
   (DATA?.grades || ['raw']).map(g =>
     `<option value="${g}"${g === selected ? ' selected' : ''}>${gradeLabel(g)}</option>`).join('') +
   '</select>';
+const conditionSelect = (id, selected) => `<select id="${id}">
+  <option value="nm"${selected === 'nm' ? ' selected' : ''}>NM</option>
+  <option value="played"${selected === 'played' ? ' selected' : ''}>Played</option>
+  </select>`;
 
 let DATA = null, sortKey = 'pl', sortDir = -1;
 let LOOKUP = null, PICKED = null, EDITING = null, SELLING = null;
 let PAGE = 1, QUERY = '';
+let PRICING_MODE = 'market';
 const PAGE_SIZE = 20;
+
+function toggleMode() {
+  PRICING_MODE = PRICING_MODE === 'market' ? 'tradein' : 'market';
+  const btn = document.getElementById('modeBtn');
+  if (btn) btn.innerHTML = PRICING_MODE === 'market' ? '🏷️ Market Value' : '💵 Trade-in Value';
+  render();
+}
 
 function setQuery(v) { QUERY = v; PAGE = 1; render(); }
 function gotoPage(p) { PAGE = p; render(); }
@@ -441,10 +472,12 @@ function renderAddBody() {
       <input type="number" id="addQty" value="1" min="1" style="width:80px">
       <label>Grade</label>
       ${gradeSelect('addGrade', 'raw')}
+      <label>Condition</label>
+      ${conditionSelect('addCondition', 'nm')}
       <button class="primary" onclick="saveAdd()">Save card</button>
     </div>
     <div class="hint">Leave Grade as “Raw” unless the card is in a PSA/BGS slab.
-      Graded-card pricing is coming soon.</div>`;
+      Set Condition to “Played” for damaged cards (discounted price).</div>`;
   document.getElementById('addBuy').focus();
 }
 
@@ -456,6 +489,7 @@ async function saveAdd() {
       region: LOOKUP.region,
       variant: PICKED,
       grade: document.getElementById('addGrade').value,
+      condition: document.getElementById('addCondition').value,
       buy_price: document.getElementById('addBuy').value,
       quantity: document.getElementById('addQty').value,
     });
@@ -465,6 +499,48 @@ async function saveAdd() {
     LOOKUP = PICKED = null;
     await load(true);
   } catch (e) { setMsg('addMsg', e.message, 'bad'); }
+}
+
+/* ---------- deck builder ---------- */
+function toggleDeckBuilder() {
+  const p = document.getElementById('deckPanel');
+  const open = p.style.display === 'none';
+  p.style.display = open ? '' : 'none';
+  if (open) { document.getElementById('decklist').focus(); }
+  else { document.getElementById('deckBody').innerHTML = ''; setMsg('deckMsg', ''); }
+}
+
+async function calcDeckCost() {
+  const text = document.getElementById('decklist').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('calcDeckBtn');
+  btn.disabled = true; setMsg('deckMsg', 'Calculating…');
+  document.getElementById('deckBody').innerHTML = '';
+  try {
+    const res = await post('/api/deck_cost', {decklist: text});
+    
+    let html = `<div class="warm" style="padding:16px;text-align:left;font-size:13px;border-color:var(--sea);color:var(--ink)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:10px">Deck Summary</div>
+      <div>You own: <strong>${res.owned_cards}</strong> / ${res.required_cards} cards</div>
+      <div>Missing: <strong>${res.missing_cards_total}</strong> cards</div>
+      <div style="margin-top:10px;font-size:16px;color:var(--head-text)">Total Cost to Finish: <strong>${fmtIDR(res.total_cost)}</strong></div>
+    </div>`;
+    
+    if (res.missing_details && res.missing_details.length > 0) {
+      html += `<table style="margin-top:16px"><thead><tr><th class="left">Missing Card</th><th>Qty</th><th>Cost</th><th></th></tr></thead><tbody>`;
+      for (const m of res.missing_details) {
+        html += `<tr><td class="card-name">${esc(m.name)}</td><td data-label="Qty">${m.missing_qty}</td><td data-label="Cost">${fmtIDR(m.total_cost)}</td><td class="act">${m.buy_url ? `<a href="${m.buy_url}" target="_blank"><button class="mini primary">🛒 Buy</button></a>` : ''}</td></tr>`;
+      }
+      html += `</tbody></table>`;
+    } else {
+      html += `<div class="msg good" style="margin-top:10px">You own the entire deck!</div>`;
+    }
+    
+    document.getElementById('deckBody').innerHTML = html;
+    setMsg('deckMsg', '');
+  } catch (e) {
+    setMsg('deckMsg', e.message, 'bad');
+  } finally { btn.disabled = false; }
 }
 
 /* ---------- edit / sell ---------- */
@@ -479,6 +555,7 @@ async function saveEdit(index, cardId, variant) {
       buy_price: document.getElementById('editBuy').value,
       quantity: document.getElementById('editQty').value,
       grade: document.getElementById('editGrade').value,
+      condition: document.getElementById('editCondition').value,
     });
     EDITING = null;
     await load(true);
@@ -522,18 +599,22 @@ function render() {
     return typeof x === 'string' ? sortDir * x.localeCompare(y) : sortDir * (x - y);
   });
 
+  const totVal = PRICING_MODE === 'tradein' ? t.sell_value : t.value;
+  const totPL = totVal - t.invested;
+  const totPLPct = t.invested > 0 ? (totPL / t.invested) * 100 : null;
+
   const cards = `
     <div class="cards">
       <div class="card"><h3>Invested</h3><div class="big">${fmtIDR(t.invested)}</div>
         <div class="note">${t.cards} card${t.cards === 1 ? '' : 's'}</div></div>
-      <div class="card"><h3>Current value</h3><div class="big">${fmtIDR(t.value)}</div>
+      <div class="card"><h3>${PRICING_MODE === 'market' ? 'Current value' : 'Trade-in value'}</h3><div class="big">${fmtIDR(totVal)}</div>
         <div class="note">${Object.entries(d.rates || {})
           .filter(([c]) => c !== d.display_currency)   // a currency's rate to itself is 1
           .map(([c, r]) => `${c}/${d.display_currency} ${r < 1 ? r.toPrecision(3) : r.toLocaleString('en-US')}`)
-          .join(' · ') || esc(d.display_currency)}${(() => { const l = fxLabel(d.fx_source); return l ? ' · ' + l : ''; })()}</div>${t.sell_value > 0 ? `<div class="note tradein-sum">↩ ${fmtIDR(t.sell_value)} <span style="opacity:.7">if sold today (trade-in)</span></div>` : ''}</div>
+          .join(' · ') || esc(d.display_currency)}${(() => { const l = fxLabel(d.fx_source); return l ? ' · ' + l : ''; })()}</div>${PRICING_MODE === 'market' && t.sell_value > 0 ? `<div class="note tradein-sum">↩ ${fmtIDR(t.sell_value)} <span style="opacity:.7">if sold today (trade-in)</span></div>` : ''}</div>
       <div class="card"><h3>Profit / Loss</h3>
-        <div class="big ${cls(t.pl)}">${fmtPL(t.pl)}</div>
-        <div class="note ${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</div></div>
+        <div class="big ${cls(totPL)}">${fmtPL(totPL)}</div>
+        <div class="note ${cls(totPLPct)}">${fmtPct(totPLPct)}</div></div>
     </div>`;
 
   const head = [
@@ -556,10 +637,11 @@ function render() {
   const body = pageRows.map(r => {
     const variant = r.variant ? `<span class="pill par">${esc(r.variant)}</span>` : '';
     const grade = r.grade ? `<span class="pill grd">${esc(r.grade.toUpperCase())}</span>` : '';
+    const cond = (r.condition && r.condition !== 'nm') ? `<span class="pill">${esc(r.condition.toUpperCase())}</span>` : '';
     const region = `<span class="pill rg">${esc((r.region || '').toUpperCase())}</span>`;
     const stock = (r.in_stock === false)
-      ? `<span class="pill sold" title="Sold out at the source — a demand / scarcity signal">SOLD OUT</span>` : '';
-    const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${variant}${stock}</td>
+      ? `<span class="pill sold" title="Sold out at the source — a demand / scarcity signal">🔥 SOLD OUT</span>` : '';
+    const name = `<td class="card-name"><span class="cardlink" onclick="showImage(${r.index})" title="Show card image">${esc(r.name)}</span>${region}${grade}${cond}${variant}${stock}</td>
                   <td class="id" data-label="ID" style="text-align:left">${esc(r.card_id)}</td>`;
     const ref = `${r.index}, '${esc(r.card_id)}', '${esc(r.variant_key)}'`;
 
@@ -567,8 +649,8 @@ function render() {
       return `<tr>${name}
         <td><input type="number" id="editQty" value="${r.qty}" min="1" style="width:70px"></td>
         <td><input type="text" id="editBuy" value="${r.buy_price}" title="price per card"></td>
-        <td colspan="2" style="text-align:left">${gradeSelect('editGrade', r.grade || 'raw')}</td>
-        <td colspan="2" class="hint" style="text-align:left">price paid per card · grade</td>
+        <td colspan="2" style="text-align:left">${gradeSelect('editGrade', r.grade || 'raw')} ${conditionSelect('editCondition', r.condition || 'nm')}</td>
+        <td colspan="2" class="hint" style="text-align:left">price paid per card · grade · condition</td>
         <td class="act">
           <button class="mini primary" onclick="saveEdit(${ref})">Save</button>
           <button class="mini" onclick="cancelRow()">Cancel</button></td></tr>`;
@@ -584,7 +666,8 @@ function render() {
 
     const actions = `<td class="act">
         <button class="mini" onclick="startEdit(${r.index})">Edit</button>
-        <button class="mini danger" onclick="startSell(${r.index})">Sold</button></td>`;
+        <button class="mini danger" onclick="startSell(${r.index})">Sold</button>
+        ${r.buy_url ? `<a href="${r.buy_url}" target="_blank" style="text-decoration:none"><button class="mini primary">🛒 Buy</button></a>` : ''}</td>`;
 
     if (!r.ok) {
       // A graded card can't be auto-priced yet — say so, don't just show "no price".
@@ -592,19 +675,27 @@ function render() {
       return `<tr>${name}<td data-label="Qty">${r.qty}</td><td data-label="Buy">${fmtIDR(r.buy)}</td>
         <td colspan="4" data-label="Market" style="text-align:center"><span class="err">${why}</span></td>${actions}</tr>`;
     }
+    
+    // Switch value based on PRICING_MODE
+    const isTradeIn = PRICING_MODE === 'tradein';
+    const val = isTradeIn ? r.buyback : r.market_value;
+    const priceNative = isTradeIn ? r.buyback_native : r.market_price;
+    const itemPL = val === null ? null : val - r.buy;
+    const itemPLPct = (itemPL === null || r.buy <= 0) ? null : (itemPL / r.buy) * 100;
+
     return `<tr>${name}
       <td data-label="Qty">${r.qty}</td>
       <td data-label="Buy">${fmtIDR(r.buy)}</td>
-      <td data-label="Market">${fmtNative(r.market_price, r.currency)}</td>
-      <td data-label="Value"><span class="valwrap">${fmtIDR(r.market_value)}${r.buyback != null ? `<span class="tradein" title="Trade-in / buyback value (what a shop would pay)">↩ ${fmtIDR(r.buyback)}</span>` : ''}</span></td>
-      <td data-label="P/L" class="${cls(r.pl)}">${fmtPL(r.pl)}</td>
-      <td data-label="P/L %" class="${cls(r.pl_pct)}">${fmtPct(r.pl_pct)}</td>${actions}</tr>`;
+      <td data-label="${isTradeIn ? 'Trade-in' : 'Market'}">${fmtNative(priceNative, r.currency)}</td>
+      <td data-label="Value"><span class="valwrap">${fmtIDR(val)}${!isTradeIn && r.buyback != null ? `<span class="tradein" title="Trade-in / buyback value (what a shop would pay)">↩ ${fmtIDR(r.buyback)}</span>` : ''}</span></td>
+      <td data-label="P/L" class="${cls(itemPL)}">${fmtPL(itemPL)}</td>
+      <td data-label="P/L %" class="${cls(itemPLPct)}">${fmtPct(itemPLPct)}</td>${actions}</tr>`;
   }).join('');
 
   const foot = `<tfoot><tr><td class="card-name">TOTAL</td><td></td><td>${t.cards}</td>
-      <td>${fmtIDR(t.invested)}</td><td></td><td>${fmtIDR(t.value)}</td>
-      <td class="${cls(t.pl)}">${fmtPL(t.pl)}</td>
-      <td class="${cls(t.pl_pct)}">${fmtPct(t.pl_pct)}</td><td></td></tr></tfoot>`;
+      <td>${fmtIDR(t.invested)}</td><td></td><td>${fmtIDR(totVal)}</td>
+      <td class="${cls(totPL)}">${fmtPL(totPL)}</td>
+      <td class="${cls(totPLPct)}">${fmtPct(totPLPct)}</td><td></td></tr></tfoot>`;
 
   const bodyHtml = body ||
     `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:26px">No cards match “${esc(QUERY)}”.</td></tr>`;
@@ -654,6 +745,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('imgModal').style.display !== 'none') { closeImage(); return; }
   if (EDITING !== null || SELLING !== null) { cancelRow(); return; }
   if (document.getElementById('addPanel').style.display !== 'none') toggleAdd();
+  if (document.getElementById('deckPanel').style.display !== 'none') toggleDeckBuilder();
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme') || 'light');

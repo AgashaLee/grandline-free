@@ -98,13 +98,14 @@ class YuyuteiProvider(PriceProvider):
         self._last_fetch = 0.0
 
     # --- helpers --------------------------------------------------------
-    def _url_for(self, card_id: str, mode: str) -> str:
-        query = urllib.parse.urlencode({"search_word": card_id, "rare": "", "type": "", "kizu": "0"})
+    def _url_for(self, card_id: str, mode: str, condition: str = "nm") -> str:
+        kizu = "1" if condition == "played" else "0"
+        query = urllib.parse.urlencode({"search_word": card_id, "rare": "", "type": "", "kizu": kizu})
         return f"{self.base_url}/{mode}/opc/s/search?{query}"
 
-    def _url(self, card_id: str) -> str:
+    def _url(self, card_id: str, condition: str = "nm") -> str:
         """The search URL for this provider's own side (kept for callers/tests)."""
-        return self._url_for(card_id, self.mode)
+        return self._url_for(card_id, self.mode, condition)
 
     @staticmethod
     def _variant_of(rarity: str, name: str) -> tuple[str, str]:
@@ -169,11 +170,11 @@ class YuyuteiProvider(PriceProvider):
             )
         return cards
 
-    def _page(self, card_id: str, mode: str) -> list[Printing]:
+    def _page(self, card_id: str, mode: str, condition: str = "nm") -> list[Printing]:
         """Every printing of one card from one side (sell or buy), cached per
-        (code, mode). Never raises; [] on failure (not memoised, so retryable)."""
+        (code, mode, condition). Never raises; [] on failure (not memoised, so retryable)."""
         code = card_id.upper()
-        ck = (code, mode)
+        ck = (code, mode, condition)
         if ck in self._pages:
             return self._pages[ck]
 
@@ -183,7 +184,7 @@ class YuyuteiProvider(PriceProvider):
             time.sleep(self.delay_seconds - elapsed)
 
         try:
-            response = self._session.get(self._url_for(code, mode), timeout=self.timeout)
+            response = self._session.get(self._url_for(code, mode, condition), timeout=self.timeout)
             self._last_fetch = time.monotonic()
             response.raise_for_status()
             response.encoding = response.encoding or "utf-8"
@@ -195,23 +196,23 @@ class YuyuteiProvider(PriceProvider):
         self._pages[ck] = printings
         return printings
 
-    def _printings(self, card_id: str) -> list[Printing]:
+    def _printings(self, card_id: str, condition: str = "nm") -> list[Printing]:
         """This provider's own side (sell, for market price + in-stock)."""
-        return self._page(card_id, self.mode)
+        return self._page(card_id, self.mode, condition)
 
-    def _buyback_of(self, card_id: str, variant: str) -> float | None:
+    def _buyback_of(self, card_id: str, variant: str, condition: str = "nm") -> float | None:
         """Buyback (買取) price for one variant, from the /buy/ side."""
-        for printing in self._page(card_id, "buy"):
+        for printing in self._page(card_id, "buy", condition):
             if printing.variant == variant:
                 return printing.price_usd
         return None
 
     # --- PriceProvider --------------------------------------------------
-    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> float | None:
+    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw", condition: str = "nm") -> float | None:
         """Return the JPY price for one printing, or ``None`` on failure."""
         if grade != "raw":
             return None  # Yuyu-tei lists raw cards only
-        for printing in self._printings(card_id):
+        for printing in self._printings(card_id, condition):
             if printing.variant == variant:
                 return printing.price_usd
         return None
@@ -223,17 +224,23 @@ class YuyuteiProvider(PriceProvider):
         printings = self._printings(card_id)
         return printings[0].name if printings else None
 
-    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> float | None:
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw", condition: str = "nm") -> float | None:
         """Yuyu-tei's 買取 (trade-in) price for one printing, in JPY."""
         if grade != "raw":
             return None
-        return self._buyback_of(card_id, variant)
+        return self._buyback_of(card_id, variant, condition)
 
-    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw") -> bool | None:
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw", condition: str = "nm") -> bool | None:
         """Whether Yuyu-tei currently stocks this printing (sold out = demand)."""
         if grade != "raw":
             return None
-        for printing in self._printings(card_id):
+        for printing in self._printings(card_id, condition):
             if printing.variant == variant:
                 return printing.in_stock
         return None
+
+    def get_buy_url(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw", condition: str = "nm") -> str | None:
+        """Return the Yuyu-tei search URL to purchase this card."""
+        if grade != "raw":
+            return None
+        return self._url_for(card_id, "sell", condition)

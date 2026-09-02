@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grand Line - One Piece TCG Card Prices, Database &amp; Meta Decks</title>
+  <meta name="description" content="Free One Piece Card Game database with 2,700+ card prices, every set, and the latest tournament-winning meta decks. Track your collection with the Grand Line tracker.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: #e4e4e7; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    /* Header - same shape as /database and /meta */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 3px solid #e74c3c;
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .header .logo h1 { font-family: 'Fredoka'; font-size: 22px; color: #fff; }
+    .header .logo span { color: #a1a1aa; font-size: 12px; }
+    .header .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .header .nav-btns button {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid #333;
+      background: #1c1c1e; color: #e4e4e7; cursor: pointer; font-size: 12px;
+      font-weight: 600; transition: all 0.2s;
+    }
+    .header .nav-btns button:hover { background: #2a2a2e; border-color: #555; }
+    .header .nav-btns button.primary { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+    .header .nav-btns button.cta { background: #f6b93b; border-color: #f6b93b; color: #1a1a2e; }
+    .header .nav-btns button.cta:hover { background: #ffd06b; border-color: #ffd06b; }
+
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px; }
+
+    /* Hero */
+    .hero {
+      background: radial-gradient(1200px 400px at 50% -120px, rgba(23,153,214,.35), transparent 70%), #101020;
+      border-bottom: 1px solid #26263a;
+      text-align: center; padding: 64px 24px 56px;
+    }
+    .hero h2 { font-family: 'Fredoka'; font-size: 44px; color: #fff; line-height: 1.15; }
+    .hero h2 .accent { color: #f6b93b; }
+    .hero p { color: #a1a1aa; font-size: 16px; max-width: 620px; margin: 14px auto 0; line-height: 1.6; }
+    .hero .actions { display: flex; gap: 12px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 13px 26px; border-radius: 10px; font-weight: 700;
+      font-size: 14px; cursor: pointer; border: 1px solid #333; background: #1c1c1e; color: #e4e4e7;
+      transition: all .2s;
+    }
+    .btn:hover { background: #2a2a2e; border-color: #555; }
+    .btn.gold { background: #f6b93b; border-color: #f6b93b; color: #1a1a2e; }
+    .btn.gold:hover { background: #ffd06b; border-color: #ffd06b; }
+    .btn.red { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+    .btn.red:hover { background: #ff6455; border-color: #ff6455; }
+    .stats { display: flex; gap: 32px; justify-content: center; margin-top: 34px; flex-wrap: wrap; }
+    .stats div { text-align: center; }
+    .stats .n { font-family: 'Fredoka'; font-size: 26px; color: #fff; }
+    .stats .l { font-size: 11px; color: #8a8a94; text-transform: uppercase; letter-spacing: 1.4px; margin-top: 2px; }
+
+    .section-bar {
+      background: #000; color: #fff; text-align: center; padding: 8px 16px;
+      font-weight: 700; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      border-radius: 6px; margin: 40px 0 20px;
+    }
+
+    /* Free feature cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .fcard {
+      background: #17171b; border: 1px solid #2a2a30; border-radius: 14px;
+      padding: 24px; transition: all .2s; display: flex; flex-direction: column;
+    }
+    .fcard:hover { border-color: #e74c3c; transform: translateY(-2px); }
+    .fcard .icon { font-size: 30px; }
+    .fcard h3 { font-family: 'Fredoka'; font-size: 19px; color: #fff; margin: 8px 0; }
+    .fcard p { color: #a1a1aa; font-size: 13px; line-height: 1.6; flex: 1; }
+    .fcard .go { margin-top: 16px; color: #f6b93b; font-weight: 700; font-size: 13px; }
+    .tag {
+      /* align-self keeps the pill from being stretched by the flex column */
+      display: inline-block; align-self: flex-start; margin-top: 10px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+    }
+    .tag.free { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.35); }
+    .tag.pro { background: rgba(246,185,59,.15); color: #f6b93b; border: 1px solid rgba(246,185,59,.35); }
+
+    /* Upsell */
+    .upsell {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid #2a2a44; border-radius: 16px; padding: 34px;
+      display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; align-items: center;
+    }
+    .upsell h3 { font-family: 'Fredoka'; font-size: 27px; color: #fff; }
+    .upsell .price { color: #f6b93b; font-weight: 700; font-size: 15px; margin: 10px 0 14px; }
+    .upsell ul { list-style: none; color: #c9c9d1; font-size: 13.5px; line-height: 2; }
+    .upsell ul li::before { content: '\2713'; color: #2ecc71; font-weight: 700; margin-right: 9px; }
+    .upsell .buy { text-align: center; }
+    .upsell .buy .btn { display: block; width: 100%; margin-bottom: 10px; }
+    .upsell .buy small { color: #8a8a94; font-size: 11px; }
+    @media (max-width: 760px) {
+      .upsell { grid-template-columns: 1fr; }
+      .hero h2 { font-size: 32px; }
+    }
+
+    footer {
+      border-top: 1px solid #26262e; margin-top: 48px; padding: 26px 24px 40px;
+      text-align: center; color: #6f6f7a; font-size: 11.5px; line-height: 1.8;
+    }
+    footer a { color: #a1a1aa; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <h1>🏴‍☠️ Grand Line</h1>
+      <span>One Piece TCG prices, sets &amp; meta</span>
+    </div>
+    <div class="nav-btns">
+      <a href="/"><button class="primary">🏠 Home</button></a>
+      <a href="/database"><button>🗃️ Card Database</button></a>
+      <a href="/market"><button>📈 Market Watch</button></a>
+      <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/news"><button>📰 News</button></a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>Every One Piece card.<br>Every price. <span class="accent">Free.</span></h2>
+    <p>
+      Browse the full card database with market prices, study the decks winning
+      tournaments right now, and track what your collection is actually worth.
+    </p>
+    <div class="actions">
+      <a href="/database"><button class="btn red">🗃️ Browse the Card Database</button></a>
+      <a href="/meta"><button class="btn">🏆 See the Meta Decks</button></a>
+    </div>
+    <div class="stats">
+      <div><div class="n" id="statCards">2,700+</div><div class="l">Cards priced</div></div>
+      <div><div class="n" id="statSets">60</div><div class="l">Sets covered</div></div>
+      <div><div class="n" id="statDecks">30</div><div class="l">Meta decklists</div></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="section-bar">Free tools</div>
+    <div class="cards">
+      <a href="/database" class="fcard">
+        <div class="icon">🗃️</div>
+        <span class="tag free">Free</span>
+        <h3>Card Database</h3>
+        <p>All 60 sets from OP-01 onward - Leaders, characters, events and promos -
+           with market prices, rarity, type and a direct link to buy each card.</p>
+        <div class="go">Browse cards →</div>
+      </a>
+      <a href="/meta" class="fcard">
+        <div class="icon">🏆</div>
+        <span class="tag free">Free</span>
+        <h3>Meta Decks</h3>
+        <p>Tournament-winning decklists with the full card breakdown, so you can see
+           exactly what the top players are running before your next locals.</p>
+        <div class="go">See the meta →</div>
+      </a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="fcard">
+        <div class="icon">📈</div>
+        <span class="tag pro">Members</span>
+        <h3>Collection Tracker</h3>
+        <p>Add your cards and sealed product once, then watch your portfolio value,
+           profit and loss update itself in your own currency.</p>
+        <div class="go">Get the tracker →</div>
+      </a>
+    </div>
+
+    <div class="section-bar">Track your collection</div>
+    <div class="upsell">
+      <div>
+        <h3>Know what your collection is worth</h3>
+        <div class="price">$1.99 / month &middot; cancel anytime</div>
+        <ul>
+          <li>Live portfolio value in your own currency</li>
+          <li>Profit &amp; loss per card and sealed box</li>
+          <li>Buy-price tracking, so you know your real cost</li>
+          <li>Deck cost calculator on any meta decklist</li>
+          <li>No ads, ever</li>
+        </ul>
+      </div>
+      <div class="buy">
+        <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="btn gold">★ Get the Tracker on Whop</button></a>
+        <a href="{{TRACKER_URL}}" target="_blank" rel="noopener"><button class="btn">Already a member? Log in</button></a>
+        <small>Secure checkout on Whop</small>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
+    Bandai Namco or Toei Animation. One Piece and all related card images and names are the
+    property of their respective owners.<br>
+    Some links are affiliate links - buying through them supports the site at no extra cost to you.
+  </footer>
+
+  <script>
+    // Fill the hero counters from the live catalog so they never go stale.
+    fetch('/api/database', { method: 'POST', body: '{}' })
+      .then(r => r.json())
+      .then(d => {
+        const cards = (d && d.cards) || [];
+        if (!cards.length) return;
+        const sets = new Set(cards.map(c => c.card_id.split('-')[0]));
+        document.getElementById('statCards').textContent = cards.length.toLocaleString();
+        document.getElementById('statSets').textContent = sets.size;
+      })
+      .catch(() => {});
+    fetch('/api/meta', { method: 'POST', body: '{}' })
+      .then(r => r.json())
+      .then(d => {
+        const decks = (d && d.decks) || [];
+        if (decks.length) document.getElementById('statDecks').textContent = decks.length;
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

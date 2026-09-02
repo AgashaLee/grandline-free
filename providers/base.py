@@ -78,7 +78,7 @@ class PriceProvider(ABC):
     grades: bool = False
 
     @abstractmethod
-    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
+    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> float | None:
         """Return the market price for one printing in ``self.currency``.
 
         A source with no concept of variants may ignore ``variant``; a raw-only
@@ -111,12 +111,16 @@ class PriceProvider(ABC):
         """
         return None
 
-    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> float | None:
         """The trade-in / buyback price (what the source would PAY), in
         ``self.currency``. Optional: sources with no buy side return None."""
         return None
 
-    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> bool | None:
+    def get_buy_url(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> str | None:
+        """A direct purchase URL for this card (with an affiliate tag if configured)."""
+        return None
+
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> bool | None:
         """Whether the source currently stocks this printing (True in stock,
         False sold out, None if it has no such notion). Optional."""
         return None
@@ -145,19 +149,21 @@ class CachedPriceProvider(PriceProvider):
         self.region = inner.region
         self.grades = inner.grades
 
-    def cache_key(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> str:
+    def cache_key(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> str:
         """Each printing+grade is priced separately, so each gets its own key."""
         base = f"{self.name}:{card_id}:{variant}"
+        if condition != "nm":
+            base = f"{base}:{condition}"
         return base if grade == RAW_GRADE else f"{base}:{grade}"
 
-    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
-        key = self.cache_key(card_id, variant, grade)
+    def get_price(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> float | None:
+        key = self.cache_key(card_id, variant, grade, condition)
 
         cached = self.cache.get(key)
         if isinstance(cached, (int, float)):
             return float(cached)
 
-        price = self.inner.get_price(card_id, variant, grade)
+        price = self.inner.get_price(card_id, variant, grade, condition)
         if price is not None:
             self.cache.set(key, float(price))
             return float(price)
@@ -179,28 +185,31 @@ class CachedPriceProvider(PriceProvider):
         """Delegate to the wrapped provider (names are not worth caching)."""
         return self.inner.get_card_name(card_id)
 
-    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> float | None:
+    def get_buy_url(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> str | None:
+        return self.inner.get_buy_url(card_id, variant, grade, condition)
+
+    def get_buyback(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> float | None:
         """Trade-in price, cached under its own key (a different number from the
         sell price) with the same fresh -> live -> stale fallback as get_price."""
-        key = self.cache_key(card_id, variant, grade) + ":buyback"
+        key = self.cache_key(card_id, variant, grade, condition) + ":buyback"
         cached = self.cache.get(key)
         if isinstance(cached, (int, float)) and not isinstance(cached, bool):
             return float(cached)
-        val = self.inner.get_buyback(card_id, variant, grade)
+        val = self.inner.get_buyback(card_id, variant, grade, condition)
         if val is not None:
             self.cache.set(key, float(val))
             return float(val)
         stale = self.cache.get_stale(key)
         return float(stale) if isinstance(stale, (int, float)) and not isinstance(stale, bool) else None
 
-    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE) -> bool | None:
+    def get_stock(self, card_id: str, variant: str = BASE_VARIANT, grade: str = RAW_GRADE, condition: str = "nm") -> bool | None:
         """In-stock flag, cached (bool) under its own key. Unknown (None) is not
         cached, so it is re-checked next time rather than sticking."""
-        key = self.cache_key(card_id, variant, grade) + ":stock"
+        key = self.cache_key(card_id, variant, grade, condition) + ":stock"
         cached = self.cache.get(key)
         if isinstance(cached, bool):
             return cached
-        val = self.inner.get_stock(card_id, variant, grade)
+        val = self.inner.get_stock(card_id, variant, grade, condition)
         if val is not None:
             self.cache.set(key, bool(val))
         return val

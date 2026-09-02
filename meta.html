@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta Decks & Decklists - OPTCG Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: #0f0f0f; 
+      color: #e4e4e7; 
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 3px solid #e74c3c;
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header .logo { display: flex; align-items: center; gap: 12px; }
+    .header .logo h1 { font-family: 'Fredoka'; font-size: 22px; color: #fff; }
+    .header .logo span { color: #a1a1aa; font-size: 12px; }
+    .header .nav-btns { display: flex; gap: 8px; }
+    .header .nav-btns a { text-decoration: none; }
+    .header .nav-btns button { 
+      padding: 8px 16px; border-radius: 8px; border: 1px solid #333; 
+      background: #1c1c1e; color: #e4e4e7; cursor: pointer; font-size: 12px; 
+      font-weight: 600; transition: all 0.2s; 
+    }
+    .header .nav-btns button:hover { background: #2a2a2e; border-color: #555; }
+    .header .nav-btns button.primary { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+    .header .nav-btns button.cta { background: #f6b93b; border-color: #f6b93b; color: #1a1a2e; }
+    .header .nav-btns button.cta:hover { background: #ffd06b; border-color: #ffd06b; }
+
+    /* Funnel footer (free pages only) */
+    .gl-footer { border-top: 1px solid #26262e; margin-top: 44px; padding: 30px 24px 40px; text-align: center; }
+    .gl-cta { display: inline-block; background: #f6b93b; color: #1a1a2e; font-weight: 700;
+              font-size: 14px; padding: 13px 26px; border-radius: 10px; text-decoration: none; }
+    .gl-cta:hover { background: #ffd06b; }
+    .gl-legal { color: #6f6f7a; font-size: 11.5px; line-height: 1.8; margin-top: 20px; }
+
+    /* Content */
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Section header like the site */
+    .section-bar {
+      background: #000; color: #fff; text-align: center; 
+      padding: 8px 16px; font-weight: 700; font-size: 14px;
+      letter-spacing: 2px; text-transform: uppercase;
+      border-top: 3px solid #e74c3c;
+      margin-bottom: 8px;
+    }
+    .section-bar small { display: block; font-size: 11px; font-weight: 400; letter-spacing: 1px; color: #ccc; }
+
+    /* Filters */
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+      padding: 12px 16px; background: #1c1c1e; border-radius: 8px;
+      border: 1px solid #2a2a2e;
+    }
+    .filters select, .filters input {
+      padding: 6px 12px; border-radius: 6px; border: 1px solid #333;
+      background: #0f0f0f; color: #e4e4e7; font-size: 12px;
+      font-family: 'Inter', sans-serif;
+    }
+    .filters input { flex: 1; min-width: 150px; }
+    .filters label { font-size: 12px; color: #a1a1aa; display: flex; align-items: center; gap: 4px; }
+
+    /* Meta Table */
+    .meta-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      background: #1c1c1e; border-radius: 8px; overflow: hidden;
+    }
+    .meta-table thead { background: #e74c3c; }
+    .meta-table thead th {
+      padding: 10px 12px; font-weight: 700; font-size: 12px;
+      text-align: left; color: #fff; white-space: nowrap;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .meta-table tbody tr {
+      border-bottom: 1px solid #2a2a2e; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .meta-table tbody tr:hover { background: #252528; }
+    .meta-table tbody td { padding: 8px 12px; vertical-align: middle; }
+
+    .leader-thumb {
+      width: 40px; height: 56px; border-radius: 4px; overflow: hidden;
+      background: #333; display: flex; align-items: center; justify-content: center;
+    }
+    .leader-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .deck-profile-tag {
+      display: inline-block; padding: 3px 10px; border-radius: 4px;
+      font-weight: 600; font-size: 11px; white-space: nowrap;
+    }
+    .color-Red { background: rgba(239,68,68,0.2); color: #f87171; }
+    .color-Blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .color-Green { background: rgba(34,197,94,0.2); color: #4ade80; }
+    .color-Purple { background: rgba(168,85,247,0.2); color: #c084fc; }
+    .color-Yellow { background: rgba(234,179,8,0.2); color: #facc15; }
+    .color-Black { background: rgba(255,255,255,0.1); color: #a1a1aa; }
+    .color-default { background: rgba(255,255,255,0.1); color: #d4d4d8; }
+
+    .placement-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-weight: 600; font-size: 11px; white-space: nowrap;
+    }
+    .placement-1st { background: rgba(234,179,8,0.2); color: #fbbf24; }
+    .placement-other { background: rgba(255,255,255,0.07); color: #a1a1aa; }
+
+    .country-flag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; white-space: nowrap;
+    }
+
+    /* Deck Detail View */
+    .deck-detail { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .back-btn {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid #333;
+      background: #1c1c1e; color: #e4e4e7; cursor: pointer; font-size: 13px;
+      font-weight: 600; transition: all 0.2s; margin-bottom: 20px;
+    }
+    .back-btn:hover { background: #2a2a2e; border-color: #555; }
+
+    .deck-header {
+      display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
+      padding: 20px; background: #1c1c1e; border-radius: 12px; border: 1px solid #2a2a2e;
+    }
+    .deck-header .leader-img {
+      width: 90px; height: 126px; border-radius: 8px; overflow: hidden;
+      background: #333; flex-shrink: 0;
+    }
+    .deck-header .leader-img img { width: 100%; height: 100%; object-fit: cover; }
+    .deck-header .info h2 { font-family: 'Fredoka'; font-size: 24px; color: #fff; margin-bottom: 6px; }
+    .deck-header .info .meta { color: #a1a1aa; font-size: 13px; line-height: 1.6; }
+    .deck-header .info .meta span { margin-right: 12px; }
+
+    /* Text decklist */
+    .text-decklist {
+      padding: 16px 20px; background: #1c1c1e; border-radius: 8px;
+      border: 1px solid #2a2a2e; margin-bottom: 24px;
+      font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 13px;
+    }
+    .text-decklist h3 { font-family: 'Inter'; font-weight: 700; margin-bottom: 12px; color: #fff; }
+    .text-decklist .card-line {
+      padding: 2px 0; display: flex; align-items: center; gap: 8px;
+    }
+    .text-decklist .qty { color: #fbbf24; font-weight: 700; min-width: 20px; }
+    .text-decklist .card-id { color: #60a5fa; }
+    .text-decklist .leader-line { color: #f87171; font-weight: 700; }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 12px;
+    }
+    .card-item {
+      position: relative; border-radius: 8px; overflow: hidden;
+      background: #222; transition: transform 0.15s; cursor: pointer;
+    }
+    .card-item:hover { transform: scale(1.05); }
+    .card-item img { width: 100%; display: block; border-radius: 8px; }
+    .card-item .qty-badge {
+      position: absolute; bottom: 4px; left: 4px;
+      background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px;
+      border-radius: 4px; font-weight: 700; font-size: 12px;
+    }
+    .card-item .card-id-label {
+      text-align: center; font-size: 10px; color: #a1a1aa; padding: 4px 0;
+    }
+    .card-item .loading-placeholder {
+      width: 100%; aspect-ratio: 5/7; background: #333; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #666;
+    }
+
+    /* Source badge */
+    .source-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 6px;
+      background: rgba(59,130,246,0.1); color: #60a5fa;
+      font-size: 11px; font-weight: 500;
+    }
+    .source-badge a { color: #60a5fa; text-decoration: none; }
+    .source-badge a:hover { text-decoration: underline; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .stat-card {
+      padding: 12px 20px; background: #1c1c1e; border-radius: 8px;
+      border: 1px solid #2a2a2e; flex: 1; min-width: 120px; text-align: center;
+    }
+    .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; font-family: 'Fredoka'; }
+    .stat-card .label { font-size: 11px; color: #a1a1aa; margin-top: 4px; }
+
+    /* Meta-share bar chart (decks per leader/archetype) */
+    .meta-chart { background: #1c1c1e; border: 1px solid #2a2a2e; border-radius: 10px;
+                  padding: 16px 18px 12px; margin-bottom: 20px; }
+    .meta-chart h3 { font-family: 'Fredoka'; font-size: 15px; color: #fff; margin-bottom: 14px; font-weight: 700; }
+    .meta-chart h3 span { font-family: 'Inter'; font-size: 11px; color: #a1a1aa; font-weight: 400; }
+    .mc-bars { display: flex; align-items: flex-end; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .mc-col { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
+    .mc-count { color: #60a5fa; font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+    .mc-bar { width: 30px; border-radius: 5px 5px 0 0; background: linear-gradient(180deg,#7ab0ff,#4d7fe0); }
+    .mc-label { color: #a1a1aa; font-size: 10px; margin-top: 7px; width: 58px; text-align: center;
+                line-height: 1.2; height: 26px; overflow: hidden; }
+    .mc-hint { color: #6f6f7a; font-size: 11px; margin-top: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <h1>🏆 Meta Decks</h1>
+      <span>Tournament decklists</span>
+    </div>
+    <div class="nav-btns">
+      <a href="/"><button>🏠 Home</button></a>
+      <a href="/database"><button>🗃️ Card Database</button></a>
+      <a href="/market"><button>📈 Market Watch</button></a>
+      <a href="/meta"><button class="primary">🏆 Meta Decks</button></a>
+      <a href="/news"><button>📰 News</button></a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="content">Loading decks...</div>
+  </div>
+
+  <!-- Shared card zoom/detail modal (same one used by /database). -->
+  <script src="/carddetail.js"></script>
+  <script>
+    let globalDecks = [];
+    let cardsById = {};   // full card catalog, so a deck card can open its details
+
+    // Open the shared detail modal for a card in a decklist.
+    function openDeckCard(id){
+      const c = cardsById[id];
+      if (c) CardDetail.open(c);
+    }
+
+    function getCountryEmoji(code) {
+      const map = { 'JP': '🇯🇵', 'Singapore': '🇸🇬', 'Indonesia': '🇮🇩', 'Thailand': '🇹🇭', 
+                     'Malaysia': '🇲🇾', 'US': '🇺🇸', 'UK': '🇬🇧', 'EN': '🌍', 'KR': '🇰🇷',
+                     'TW': '🇹🇼', 'HK': '🇭🇰', 'PH': '🇵🇭', 'AU': '🇦🇺' };
+      return map[code] || '🌏';
+    }
+
+    function getColorClass(color) {
+      const c = (color || '').split(/[\s\/]/)[0]; // Take first color word
+      return ['Red','Blue','Green','Purple','Yellow','Black'].includes(c) ? 'color-' + c : 'color-default';
+    }
+
+    function getPlacementClass(p) {
+      return (p || '').toLowerCase().startsWith('1st') ? 'placement-1st' : 'placement-other';
+    }
+
+    // Bar chart of how many decklists each leader/archetype has (meta share).
+    function metaShareChart() {
+      const counts = {};
+      globalDecks.forEach(d => {
+        const k = (d.event_name || d.leader_id || 'Other').trim();
+        counts[k] = (counts[k] || 0) + 1;
+      });
+      const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (!rows.length) return '';
+      const max = rows[0][1];
+      const esc = (window.CardDetail && CardDetail.esc) || (s => s);
+      const bars = rows.map(([name, c]) => {
+        const h = Math.max(6, Math.round(c / max * 150));
+        return `<div class="mc-col">
+          <div class="mc-count">${c}</div>
+          <div class="mc-bar" style="height:${h}px" title="${esc(name)}: ${c} decks"></div>
+          <div class="mc-label">${esc(name)}</div>
+        </div>`;
+      }).join('');
+      return `<div class="meta-chart">
+        <h3>Most-Played Leaders <span>· ${rows.length} archetypes across ${globalDecks.length} decks</span></h3>
+        <div class="mc-bars">${bars}</div>
+        <div class="mc-hint">Click any row below to view a full decklist</div>
+      </div>`;
+    }
+
+    function renderDecks() {
+      // Count stats
+      const countries = new Set(globalDecks.map(d => d.country));
+      const leaders = new Set(globalDecks.map(d => d.leader_id));
+
+      let html = `
+        <div class="stats-row">
+          <div class="stat-card"><div class="value">${globalDecks.length}</div><div class="label">Decklists</div></div>
+          <div class="stat-card"><div class="value">${leaders.size}</div><div class="label">Unique Leaders</div></div>
+          <div class="stat-card"><div class="value">${countries.size}</div><div class="label">Countries</div></div>
+        </div>
+
+        ${metaShareChart()}
+
+        <div class="section-bar">STATE OF THE GAME<small>JAPAN &amp; WORLDWIDE · META DECKS</small></div>
+
+        <div class="filters">
+          <label>Color: <select id="filter-color" onchange="applyFilters()">
+            <option value="">All</option>
+            <option value="Red">Red</option>
+            <option value="Blue">Blue</option>
+            <option value="Green">Green</option>
+            <option value="Purple">Purple</option>
+            <option value="Yellow">Yellow</option>
+            <option value="Black">Black</option>
+          </select></label>
+          <label>Country: <select id="filter-country" onchange="applyFilters()">
+            <option value="">All</option>
+          </select></label>
+          <label>Tournament: <select id="filter-tournament" onchange="applyFilters()">
+            <option value="">All</option>
+          </select></label>
+          <label>Search: <input type="text" id="filter-search" placeholder="Search by deck, player, host..." oninput="applyFilters()"></label>
+        </div>
+
+        <table class="meta-table">
+          <thead>
+            <tr>
+              <th>Details</th>
+              <th>Deck Profile</th>
+              <th>Date</th>
+              <th>Country</th>
+              <th>Author</th>
+              <th>Placement</th>
+              <th>Tournament</th>
+              <th>Host</th>
+            </tr>
+          </thead>
+          <tbody id="deck-tbody">
+          </tbody>
+        </table>
+      `;
+      document.getElementById('content').innerHTML = html;
+
+      // Populate filter dropdowns
+      const countrySet = [...new Set(globalDecks.map(d => d.country).filter(Boolean))].sort();
+      const tournamentSet = [...new Set(globalDecks.map(d => d.event_type).filter(Boolean))].sort();
+      const countrySelect = document.getElementById('filter-country');
+      countrySet.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; countrySelect.appendChild(o); });
+      const tournamentSelect = document.getElementById('filter-tournament');
+      tournamentSet.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tournamentSelect.appendChild(o); });
+
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const color = document.getElementById('filter-color').value;
+      const country = document.getElementById('filter-country').value;
+      const tournament = document.getElementById('filter-tournament').value;
+      const search = document.getElementById('filter-search').value.toLowerCase();
+
+      let filtered = globalDecks;
+      // We store the original "color" in the deck name or we can infer from leader
+      // The event_name field stores the deck name from topdecks
+      if (color) {
+        // Color is not stored directly in our schema, but deck names often contain color
+        // We'll filter based on event_name containing the color keyword
+        filtered = filtered.filter(d => {
+          const n = (d.event_name || '').toLowerCase();
+          return n.includes(color.toLowerCase());
+        });
+      }
+      if (country) filtered = filtered.filter(d => d.country === country);
+      if (tournament) filtered = filtered.filter(d => d.event_type === tournament);
+      if (search) {
+        filtered = filtered.filter(d => {
+          const text = [d.event_name, d.winner, d.leader_id, d.country, d.event_type, d.players].join(' ').toLowerCase();
+          return text.includes(search);
+        });
+      }
+
+      const tbody = document.getElementById('deck-tbody');
+      tbody.innerHTML = '';
+      
+      filtered.forEach((d, idx) => {
+        const tr = document.createElement('tr');
+        tr.onclick = () => renderDeckDetails(d.id);
+        tr.innerHTML = `
+          <td><div class="leader-thumb" id="leader-thumb-${idx}"></div></td>
+          <td>
+            <div style="font-weight:600; font-size:13px">${d.event_name || '-'}</div>
+            <div style="font-size:11px; color:#71717a; margin-top:2px">${d.leader_id}</div>
+          </td>
+          <td style="white-space:nowrap; color:#a1a1aa; font-size:12px">${d.event_date || '-'}</td>
+          <td><span class="country-flag">${getCountryEmoji(d.country)} ${d.country || '-'}</span></td>
+          <td style="font-weight:500">${d.winner || '-'}</td>
+          <td><span class="placement-badge ${getPlacementClass(d.players)}">${d.players || '-'}</span></td>
+          <td style="color:#a1a1aa; font-size:12px">${d.event_type || '-'}</td>
+          <td style="color:#71717a; font-size:12px">-</td>
+        `;
+        tbody.appendChild(tr);
+
+        // Load leader thumbnail
+        if (d.leader_id) {
+          fetch('/api/image', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({card_id: d.leader_id, region: 'en', variant: 'Normal'})
+          })
+          .then(r => r.json())
+          .then(imgData => {
+            const el = document.getElementById('leader-thumb-' + idx);
+            if (el && imgData.image) {
+              el.innerHTML = `<img src="${imgData.image}" alt="${d.leader_id}">`;
+            }
+          }).catch(() => {});
+        }
+      });
+    }
+
+    function renderDeckDetails(deckId) {
+      const deck = globalDecks.find(d => d.id === deckId);
+      if (!deck) return;
+
+      const totalCards = deck.cards.reduce((sum, c) => sum + c.quantity, 0);
+
+      // Sort cards: leader first, then by card_id
+      const sortedCards = [...deck.cards].sort((a, b) => {
+        if (a.card_id === deck.leader_id) return -1;
+        if (b.card_id === deck.leader_id) return 1;
+        return a.card_id.localeCompare(b.card_id);
+      });
+
+      let html = `<div class="deck-detail">
+        <button class="back-btn" onclick="renderDecks()">⬅️ Back to Decklists</button>
+
+        <div class="deck-header">
+          <div class="leader-img" id="detail-leader-img"></div>
+          <div class="info">
+            <h2>${deck.event_name || 'Decklist'}</h2>
+            <div class="meta">
+              <span>👤 <strong>${deck.winner}</strong></span>
+              <span>📅 ${deck.event_date || '-'}</span>
+              <span>🌍 ${deck.country || '-'}</span>
+              <span>🏆 ${deck.players || '-'}</span>
+              <span>📋 ${totalCards} cards</span>
+            </div>
+            <div class="meta" style="margin-top:4px">
+              <span>🎴 Leader: <strong>${deck.leader_id}</strong></span>
+              <span>📊 ${deck.event_type || '-'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-decklist">
+          <h3>Decklist in text:</h3>
+          ${sortedCards.map((c, i) => `
+            <div class="card-line ${c.card_id === deck.leader_id ? 'leader-line' : ''}">
+              <span class="qty">${c.quantity}x</span>
+              <span class="card-id">${c.card_id}</span>
+              ${c.card_id === deck.leader_id ? '<span style="color:#f87171; font-size:11px; margin-left:8px">LEADER</span>' : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <h3 style="color:#fff; margin-bottom:16px; font-family:'Fredoka'">Card Images</h3>
+        <div class="card-grid">
+          ${sortedCards.map((c, i) => `
+            <div class="card-item" id="card-item-${i}" onclick="openDeckCard('${c.card_id}')" title="Click for card details">
+              <div class="loading-placeholder" id="img-${i}">Loading...</div>
+              <div class="qty-badge">x${c.quantity}</div>
+              <div class="card-id-label">${c.card_id}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+
+      document.getElementById('content').innerHTML = html;
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Load leader image
+      if (deck.leader_id) {
+        fetch('/api/image', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({card_id: deck.leader_id, region: 'en', variant: 'Normal'})
+        })
+        .then(r => r.json())
+        .then(imgData => {
+          const el = document.getElementById('detail-leader-img');
+          if (el && imgData.image) {
+            el.innerHTML = `<img src="${imgData.image}" style="width:100%;height:100%;object-fit:cover">`;
+          }
+        }).catch(() => {});
+      }
+
+      // Load all card images
+      sortedCards.forEach((c, i) => {
+        fetch('/api/image', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({card_id: c.card_id, region: 'en', variant: 'Normal'})
+        })
+        .then(r => r.json())
+        .then(imgData => {
+          const el = document.getElementById('img-' + i);
+          if (el) {
+            if (imgData.image) {
+              el.outerHTML = `<img src="${imgData.image}" alt="${c.card_id}" style="width:100%;display:block;border-radius:8px">`;
+            } else {
+              el.innerHTML = `<span style="color:#666;font-size:10px">No image</span>`;
+            }
+          }
+        })
+        .catch(() => {});
+      });
+    }
+
+    // Load the card catalog in the background so clicking a deck card can show
+    // its full details (same data as the Card Database). Non-blocking.
+    function loadCatalog() {
+      fetch('/api/database', {method: 'POST', body: '{}'})
+        .then(r => r.json())
+        .then(d => { for (const c of (d.cards || [])) cardsById[c.card_id] = c; })
+        .catch(() => {});
+    }
+
+    async function load() {
+      loadCatalog();
+      try {
+        const res = await fetch('/api/meta', {method: 'POST', body: '{}'});
+        const data = await res.json();
+        globalDecks = data.decks;
+        renderDecks();
+      } catch (e) {
+        document.getElementById('content').innerHTML = '<div style="color:white;padding:40px;text-align:center">Error loading decks. Make sure the server is running.</div>';
+      }
+    }
+    load();
+  </script>
+
+  <footer class="gl-footer">
+    <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
+      &#9733; Track your collection with the Grand Line tracker &mdash; $1.99/mo
+    </a>
+    <div class="gl-legal">
+      Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
+      Bandai Namco or Toei Animation. One Piece and all related card images and names are the
+      property of their respective owners.<br>
+      Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.
+    </div>
+  </footer>
+</body>
+</html>

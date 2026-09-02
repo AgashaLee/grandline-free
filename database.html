@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Card Database - One Piece Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Special+Elite&family=Rye&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --sea:#1799d6; --sea-deep:#0d6ea3;
+    --red:#e74c3c; --red-deep:#c0392b;
+    --gold:#f6b93b; --gold-deep:#e58e26;
+    --page-bg:#0f0f0f;
+    --surface:#17171b; --surface-head:#1c1c1e;
+    --ink:#e4e4e7; --muted:#a1a1aa; --line:#2a2a30;
+    --btn-bg:#1c1c1e; --btn-hover:#2a2a2e;
+    --shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       color:var(--ink);font-size:13px;padding:0 0 48px;min-height:100vh;overflow-x:hidden;
+       background:var(--page-bg) no-repeat;background-attachment:fixed}
+  h1,h3{font-family:'Fredoka',sans-serif}
+  .header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+          border-bottom:3px solid var(--red);padding:14px 22px;
+          display:flex;align-items:center;justify-content:space-between;
+          position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .header h1{font-size:20px;font-weight:700;color:#fff;}
+  .sub{color:#a1a1aa;font-size:11px;margin-top:2px}
+  .wrap{max-width:1120px;margin:22px auto;padding:0 18px}
+  button{background:var(--btn-bg);color:var(--ink);border:2px solid var(--line);
+         border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;font-weight:600}
+  button:hover{background:var(--btn-hover);border-color:var(--gold)}
+  button.primary{background:var(--sea);border-color:var(--sea-deep);color:#fff;box-shadow:0 3px 0 var(--sea-deep)}
+  button.primary:hover{background:var(--sea-deep)}
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+  .card{background:var(--surface);border:2px solid var(--line);border-radius:16px;
+        padding:16px 20px;box-shadow:var(--shadow);text-align:center;}
+  button.cta{background:var(--gold);border-color:var(--gold-deep);color:#4a2f10;
+             box-shadow:0 3px 0 var(--gold-deep)}
+  button.cta:hover{background:#ffd06b;border-color:var(--gold-deep)}
+
+  /* Card tile in a set's grid */
+  .cardtile{background:var(--surface);border:2px solid var(--line);border-radius:14px;
+            padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .cardtile .thumb{height:210px;display:flex;align-items:center;justify-content:center;
+                   margin-bottom:8px;cursor:zoom-in}
+  .cardtile .thumb img{max-width:100%;max-height:210px;border-radius:8px;transition:transform .15s}
+  .cardtile .thumb:hover img{transform:scale(1.03)}
+  .cardtile .nm{font-weight:600;font-size:12.5px;line-height:1.3;min-height:32px;
+                display:flex;align-items:center;justify-content:center}
+  .cardtile .code{color:var(--muted);font-size:11px;margin:2px 0 8px}
+  .buy-btn{width:100%;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;
+           color:#fff;cursor:pointer}
+
+  /* Search + filter bar */
+  .filterbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);
+             border:2px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:20px;
+             box-shadow:var(--shadow)}
+  .filterbar .fld{display:flex;flex-direction:column;gap:3px}
+  .filterbar .fld.grow{flex:1;min-width:200px}
+  .filterbar .fld > span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;
+                         letter-spacing:.5px;padding-left:2px}
+  .filterbar input[type=text]{width:100%;padding:9px 12px;border:2px solid var(--line);border-radius:8px;
+             font-size:13px;color:var(--ink);background:#0f0f0f}
+  .filterbar input[type=text]:focus{outline:none;border-color:var(--gold)}
+  .filterbar select{padding:8px 10px;border:2px solid var(--line);border-radius:8px;font-size:12px;
+             color:var(--ink);background:#0f0f0f;font-weight:600;cursor:pointer;min-width:88px}
+  .filterbar select:focus{outline:none;border-color:var(--gold)}
+  .filterbar .clear{background:var(--btn-bg);border:2px solid var(--line);border-radius:8px;padding:9px 14px;
+             font-size:12px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .filterbar .clear:hover{background:var(--btn-hover);border-color:var(--gold)}
+  .filterbar .search-row{display:flex;gap:8px}
+  .filterbar .search-row input{flex:1}
+  .searchbtn{background:var(--sea);color:#fff;border:2px solid var(--sea-deep);border-radius:8px;
+             padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+             box-shadow:0 2px 0 var(--sea-deep)}
+  .searchbtn:hover{background:var(--sea-deep)}
+  /* The card zoom/detail modal lives in the shared /carddetail.js (also used by /meta). */
+  /* Funnel footer (free pages only) */
+  .gl-footer{border-top:2px solid var(--line);margin-top:40px;padding:30px 24px 10px;text-align:center}
+  .gl-cta{display:inline-block;background:var(--gold);color:#4a2f10;font-weight:700;font-size:14px;
+          padding:13px 26px;border-radius:10px;text-decoration:none;box-shadow:0 3px 0 var(--gold-deep)}
+  .gl-cta:hover{background:#ffd06b}
+  .gl-legal{color:var(--muted);font-size:11.5px;line-height:1.8;margin-top:20px}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>🗃️ Card Database</h1>
+      <div class="sub">Browse all One Piece cards</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a href="/"><button>🏠 Home</button></a>
+      <a href="/database"><button class="primary">🗃️ Card Database</button></a>
+      <a href="/market"><button>📈 Market Watch</button></a>
+      <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/news"><button>📰 News</button></a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="filterbar">
+      <div class="fld grow">
+        <span>Search</span>
+        <div class="search-row">
+          <input type="text" id="fSearch" placeholder="🔍 Card code" title="Search by card code or name — e.g. OP17-001, Luffy"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch();}">
+          <button class="searchbtn" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+      <div class="fld"><span>Color</span><select id="fColor" onchange="applyFilters()"><option value="">All</option></select></div>
+      <div class="fld"><span>Type</span><select id="fType" onchange="applyFilters()"><option value="">All</option></select></div>
+      <div class="fld"><span>Cost</span><select id="fCost" onchange="applyFilters()"><option value="">All</option></select></div>
+      <div class="fld"><span>Power</span><select id="fPower" onchange="applyFilters()"><option value="">All</option></select></div>
+      <div class="fld"><span>Rarity</span><select id="fRarity" onchange="applyFilters()"><option value="">All</option></select></div>
+      <button class="clear" onclick="clearFilters()">✕ Clear</button>
+    </div>
+    <div id="content">Loading sets...</div>
+  </div>
+
+  <!-- Shared card zoom/detail modal (also used by /meta). Buy/affiliate config lives there. -->
+  <script src="/carddetail.js"></script>
+  <script>
+    // Open the shared detail modal for a card id.
+    function openCard(id){ CardDetail.open(globalCardsById[id]); }
+
+    let globalCardsBySet = {};
+    let globalCardsById = {};
+    let globalDataCards = [];
+
+    // Sort order: OP sets first (by number), then EB, PRB, ST, promos.
+    function setSortKey(prefix){
+      const m = prefix.match(/^([A-Za-z]+)(\d*)$/);
+      const type = m ? m[1].toUpperCase() : prefix;
+      const num = m ? parseInt(m[2] || '0', 10) : 0;
+      const order = {OP:0, EB:1, PRB:2, ST:3, P:4};
+      return [order[type] !== undefined ? order[type] : 9, type, num];
+    }
+
+    function renderSets() {
+      const keys = Object.keys(globalCardsBySet).sort((a, b) => {
+        const ka = setSortKey(a), kb = setSortKey(b);
+        return ka[0] - kb[0] || ka[1].localeCompare(kb[1]) || ka[2] - kb[2];
+      });
+      let html = '<div class="grid">';
+      for (const setPrefix of keys) {
+        const cards = globalCardsBySet[setPrefix];
+        // Use the scraped set-box image. If a set has no box (e.g. promos),
+        // show a clean branded placeholder rather than a random SAMPLE card.
+        const boxUrl = `/assets/${setPrefix}.jpg`;
+        const ph = `this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'\\u{1F3B4}',style:'width:96px;height:134px;display:flex;align-items:center;justify-content:center;font-size:44px;border-radius:8px;background:linear-gradient(160deg,#2a2a30,#17171b);border:2px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,0.12)'}))`;
+        html += `<div class="card" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; height:240px; background:var(--surface-head)" onclick="renderCards('${setPrefix}')">
+          <div style="height:140px; margin-bottom:10px; display:flex; align-items:center;">
+             <img src="${boxUrl}" onerror="${ph}"
+                  style="max-height:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+          </div>
+          <h3>${setPrefix}</h3>
+          <div style="color:var(--muted); margin-top:5px">${cards.length} Cards</div>
+        </div>`;
+      }
+      html += '</div>';
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Escape text going into HTML (card names/effects can contain < > & ").
+    function esc(s){ return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function renderCards(setPrefix) {
+      const cards = globalCardsBySet[setPrefix];
+      // Promos come from several sub-sets; show one clean heading for the group.
+      const setName = setPrefix === 'P' ? 'Promo Cards'
+                    : ((cards[0] && cards[0].set_name) || setPrefix);
+      let html = `<div style="margin-bottom:20px;">
+        <button onclick="renderSets()">⬅️ Back to Sets</button>
+        <h2 style="display:inline-block; margin-left:15px">${esc(setName)}
+          <span style="color:var(--muted); font-size:14px">(${setPrefix} · ${cards.length} cards)</span></h2>
+      </div>`;
+      html += `<div class="grid">` + cards.map(cardTileHTML).join('') + `</div>`;
+      document.getElementById('content').innerHTML = html;
+      window.scrollTo(0, 0);
+    }
+
+    // One card tile (used by set browsing AND search results).
+    function cardTileHTML(c){
+      const img = c.image_url
+        ? `<img src="${esc(c.image_url)}" loading="lazy"
+                onerror="this.outerHTML='<span style=&quot;color:var(--muted)&quot;>No image</span>'">`
+        : '<span style="color:var(--muted)">No image</span>';
+      return `<div class="cardtile">
+        <div class="thumb" onclick="openCard('${esc(c.card_id)}')" title="Click to zoom">${img}</div>
+        <div class="nm">${esc(c.name)}</div>
+        <div class="code">${esc(c.card_id)}${c.rarity ? ' · ' + esc(c.rarity) : ''}${c.card_type ? ' · ' + esc(c.card_type) : ''}</div>
+        <button class="buy-btn" style="background:var(--sea)" onclick="openCard('${esc(c.card_id)}')">🛒 Buy</button>
+      </div>`;
+    }
+
+    // --- Search + filters ---------------------------------------------------
+    function fillSelect(id, values){
+      const sel = document.getElementById(id);
+      const keep = sel.options[0];                 // the "All" option
+      sel.innerHTML = ''; sel.appendChild(keep);
+      for(const v of values){
+        const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+      }
+    }
+    function buildFilterOptions(){
+      const colors=new Set(), types=new Set(), costs=new Set(), powers=new Set(), rarities=new Set();
+      for(const c of globalDataCards){
+        (c.card_color || '').split(/[\s\/]+/).filter(Boolean).forEach(x => colors.add(x));
+        if(c.card_type) types.add(c.card_type);
+        // Only real numbers — the source sometimes puts trait text in these fields.
+        const cost = String(c.card_cost ?? '').trim();
+        const power = String(c.card_power ?? '').trim();
+        if(/^\d+$/.test(cost)) costs.add(cost);
+        if(/^\d+$/.test(power)) powers.add(power);
+        if(c.rarity) rarities.add(c.rarity);
+      }
+      const num = (a,b) => (parseFloat(a)||0) - (parseFloat(b)||0);
+      fillSelect('fColor', [...colors].sort());
+      fillSelect('fType', [...types].sort());
+      fillSelect('fCost', [...costs].sort(num));
+      fillSelect('fPower', [...powers].sort(num));
+
+      // Rarity: friendly names in a sensible order, and one merged "Promo" option
+      // (the source labels promos inconsistently: P, PR, or no tag — all are P-### cards).
+      const RARITY_LABELS = {L:'Leader', C:'Common', UC:'Uncommon', R:'Rare',
+                             SR:'Super Rare', SEC:'Secret Rare', TR:'Treasure Rare'};
+      const rSel = document.getElementById('fRarity');
+      rSel.innerHTML = '<option value="">All</option>';
+      for(const code of ['L','C','UC','R','SR','SEC','TR']){
+        if(rarities.has(code)){
+          const o = document.createElement('option');
+          o.value = code; o.textContent = `${RARITY_LABELS[code]} (${code})`;
+          rSel.appendChild(o);
+        }
+      }
+      if(globalDataCards.some(c => c.card_id.startsWith('P-'))){
+        const o = document.createElement('option');
+        o.value = '__PROMO__'; o.textContent = 'Promo';
+        rSel.appendChild(o);
+      }
+    }
+    // The text search only takes effect when the user presses Search / Enter
+    // (stored in searchTerm). Dropdown filters stay instant.
+    let searchTerm = '';
+    function doSearch(){
+      searchTerm = document.getElementById('fSearch').value.trim().toLowerCase();
+      applyFilters();
+    }
+    function applyFilters(){
+      const q = searchTerm;
+      const color = document.getElementById('fColor').value;
+      const type = document.getElementById('fType').value;
+      const cost = document.getElementById('fCost').value;
+      const power = document.getElementById('fPower').value;
+      const rarity = document.getElementById('fRarity').value;
+      // No search/filter -> normal set-tile browse.
+      if(!(q || color || type || cost || power || rarity)){ renderSets(); return; }
+      const res = globalDataCards.filter(c => {
+        if(q){ const hay = (c.card_id + ' ' + (c.name||'')).toLowerCase(); if(!hay.includes(q)) return false; }
+        if(color && !(c.card_color||'').split(/[\s\/]+/).includes(color)) return false;
+        if(type && c.card_type !== type) return false;
+        if(cost && String(c.card_cost) !== cost) return false;
+        if(power && String(c.card_power) !== power) return false;
+        if(rarity){
+          if(rarity === '__PROMO__'){ if(!c.card_id.startsWith('P-')) return false; }
+          else if(c.rarity !== rarity) return false;
+        }
+        return true;
+      });
+      renderResults(res);
+    }
+    function renderResults(cards){
+      let html = `<div style="margin-bottom:16px;color:var(--muted);font-weight:600">
+        ${cards.length} card${cards.length===1?'':'s'} found</div>`;
+      html += cards.length
+        ? `<div class="grid">` + cards.map(cardTileHTML).join('') + `</div>`
+        : `<div style="padding:36px;text-align:center;color:var(--muted)">No cards match. Try clearing a filter.</div>`;
+      document.getElementById('content').innerHTML = html;
+      window.scrollTo(0, 0);
+    }
+    function clearFilters(){
+      ['fSearch','fColor','fType','fCost','fPower','fRarity'].forEach(id => document.getElementById(id).value = '');
+      searchTerm = '';
+      renderSets();
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/database', {method: 'POST', body: '{}'});
+        const data = await res.json();
+        globalDataCards = data.cards;
+        
+        globalCardsBySet = {};
+        globalCardsById = {};
+        for(const c of data.cards) {
+          const setPrefix = c.card_id.split('-')[0];
+          if(!globalCardsBySet[setPrefix]) globalCardsBySet[setPrefix] = [];
+          globalCardsBySet[setPrefix].push(c);
+          globalCardsById[c.card_id] = c;
+        }
+
+        if (Object.keys(globalCardsBySet).length > 0) {
+          buildFilterOptions();
+          renderSets();
+        } else {
+          document.getElementById('content').innerHTML = 'No cards found.';
+        }
+      } catch (e) {
+        document.getElementById('content').innerHTML = 'Error loading sets.';
+      }
+    }
+    load();
+  </script>
+
+  <footer class="gl-footer">
+    <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
+      &#9733; Track your collection with the Grand Line tracker &mdash; $1.99/mo
+    </a>
+    <div class="gl-legal">
+      Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
+      Bandai Namco or Toei Animation. One Piece and all related card images and names are the
+      property of their respective owners.<br>
+      Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.
+    </div>
+  </footer>
+</body>
+</html>

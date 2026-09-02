@@ -19,6 +19,7 @@ field names, and how variants are spelled -- is contained in this file.
 from __future__ import annotations
 
 import re
+import urllib.parse
 from typing import Any
 
 import requests
@@ -150,3 +151,10 @@ class OPTCGProvider(PriceProvider):
         """Return the printed card name, used to confirm a code while typing."""
         printings = self._fetch(card_id)
         return printings[0].name if printings else None
+
+    def get_buy_url(self, card_id: str, variant: str = BASE_VARIANT, grade: str = "raw", condition: str = "nm") -> str | None:
+        """Return a TCGplayer affiliate search URL for this card."""
+        if grade != "raw":
+            return None
+        query = urllib.parse.quote_plus(card_id)
+        return f"https://www.tcgplayer.com/search/all/product?q={query}&exta=YOUR_TCG_AFFILIATE_ID"
