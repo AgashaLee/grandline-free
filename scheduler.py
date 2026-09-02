@@ -51,7 +51,7 @@ def _run_snapshot():
 
 def _run_meta_refresh():
     """Best-effort weekly meta refresh (West + JP). Never fatal."""
-    for mod in ("seed_meta_limitless", "seed_meta_cardrush_jp"):
+    for mod in ("seed_meta_limitless", "seed_meta_tcgportal_jp"):
         try:
             m = __import__(mod)
             for fn in ("main", "seed", "run"):

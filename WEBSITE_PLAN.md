@@ -73,8 +73,20 @@ Everything below is DONE & tested locally; the free site is **NOT deployed yet**
 3. **Affiliate IDs**: Shopee+Tokopedia (Involve Asia), TCGplayer (Impact), eBay (EPN) →
    set in `carddetail.js`; and the tracker's buy links.
 4. **Buy domain** (grandline.gg) + AdSense (needs live domain).
-5. onepiecetopdecks still **IP-blocks us locally** (works from Railway's IP) — only needed if
-   we later want its JP/Asia aggregation; not required now (Limitless+Cardrush cover meta).
+6. **JP meta source is now tcg-portal.jp** (2026-09-02) — REPLACED Cardrush. `seed_meta_tcgportal_jp.py`
+   pulls ~60 recent JP tournament decks from its clean JSON API (`/api/onepiece/tournament-results`
+   + `/api/onepiece/cards` for the internal-id→code map, cached in `tcgportal_cardmap.json`).
+   Unblocked from any IP. Gives full 50-card lists + JP archetype (deckGuide.name, kept Japanese) +
+   placement + tournament; leader_id blank (source stores leader only as an archetype label). 99%
+   of card codes match our catalog. The seeder deletes old `cardrush-%`/`tcgportal-%` rows so JP is
+   one consistent set (West/limitless untouched). Scheduler now runs limitless + tcgportal (was
+   cardrush). To refresh the LIVE volume DB immediately: run `python seed_meta_tcgportal_jp.py` in
+   Railway Console (weekly scheduler maintains it after).
+5. onepiecetopdecks now **IP-blocks us from BOTH local AND Railway** (host-firewall 403 confirmed
+   2026-09-02 via `scrape_topdecks_jp.py` run in Railway Console — the old "works from Railway's
+   IP" note is stale; cloud IP ranges are blocked too). Do NOT keep retrying / don't bypass the
+   block. JP meta already covered by Cardrush (`seed_meta_cardrush_jp.py`). `scrape_topdecks_jp.py`
+   is left as a safe no-op (self-aborts on 403) in case their firewall ever loosens.
 
 
 ## The business model (decided)
