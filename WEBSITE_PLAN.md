@@ -45,8 +45,19 @@ Everything below is DONE & tested locally; the free site is **NOT deployed yet**
   thread-safe cache (cache.py) so big decks don't time out. Also pushed an **iOS mobile fix**
   (text-size-adjust + overflow-x). Built in a clean clone, not the free-site folder.
 
+### ✅ DEPLOYED (2026-09-02) — the free site is LIVE
+- **Live URL**: https://grandline.up.railway.app (Railway project `faithful-passion`,
+  service `web`, GitHub repo `AgashaLee/grandline-free` branch `main`). All 5 pages verified live.
+- **Volume `web-volume` mounted at `/data`**, `DB_PATH=/data/tracker.db` → catalog seeded onto it,
+  price_history persists across redeploys. Day 1 (2026-09-02) snapshot confirmed on the volume.
+- **Build fix**: Railway's `mise` builder failed verifying Python attestations → fixed with env var
+  `MISE_PYTHON_GITHUB_ATTESTATIONS=false`. Other env vars set: DB_PATH, TRACKER_URL, WHOP_STORE_URL,
+  PYTHONUNBUFFERED=1. No WHOP_* creds set → fully public.
+- **Daily jobs run in-process** (`scheduler.py`) — Market Watch fills in from the 2nd day (2026-09-03).
+- Repo has the paid tracker's git history tagged along (harmless); `git remote freesite` points at it.
+
 ### PENDING / NEXT
-1. **Deploy free site to Railway** — CODE IS PREPPED (2026-09-02), see
+1. ~~Deploy free site to Railway~~ ✅ DONE (above). Original prep notes: see
    **`DEPLOY_FREE_SITE.md`** for the exact runbook. Done in code: `DB_PATH` env
    override + first-boot volume seed (`database.py`), in-process daily-jobs thread
    (`scheduler.py`, runs `snapshot_prices.py` daily + meta on Mondays — no Railway
