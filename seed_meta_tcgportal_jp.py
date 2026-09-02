@@ -137,15 +137,19 @@ def seed(max_decks: int = MAX_DECKS) -> int:
 
         guide = t.get("deckGuide") or {}
         archetype = (guide.get("name") or "").strip() or "Unknown"
+        # The source has no leader card code, but does give the archetype's
+        # representative card art -> use it as the leader thumbnail on /meta.
+        leader_image = guide.get("representativeCardImage") or ""
         date = (t.get("date") or "")[:10]  # YYYY-MM-DD
         deck_id = f"tcgportal-{t['id']}"
         db.execute(
             """INSERT OR REPLACE INTO meta_decks
-               (id, event_date, country, event_name, event_type, players, winner, leader_id)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               (id, event_date, country, event_name, event_type, players, winner,
+                leader_id, leader_image)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (deck_id, date, "JP", archetype,
              (t.get("tournamentName") or "Japan event").strip(),
-             _placement(t.get("rank")), "", ""),
+             _placement(t.get("rank")), "", "", leader_image),
         )
         db.execute("DELETE FROM meta_deck_cards WHERE deck_id=?", (deck_id,))
         for code, qty in counts.items():

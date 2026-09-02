@@ -404,7 +404,9 @@
         `;
         tbody.appendChild(tr);
 
-        // Load leader thumbnail
+        // Load leader thumbnail: prefer our catalog image by leader_id; if the
+        // source gave no leader (JP archetypes), fall back to its representative
+        // card image so the cell isn't blank.
         if (d.leader_id) {
           fetch('/api/image', {
             method: 'POST',
@@ -418,6 +420,9 @@
               el.innerHTML = `<img src="${imgData.image}" alt="${d.leader_id}">`;
             }
           }).catch(() => {});
+        } else if (d.leader_image) {
+          const el = document.getElementById('leader-thumb-' + idx);
+          if (el) el.innerHTML = `<img src="${d.leader_image}" alt="${d.event_name || ''}">`;
         }
       });
     }
@@ -443,14 +448,14 @@
           <div class="info">
             <h2>${deck.event_name || 'Decklist'}</h2>
             <div class="meta">
-              <span>👤 <strong>${deck.winner}</strong></span>
+              <span>👤 <strong>${deck.winner || '—'}</strong></span>
               <span>📅 ${deck.event_date || '-'}</span>
               <span>🌍 ${deck.country || '-'}</span>
               <span>🏆 ${deck.players || '-'}</span>
               <span>📋 ${totalCards} cards</span>
             </div>
             <div class="meta" style="margin-top:4px">
-              <span>🎴 Leader: <strong>${deck.leader_id}</strong></span>
+              <span>🎴 Leader: <strong>${deck.leader_id || deck.event_name || '—'}</strong></span>
               <span>📊 ${deck.event_type || '-'}</span>
             </div>
           </div>
@@ -484,7 +489,8 @@
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // Load leader image
+      // Load leader image (fall back to the source's representative card image
+      // when there's no leader card id, e.g. JP archetypes).
       if (deck.leader_id) {
         fetch('/api/image', {
           method: 'POST',
@@ -498,6 +504,9 @@
             el.innerHTML = `<img src="${imgData.image}" style="width:100%;height:100%;object-fit:cover">`;
           }
         }).catch(() => {});
+      } else if (deck.leader_image) {
+        const el = document.getElementById('detail-leader-img');
+        if (el) el.innerHTML = `<img src="${deck.leader_image}" style="width:100%;height:100%;object-fit:cover">`;
       }
 
       // Load all card images

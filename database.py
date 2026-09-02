@@ -88,6 +88,12 @@ def init_db():
         PRIMARY KEY(deck_id, card_id)
     );
     """)
+    # Non-destructive migrations: add columns introduced after the initial schema.
+    for ddl in ["ALTER TABLE meta_decks ADD COLUMN leader_image TEXT"]:
+        try:
+            db.execute(ddl)
+        except sqlite3.OperationalError:
+            pass  # column already exists
     db.commit()
 
 # Initialize DB on first import
