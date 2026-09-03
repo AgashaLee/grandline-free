@@ -324,7 +324,7 @@
     // longest-first so multi-word phrases resolve before their sub-terms. Unknown
     // fragments stay as-is (still tagged jp). West names pass through unchanged.
     const JP_TOURNEY = [
-      ['ONEPIECEカードゲーム', 'One Piece Card Game '], ['ワンピースカードゲーム', 'One Piece Card Game '],
+      ['ONEPIECEカードゲーム', ''], ['ワンピースカードゲーム', ''],   /* redundant game-name prefix -> drop it (keeps labels short on mobile) */
       ['エクストラチャンピオンシップ', 'Extra Championship '], ['エクストラグランドバトル', 'Extra Grand Battle'],
       ['グランドバトル', 'Grand Battle'], ['フラッグシップバトル', 'Flagship Battle'],
       ['スタンダードバトル', 'Standard Battle'], ['チャンピオンシップ', 'Championship '],
