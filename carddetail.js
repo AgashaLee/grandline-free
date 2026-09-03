@@ -131,6 +131,7 @@ window.CardDetail = (function () {
   .cd-price-row + .cd-price-row{border-top:1px dashed #f0e6d5}
   .cd-price-row em{color:#9c8a76;font-style:normal;font-size:11px;font-weight:600;margin-left:4px}
   .cd-price-row b{color:#0d6ea3;font-weight:800}
+  .cd-prices-note{font-size:10.5px;color:#9c8a76;margin-top:7px;padding-top:6px;border-top:1px dashed #f0e6d5}
   .cd-text{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:12px 14px;
     font-size:12.5px;line-height:1.9;margin-bottom:16px}
   /* Keyword tags are coloured by the keyword's OWN printed colour (as on the
@@ -220,12 +221,16 @@ window.CardDetail = (function () {
       ? `<div class="cd-traits"><b>Traits:</b> ${esc(traits.replace(/\s*\/\s*/g, ' / '))}</div>` : '';
 
     // Per-printing prices (base + alt-art/parallel), each with its own value.
+    // We can show more artworks than we have prices for (images and prices come
+    // from different sources), so note that when it happens.
     const variants = Array.isArray(c.variants) ? c.variants : [];
+    const moreArts = arts.length > variants.length;
     const pricesHtml = variants.length ? `<div class="cd-prices">
       <div class="cd-prices-h">Market price (USD)</div>
       ${variants.map(v => `<div class="cd-price-row">
         <span>${esc(v.label || 'Base')}${v.rarity ? ` <em>${esc(v.rarity)}</em>` : ''}</span>
         <b>$${Number(v.price).toFixed(2)}</b></div>`).join('')}
+      ${moreArts ? `<div class="cd-prices-note">Prices shown only for versions with market data.</div>` : ''}
     </div>` : '';
 
     const buys = Object.keys(MARKET).filter(key => MARKET[key].region === REGION).map(key => {
