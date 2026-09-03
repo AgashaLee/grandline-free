@@ -2,10 +2,27 @@
 
 Handoff note so a new chat can continue without losing context.
 
-## ⭐ LATEST SNAPSHOT (2026-09-02) — read this first
-The free site now has 5 pages, all **dark-themed & consistent**: `/` (home), `/database`,
-`/market`, `/meta`, `/news`. Run locally: `python main.py dashboard` → http://127.0.0.1:8802 .
-Everything below is DONE & tested locally; the free site is **NOT deployed yet**.
+## ⭐ LATEST SNAPSHOT (2026-09-03) — read this first
+**LIVE & deployed:** https://grandline.up.railway.app — Railway project `faithful-passion`, service
+`web`, from GitHub repo **`AgashaLee/grandline-free`** (branch `main`; local git remote = `freesite`,
+push via PowerShell: `git push freesite HEAD:main`). Volume `web-volume` at `/data`,
+`DB_PATH=/data/tracker.db`. Fully public (no WHOP_* creds). 5 pages: `/` `/database` `/market`
+`/meta` `/news`. Run locally: `python main.py dashboard` → http://127.0.0.1:8802 .
+
+Done since first deploy (all live): **Market Watch** shows prices gumgum-style (gainers/losers, %/$,
+value tiers, Cards/Table); **per-printing prices** (base + alt-arts) via `card_variants`
+(`seed_variants.py`); **price-history chart** in the card popup; **historical meta by set-format**
+(pills OP13–OP17, West+JP, ~883 decks); JP labels translated to English +(jp); **full visual
+redesign** (sleek zinc/glassmorphism — Gemini pass, restore point tag `pre-gemini-redesign`).
+**Fully self-updating** via `scheduler.py`: news (30m), prices (daily), meta + new card sets
+(weekly Mon). NOTE: Gemini rewrote `database.html`'s JS during the redesign (works fine, tested).
+
+**PENDING = monetization:** buy a domain (grandline.gg) + point at Railway (Custom Domain);
+plug affiliate IDs into `carddetail.js` (Shopee/Tokopedia via Involve Asia, TCGplayer via Impact,
+eBay via EPN); enable AdSense (needs live domain). Prices come from OPTCGAPI (its `allPromoCards`
+endpoint is broken upstream → new promos not auto-added until it returns; self-heals).
+Live-DB refresh commands (Railway Console): `python seed_variants.py`, `python snapshot_prices.py`,
+`python add_new_set.py`, `python seed_meta_limitless.py`, `python seed_meta_tcgportal_jp.py`.
 
 - **Market Watch** (`/market`, `market.html`, `api_market`): **gumgum.gg-style** movers page.
   **DECISION REVERSED 2026-09-03: the free site now SHOWS exact prices** ($ price, $ diff, % diff) —
