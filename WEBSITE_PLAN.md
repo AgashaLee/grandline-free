@@ -7,9 +7,13 @@ The free site now has 5 pages, all **dark-themed & consistent**: `/` (home), `/d
 `/market`, `/meta`, `/news`. Run locally: `python main.py dashboard` → http://127.0.0.1:8802 .
 Everything below is DONE & tested locally; the free site is **NOT deployed yet**.
 
-- **Market Watch** (`/market`, `market.html`, `api_market`): biggest price **gainers/losers**
-  as **% change only** (raw $ stays a paid-tracker feature — the upsell). Two panels, 24h/7d/30d
-  window toggle, rows click into the shared `carddetail.js` modal. Fed by a new **daily snapshot
+- **Market Watch** (`/market`, `market.html`, `api_market`): **gumgum.gg-style** movers page.
+  **DECISION REVERSED 2026-09-03: the free site now SHOWS exact prices** ($ price, $ diff, % diff) —
+  the earlier "hide prices as the upsell" choice was dropped at the user's request; the paid tracker's
+  hooks are now portfolio value/history, not raw prices. Layout: Gainers/Losers toggle, %/$ sort,
+  value tiers (All/$5+/$20+), 24h/7d/30d window, and a **Cards grid ↔ Table** view toggle, with a card
+  count + last-updated line. `api_market` returns price+diff+pct; rows click into `carddetail.js`.
+  (No per-card price CHART yet — price_history only has a few days; add once it accumulates.) Fed by a new **daily snapshot
   job** `snapshot_prices.py`: additive (never DROPs), APPENDs one row/card/day into a new
   `price_history` table AND refreshes `cards.market_price` in place — safe to run daily even while
   `allPromoCards` is 404. **First snapshot already written (2026-09-02, 2,711 cards).** The page
