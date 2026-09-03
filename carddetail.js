@@ -1,5 +1,10 @@
-/* Shared card-detail modal — used by both the Card Database (/database) and the
-   Meta Decks (/meta) pages. Click a card anywhere -> CardDetail.open(cardObj).
+/* Shared card-detail modal — used by the Card Database (/database), Meta Decks
+   (/meta) AND Market Watch (/market). Click a card anywhere -> CardDetail.open(cardObj).
+
+   PRICES/CHART are OFF by default and shown ONLY when the caller opts in with
+   CardDetail.open(card, {prices:true}) — Market Watch does this (prices are its
+   whole point), while Database and Meta deliberately hide them (exact prices +
+   history stay a Market-Watch / paid-tracker feature, not on the browse pages).
 
    The card object is a row from /api/database (card_id, name, set_name, image_url,
    rarity, card_type, card_color, card_cost, card_power, attribute, counter, life,
@@ -47,6 +52,7 @@ window.CardDetail = (function () {
   }
   let REGION = detectRegion();
   let _lastCard = null;
+  let _lastOpts = {};
 
   function buyQuery(c) {
     const name = (c.name || '').replace(/\s*\(\d+\)\s*$/, '').trim();
@@ -243,8 +249,10 @@ window.CardDetail = (function () {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
 
-  function open(c) {
+  function open(c, opts) {
     if (!c) return;
+    opts = opts || {};
+    const showPrices = !!opts.prices;  // prices + history chart are opt-in (Market Watch only)
     ensureDom();
     // Build the art strip: base image, then each priced variant's image (so
     // every price has a matching thumbnail), then gallery alt-arts. De-duped
@@ -291,7 +299,7 @@ window.CardDetail = (function () {
     // from different sources), so note that when it happens.
     const variants = Array.isArray(c.variants) ? c.variants : [];
     const moreArts = arts.length > variants.length;
-    const pricesHtml = variants.length ? `<div class="cd-prices">
+    const pricesHtml = (showPrices && variants.length) ? `<div class="cd-prices">
       <div class="cd-prices-h">Market price (USD)</div>
       ${variants.map(v => `<div class="cd-price-row">
         <span>${esc(v.label || 'Base')}${v.rarity ? ` <em>${esc(v.rarity)}</em>` : ''}</span>
@@ -318,17 +326,18 @@ window.CardDetail = (function () {
         <div class="cd-chips">${chips.join('')}</div>
         ${traitsHtml}
         ${pricesHtml}
-        <div class="cd-chart" id="cdChart" hidden></div>
+        ${showPrices ? '<div class="cd-chart" id="cdChart" hidden></div>' : ''}
         ${c.card_text ? `<div class="cd-text">${formatCardText(c.card_text)}</div>` : ''}
         <div class="cd-buyrow">${buys}</div>
         ${regionBar}
         <div class="cd-buynote">Opens a marketplace search for this card. Prices vary by seller.</div>
       </div>`;
     _lastCard = c;
+    _lastOpts = opts;
     document.getElementById('cdModal').classList.add('open');
 
-    // Load the price-history chart (async, non-blocking).
-    if (c.card_id) {
+    // Load the price-history chart (async, non-blocking) — only when prices are shown.
+    if (showPrices && c.card_id) {
       fetch('/api/price_history', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ card_id: c.card_id }),
@@ -347,7 +356,7 @@ window.CardDetail = (function () {
   function switchRegion() {
     REGION = (REGION === 'id') ? 'intl' : 'id';
     try { localStorage.setItem('gl_region', REGION); } catch (e) {}
-    if (_lastCard) open(_lastCard);
+    if (_lastCard) open(_lastCard, _lastOpts);
   }
 
   return { open, close, esc, switchRegion, _swap: swapArt };

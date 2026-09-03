@@ -225,7 +225,7 @@
 
     function bindClicks(){
       document.querySelectorAll('[data-id]').forEach(el=>{
-        el.addEventListener('click', ()=>{ const c = cardsById[el.dataset.id]; if(c && window.CardDetail) CardDetail.open(c); });
+        el.addEventListener('click', ()=>{ const c = cardsById[el.dataset.id]; if(c && window.CardDetail) CardDetail.open(c, {prices:true}); });
       });
     }
 
