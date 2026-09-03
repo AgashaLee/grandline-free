@@ -251,9 +251,11 @@
     }
 
     function getCountryEmoji(code) {
-      const map = { 'JP': '🇯🇵', 'Singapore': '🇸🇬', 'Indonesia': '🇮🇩', 'Thailand': '🇹🇭', 
-                     'Malaysia': '🇲🇾', 'US': '🇺🇸', 'UK': '🇬🇧', 'EN': '🌍', 'KR': '🇰🇷',
-                     'TW': '🇹🇼', 'HK': '🇭🇰', 'PH': '🇵🇭', 'AU': '🇦🇺' };
+      // Non-regional-indicator glyphs on purpose: Windows renders 🇯🇵-style flags
+      // as their letter pair (e.g. "JP"), which doubled up next to the text label.
+      const map = { 'JP': '🎌', 'West': '🌍', 'Singapore': '🇸🇬', 'Indonesia': '🇮🇩',
+                     'Thailand': '🇹🇭', 'Malaysia': '🇲🇾', 'US': '🌎', 'UK': '🌍',
+                     'EN': '🌍', 'KR': '🇰🇷', 'TW': '🇹🇼', 'HK': '🇭🇰', 'PH': '🇵🇭', 'AU': '🇦🇺' };
       return map[code] || '🌏';
     }
 
