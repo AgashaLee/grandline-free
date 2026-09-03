@@ -636,6 +636,7 @@ def api_market(payload: dict) -> dict:
 #: syndicate headlines). Cached in memory so we hit Google at most twice an hour.
 _NEWS_CACHE: dict = {"at": 0.0, "items": []}
 _NEWS_TTL = 1800  # seconds
+_NEWS_MAX = 60    # how many headlines to keep (was hard-capped at 18)
 _NEWS_URL = ("https://news.google.com/rss/search?"
              "q=%22one+piece+card+game%22&hl=en-US&gl=US&ceid=US:en")
 
@@ -668,6 +669,7 @@ def api_news(payload: dict | None = None) -> dict:
     if _NEWS_CACHE["items"] and now - _NEWS_CACHE["at"] < _NEWS_TTL:
         return {"featured": featured, "items": _NEWS_CACHE["items"], "cached": True}
 
+    import email.utils
     import urllib.request
     import xml.etree.ElementTree as ET
     try:
@@ -675,18 +677,29 @@ def api_news(payload: dict | None = None) -> dict:
         with urllib.request.urlopen(req, timeout=15) as resp:
             root = ET.fromstring(resp.read())
         items = []
-        for it in root.findall(".//item")[:18]:
+        for it in root.findall(".//item"):
             title = (it.findtext("title") or "").strip()
             src = it.find("source")
             source = (src.text or "").strip() if src is not None else ""
             if source and title.endswith(f" - {source}"):
                 title = title[: -(len(source) + 3)].strip()
+            pub = (it.findtext("pubDate") or "").strip()
+            try:
+                ts = email.utils.parsedate_to_datetime(pub).timestamp() if pub else 0.0
+            except Exception:
+                ts = 0.0
             items.append({
                 "title": title,
                 "link": (it.findtext("link") or "").strip(),
                 "source": source,
-                "date": (it.findtext("pubDate") or "").strip(),
+                "date": pub,
+                "_ts": ts,
             })
+        # Newest first, then keep a generous number (was hard-capped at 18).
+        items.sort(key=lambda x: x["_ts"], reverse=True)
+        items = items[:_NEWS_MAX]
+        for x in items:
+            x.pop("_ts", None)
         if items:
             _NEWS_CACHE["items"], _NEWS_CACHE["at"] = items, now
         return {"featured": featured, "items": items}
