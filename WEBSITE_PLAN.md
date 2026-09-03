@@ -28,6 +28,12 @@ Everything below is DONE & tested locally; the free site is **NOT deployed yet**
 - **Card Database** (`/database`): dark theme; set→card grid→click-to-zoom modal; **search
   (code/name, press Enter/Search) + filters** (Color/Type/Cost/Power/Rarity friendly names,
   "Promo" merges P/PR/blank); prices hidden; alt-art thumbnails in zoom.
+- **Per-printing prices** (2026-09-03): new `card_variants` table (`seed_variants.py`, from OPTCGAPI)
+  holds every printing's price (base + Alternate Art/Parallel/SP/Manga; ~3,982 priced). Card popup
+  lists a price per version (base + alt-art). `snapshot_prices.py` now logs each variant into
+  price_history (keyed by variant_id; base==card_id), and `api_market` joins card_variants so pricey
+  alt-arts appear as their own Market Watch movers (needs 2 variant-snapshot days to populate).
+  On a fresh volume run `python seed_variants.py` (popup prices) — movers fill via the daily scheduler.
 - **Card detail modal is a shared module** `carddetail.js` (used by /database AND /meta).
   Buy buttons **auto-detect region** (browser timezone/lang): 🇮🇩 ID→Shopee/Tokopedia,
   🌍 else→TCGplayer/eBay, with a manual switch (localStorage `gl_region`). **All 4 affiliate
