@@ -268,6 +268,34 @@
       return (p || '').toLowerCase().startsWith('1st') ? 'placement-1st' : 'placement-other';
     }
 
+    // JP archetype labels (from tcg-portal) look like "<colors><leader>（set）",
+    // e.g. 緑ミホーク or 赤緑ルフィ（OP13）. Translate to English for display and
+    // tag with "(jp)". West labels (already English) pass through unchanged.
+    const JP_COLOR = {'赤':'Red','青':'Blue','緑':'Green','紫':'Purple','黄':'Yellow','黒':'Black'};
+    const JP_LEADER = {
+      'ミホーク':'Mihawk','ルフィ':'Luffy','エネル':'Enel','エース':'Ace','ロビン':'Robin',
+      'ロックス':'Rocks','サボ':'Sabo','ハンコック':'Hancock','ティーチ':'Teach','クザン':'Kuzan',
+      'リンリン':'Big Mom','ゾロ':'Zoro','ナミ':'Nami','ヤマト':'Yamato','ルーシー':'Lucy',
+      'イム':'Im','カタクリ':'Katakuri','ドフラミンゴ':'Doflamingo','カイドウ':'Kaido',
+      'シャンクス':'Shanks','ロー':'Law','キッド':'Kid','ボニー':'Bonney','ウタ':'Uta',
+      'モリア':'Moria','クロ':'Kuro','ペローナ':'Perona','プリン':'Pudding','バギー':'Buggy',
+      'スモーカー':'Smoker','クマ':'Kuma','レベッカ':'Rebecca','ドレーク':'Drake','リューマ':'Ryuma',
+      'ベロ':'Belo Betty','ガープ':'Garp','クイーン':'Queen','ボア':'Hancock','ゲッコー':'Moria'
+    };
+    function hasJP(s) { return /[぀-ヿ一-龯]/.test(s || ''); }
+    function translateArchetype(name) {
+      if (!name || !hasJP(name)) return name;   // West/English labels unchanged
+      let s = name.trim();
+      let setSuffix = '';
+      const m = s.match(/[（(]([^）)]*)[）)]\s*$/);   // trailing （OP13） etc.
+      if (m) { setSuffix = ' (' + m[1].trim() + ')'; s = s.slice(0, m.index).trim(); }
+      const colors = [];
+      while (s.length && JP_COLOR[s[0]]) { colors.push(JP_COLOR[s[0]]); s = s.slice(1); }
+      const leader = JP_LEADER[s] || s;   // unknown leader -> keep JP text
+      const colorStr = colors.length ? colors.join('/') + ' ' : '';
+      return (colorStr + leader + setSuffix).trim() + ' (jp)';
+    }
+
     // Bar chart of how many decklists each leader/archetype has (meta share).
     function metaShareChart() {
       const counts = {};
@@ -281,10 +309,11 @@
       const esc = (window.CardDetail && CardDetail.esc) || (s => s);
       const bars = rows.map(([name, c]) => {
         const h = Math.max(6, Math.round(c / max * 150));
+        const label = translateArchetype(name);
         return `<div class="mc-col">
           <div class="mc-count">${c}</div>
-          <div class="mc-bar" style="height:${h}px" title="${esc(name)}: ${c} decks"></div>
-          <div class="mc-label">${esc(name)}</div>
+          <div class="mc-bar" style="height:${h}px" title="${esc(label)}: ${c} decks"></div>
+          <div class="mc-label">${esc(label)}</div>
         </div>`;
       }).join('');
       return `<div class="meta-chart">
@@ -394,7 +423,7 @@
         tr.innerHTML = `
           <td><div class="leader-thumb" id="leader-thumb-${idx}"></div></td>
           <td>
-            <div style="font-weight:600; font-size:13px">${d.event_name || '-'}</div>
+            <div style="font-weight:600; font-size:13px">${translateArchetype(d.event_name) || '-'}</div>
             <div style="font-size:11px; color:#71717a; margin-top:2px">${d.leader_id}</div>
           </td>
           <td style="white-space:nowrap; color:#a1a1aa; font-size:12px">${d.event_date || '-'}</td>
@@ -448,7 +477,7 @@
         <div class="deck-header">
           <div class="leader-img" id="detail-leader-img"></div>
           <div class="info">
-            <h2>${deck.event_name || 'Decklist'}</h2>
+            <h2>${translateArchetype(deck.event_name) || 'Decklist'}</h2>
             <div class="meta">
               <span>👤 <strong>${deck.winner || '—'}</strong></span>
               <span>📅 ${deck.event_date || '-'}</span>
@@ -457,7 +486,7 @@
               <span>📋 ${totalCards} cards</span>
             </div>
             <div class="meta" style="margin-top:4px">
-              <span>🎴 Leader: <strong>${deck.leader_id || deck.event_name || '—'}</strong></span>
+              <span>🎴 Leader: <strong>${deck.leader_id || translateArchetype(deck.event_name) || '—'}</strong></span>
               <span>📊 ${deck.event_type || '-'}</span>
             </div>
           </div>
