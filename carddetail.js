@@ -72,6 +72,46 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function _fmtDay(d) {
+    try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    catch (e) { return d; }
+  }
+  // Tiny inline line chart of a printing's daily price history.
+  function sparkline(points) {
+    if (!points || points.length < 2)
+      return `<div class="cd-chart-empty">Price history is still building (updated daily) — check back as it grows.</div>`;
+    const W = 320, H = 112, padL = 40, padR = 8, padT = 10, padB = 20;
+    const prices = points.map(p => p.price);
+    let min = Math.min(...prices), max = Math.max(...prices);
+    if (min === max) { min = min * 0.9; max = max * 1.1 || 1; }
+    const n = points.length;
+    const x = i => padL + (n === 1 ? 0 : i * (W - padL - padR) / (n - 1));
+    const y = v => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
+    const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.price).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${W} ${H}" class="cd-spark" preserveAspectRatio="none">
+      <text x="4" y="${(y(max) + 3).toFixed(1)}" class="cd-ax">$${max.toFixed(2)}</text>
+      <text x="4" y="${(y(min) + 3).toFixed(1)}" class="cd-ax">$${min.toFixed(2)}</text>
+      <path class="cd-line" d="${path}"/>
+      <text x="${padL}" y="${H - 5}" class="cd-ax">${esc(_fmtDay(points[0].date))}</text>
+      <text x="${W - padR}" y="${H - 5}" class="cd-ax" text-anchor="end">${esc(_fmtDay(points[n - 1].date))}</text>
+    </svg>`;
+  }
+  function renderChart(series) {
+    const el = document.getElementById('cdChart');
+    if (!el) return;
+    if (!series || !series.length) { el.hidden = true; el.innerHTML = ''; return; }
+    let idx = series.findIndex(s => s.is_base);
+    if (idx < 0) idx = 0;
+    const sel = series.length > 1
+      ? `<select class="cd-chart-sel">${series.map((s, i) =>
+          `<option value="${i}"${i === idx ? ' selected' : ''}>${esc(s.label)}</option>`).join('')}</select>` : '';
+    el.hidden = false;
+    el.innerHTML = `<div class="cd-chart-h">Price history ${sel}</div>
+                    <div class="cd-chart-body">${sparkline(series[idx].points)}</div>`;
+    const s = el.querySelector('.cd-chart-sel');
+    if (s) s.onchange = () => { el.querySelector('.cd-chart-body').innerHTML = sparkline(series[+s.value].points); };
+  }
+
   // Format effect text like the printed card: keyword tags -> badges, {traits}
   // emphasised, and the [Trigger] clause on its own line.
   function formatCardText(text) {
@@ -132,6 +172,14 @@ window.CardDetail = (function () {
   .cd-price-row em{color:#9c8a76;font-style:normal;font-size:11px;font-weight:600;margin-left:4px}
   .cd-price-row b{color:#0d6ea3;font-weight:800}
   .cd-prices-note{font-size:10.5px;color:#9c8a76;margin-top:7px;padding-top:6px;border-top:1px dashed #f0e6d5}
+  .cd-chart{margin-bottom:14px}
+  .cd-chart-h{font-size:10.5px;font-weight:700;color:#9c8a76;text-transform:uppercase;letter-spacing:.5px;
+              margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .cd-chart-sel{font-size:11px;padding:2px 6px;border:1px solid #ecdcc2;border-radius:6px;background:#fff;color:#3a2a1e;cursor:pointer}
+  .cd-spark{display:block;width:100%;height:112px;background:#fff;border:1px solid #ecdcc2;border-radius:8px}
+  .cd-ax{fill:#9c8a76;font-size:9px}
+  .cd-line{fill:none;stroke:#1799d6;stroke-width:2;vector-effect:non-scaling-stroke}
+  .cd-chart-empty{font-size:11.5px;color:#9c8a76;background:#fff;border:1px dashed #ecdcc2;border-radius:8px;padding:16px;text-align:center}
   .cd-text{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:12px 14px;
     font-size:12.5px;line-height:1.9;margin-bottom:16px}
   /* Keyword tags are coloured by the keyword's OWN printed colour (as on the
@@ -263,6 +311,7 @@ window.CardDetail = (function () {
         <div class="cd-chips">${chips.join('')}</div>
         ${traitsHtml}
         ${pricesHtml}
+        <div class="cd-chart" id="cdChart" hidden></div>
         ${c.card_text ? `<div class="cd-text">${formatCardText(c.card_text)}</div>` : ''}
         <div class="cd-buyrow">${buys}</div>
         ${regionBar}
@@ -270,6 +319,16 @@ window.CardDetail = (function () {
       </div>`;
     _lastCard = c;
     document.getElementById('cdModal').classList.add('open');
+
+    // Load the price-history chart (async, non-blocking).
+    if (c.card_id) {
+      fetch('/api/price_history', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ card_id: c.card_id }),
+      }).then(r => r.json())
+        .then(d => { if (_lastCard === c) renderChart((d && d.series) || []); })
+        .catch(() => {});
+    }
   }
 
   function close() {

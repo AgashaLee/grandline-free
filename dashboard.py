@@ -50,7 +50,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
 PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market"}
-PUBLIC_API = {"/api/database", "/api/meta", "/api/news", "/api/market"}
+PUBLIC_API = {"/api/database", "/api/meta", "/api/news", "/api/market", "/api/price_history"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
 #: redo it for every browser poll.
@@ -709,6 +709,43 @@ def api_market(payload: dict) -> dict:
     }
 
 
+def api_price_history(payload: dict) -> dict:
+    """Daily price points for a card's printings, for the popup's history chart.
+
+    Returns one series per printing (base + priced variants) that has any logged
+    history, each a list of {date, price} from the ``price_history`` snapshots.
+    """
+    db = get_db()
+    card_id = (payload.get("card_id") or "").strip().upper() if isinstance(payload, dict) else ""
+    if not card_id:
+        return {"series": []}
+    try:
+        vids = db.execute(
+            """SELECT variant_id, variant_label, is_base FROM card_variants
+                WHERE card_id=? ORDER BY is_base DESC, market_price DESC""",
+            (card_id,)).fetchall()
+    except Exception:
+        vids = []
+    if not vids:  # no variant table -> just the base, keyed by card_id
+        vids = [{"variant_id": card_id, "variant_label": "", "is_base": 1}]
+
+    series = []
+    for v in vids:
+        try:
+            pts = db.execute(
+                "SELECT date, price FROM price_history WHERE card_id=? ORDER BY date",
+                (v["variant_id"],)).fetchall()
+        except Exception:
+            pts = []
+        if not pts:
+            continue
+        series.append({
+            "label": v["variant_label"] or "Base", "is_base": v["is_base"],
+            "points": [{"date": p["date"], "price": p["price"]} for p in pts],
+        })
+    return {"series": series}
+
+
 #: Aggregated One Piece TCG news via Google News RSS (free, no key, legal to
 #: syndicate headlines). Cached in memory so we hit Google at most twice an hour.
 _NEWS_CACHE: dict = {"at": 0.0, "items": []}
@@ -797,6 +834,7 @@ ROUTES = {
     "/api/database": api_database,
     "/api/meta": api_meta,
     "/api/market": api_market,
+    "/api/price_history": api_price_history,
     "/api/news": api_news,
 }
 
