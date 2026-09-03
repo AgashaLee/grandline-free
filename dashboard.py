@@ -539,14 +539,22 @@ def api_database(payload: dict) -> dict:
     # show a price for each version. Table may not exist yet -> treat as none.
     try:
         vmap: dict[str, list[dict]] = {}
+        base_img: dict[str, str] = {}   # correct plain-base image per card
         for r in db.execute(
-                """SELECT card_id, variant_label, rarity, market_price, is_base
+                """SELECT card_id, variant_label, rarity, market_price, is_base, image_url
                      FROM card_variants WHERE market_price IS NOT NULL"""):
             vmap.setdefault(r["card_id"], []).append({
                 "label": r["variant_label"] or "Base", "rarity": r["rarity"],
                 "price": r["market_price"], "is_base": r["is_base"],
             })
+            if r["is_base"] and r["image_url"]:
+                base_img[r["card_id"]] = r["image_url"]
         for c in cards:
+            # The catalog's image_url can be a parallel by mistake; prefer the
+            # plain-base image from card_variants so the grid + popup base art
+            # matches what Market Watch shows.
+            if base_img.get(c["card_id"]):
+                c["image_url"] = base_img[c["card_id"]]
             vs = vmap.get(c["card_id"])
             if vs:
                 # Base first, then priciest variants.
