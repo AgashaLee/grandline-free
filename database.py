@@ -87,6 +87,19 @@ def init_db():
         quantity INTEGER,
         PRIMARY KEY(deck_id, card_id)
     );
+
+    -- One row per PRINTING of a card (base + each alt/parallel), so we can price
+    -- them separately. Base print's variant_id == card_id.
+    CREATE TABLE IF NOT EXISTS card_variants (
+        variant_id   TEXT PRIMARY KEY,   -- card_id (base) or card_id#slug (variant)
+        card_id      TEXT,               -- base code, for grouping
+        name         TEXT,
+        rarity       TEXT,
+        variant_label TEXT,              -- '' for base, e.g. 'Alternate Art', 'Parallel'
+        image_url    TEXT,
+        market_price REAL,
+        is_base      INTEGER DEFAULT 0
+    );
     """)
     # Non-destructive migrations: add columns introduced after the initial schema.
     for ddl in ["ALTER TABLE meta_decks ADD COLUMN leader_image TEXT",

@@ -535,6 +535,26 @@ def api_database(payload: dict) -> dict:
     except Exception:
         pass
 
+    # Attach per-printing prices (base + alt-art/parallel) so the detail modal can
+    # show a price for each version. Table may not exist yet -> treat as none.
+    try:
+        vmap: dict[str, list[dict]] = {}
+        for r in db.execute(
+                """SELECT card_id, variant_label, rarity, market_price, is_base
+                     FROM card_variants WHERE market_price IS NOT NULL"""):
+            vmap.setdefault(r["card_id"], []).append({
+                "label": r["variant_label"] or "Base", "rarity": r["rarity"],
+                "price": r["market_price"], "is_base": r["is_base"],
+            })
+        for c in cards:
+            vs = vmap.get(c["card_id"])
+            if vs:
+                # Base first, then priciest variants.
+                vs.sort(key=lambda v: (0 if v["is_base"] else 1, -(v["price"] or 0)))
+                c["variants"] = vs
+    except Exception:
+        pass
+
     return {"cards": cards}
 
 def api_meta(payload: dict) -> dict:
@@ -600,16 +620,36 @@ def api_market(payload: dict) -> dict:
     if baseline == latest:
         baseline = dates[0]
 
-    rows = db.execute(
-        """SELECT n.card_id, c.name, c.set_id, c.set_name, c.rarity,
-                  c.card_type, c.card_color, c.image_url,
-                  o.price AS old_price, n.price AS new_price
-             FROM price_history n
-             JOIN price_history o ON o.card_id = n.card_id AND o.date = ?
-             JOIN cards c        ON c.card_id = n.card_id
-            WHERE n.date = ? AND o.price >= ? AND o.price > 0""",
-        (baseline, latest, min_price),
-    ).fetchall()
+    # Prefer per-printing prices (base + alt-arts) so pricey alt-arts show up as
+    # their own movers; fall back to the base-only catalog if variants aren't seeded.
+    try:
+        has_variants = db.execute("SELECT 1 FROM card_variants LIMIT 1").fetchone() is not None
+    except Exception:
+        has_variants = False
+
+    if has_variants:
+        rows = db.execute(
+            """SELECT v.card_id AS card_id, v.name AS name, c.set_name AS set_name,
+                      v.rarity AS rarity, v.image_url AS image_url,
+                      o.price AS old_price, n.price AS new_price
+                 FROM price_history n
+                 JOIN price_history o  ON o.card_id = n.card_id AND o.date = ?
+                 JOIN card_variants v  ON v.variant_id = n.card_id
+                 LEFT JOIN cards c     ON c.card_id = v.card_id
+                WHERE n.date = ? AND o.price >= ? AND o.price > 0""",
+            (baseline, latest, min_price),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            """SELECT n.card_id AS card_id, c.name AS name, c.set_name AS set_name,
+                      c.rarity AS rarity, c.image_url AS image_url,
+                      o.price AS old_price, n.price AS new_price
+                 FROM price_history n
+                 JOIN price_history o ON o.card_id = n.card_id AND o.date = ?
+                 JOIN cards c        ON c.card_id = n.card_id
+                WHERE n.date = ? AND o.price >= ? AND o.price > 0""",
+            (baseline, latest, min_price),
+        ).fetchall()
 
     movers = []
     for r in rows:
@@ -618,10 +658,8 @@ def api_market(payload: dict) -> dict:
         if pct == 0:
             continue
         movers.append({
-            "card_id": r["card_id"], "name": r["name"],
-            "set_id": r["set_id"], "set_name": r["set_name"],
-            "rarity": r["rarity"], "card_type": r["card_type"],
-            "card_color": r["card_color"], "image_url": r["image_url"],
+            "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
+            "rarity": r["rarity"], "image_url": r["image_url"],
             "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
         })
 

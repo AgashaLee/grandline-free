@@ -78,29 +78,38 @@ def snapshot(day: str | None = None):
     ensure_table(db)
 
     day = day or _dt.date.today().isoformat()
-    prices = _fetch_prices()
-    if not prices:
-        print("No prices fetched -- aborting (nothing written).")
+
+    # Refresh every printing's price (base + alt-arts/parallels) into
+    # card_variants, then log each into price_history. Keyed by variant_id, so
+    # the base print (variant_id == card_id) keeps its existing history and each
+    # alt-art builds its own -- that's what lets Market Watch track them.
+    try:
+        import seed_variants
+        seed_variants.seed()
+    except Exception as exc:
+        print(f"variant refresh failed ({exc}) -- falling back to base prices only.")
+
+    rows = db.execute(
+        "SELECT variant_id, card_id, market_price, is_base FROM card_variants "
+        "WHERE market_price IS NOT NULL").fetchall()
+    if not rows:
+        print("No prices available -- aborting (nothing written).")
         return 0
 
-    # Only record/refresh cards we actually have in the catalog.
-    known = {r[0] for r in db.execute("SELECT card_id FROM cards").fetchall()}
-
     written = 0
-    for cid, p in prices.items():
-        if cid not in known:
-            continue
+    for r in rows:
         db.execute(
             "INSERT OR REPLACE INTO price_history (card_id, date, price) VALUES (?,?,?)",
-            (cid, day, p),
+            (r[0], day, r[2]),
         )
-        db.execute("UPDATE cards SET market_price=? WHERE card_id=?", (p, cid))
+        if r[3]:  # base print -> keep the catalog's market_price fresh too
+            db.execute("UPDATE cards SET market_price=? WHERE card_id=?", (r[2], r[1]))
         written += 1
     db.commit()
 
     days = db.execute("SELECT COUNT(DISTINCT date) FROM price_history").fetchone()[0]
     total = db.execute("SELECT COUNT(*) FROM price_history").fetchone()[0]
-    print(f"Snapshot {day}: wrote {written} card prices.")
+    print(f"Snapshot {day}: wrote {written} printing prices (base + variants).")
     print(f"price_history now holds {total} rows across {days} distinct day(s).")
     return written
 

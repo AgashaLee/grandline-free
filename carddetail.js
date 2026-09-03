@@ -125,6 +125,12 @@ window.CardDetail = (function () {
   .cd-chip b{color:#0d6ea3}
   .cd-traits{font-size:12px;color:#3a2a1e;margin:-6px 0 14px}
   .cd-traits b{color:#9c8a76;font-weight:700}
+  .cd-prices{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .cd-prices-h{font-size:10.5px;font-weight:700;color:#9c8a76;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .cd-price-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0}
+  .cd-price-row + .cd-price-row{border-top:1px dashed #f0e6d5}
+  .cd-price-row em{color:#9c8a76;font-style:normal;font-size:11px;font-weight:600;margin-left:4px}
+  .cd-price-row b{color:#0d6ea3;font-weight:800}
   .cd-text{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:12px 14px;
     font-size:12.5px;line-height:1.9;margin-bottom:16px}
   /* Keyword tags are coloured by the keyword's OWN printed colour (as on the
@@ -213,6 +219,15 @@ window.CardDetail = (function () {
     const traitsHtml = traits
       ? `<div class="cd-traits"><b>Traits:</b> ${esc(traits.replace(/\s*\/\s*/g, ' / '))}</div>` : '';
 
+    // Per-printing prices (base + alt-art/parallel), each with its own value.
+    const variants = Array.isArray(c.variants) ? c.variants : [];
+    const pricesHtml = variants.length ? `<div class="cd-prices">
+      <div class="cd-prices-h">Market price (USD)</div>
+      ${variants.map(v => `<div class="cd-price-row">
+        <span>${esc(v.label || 'Base')}${v.rarity ? ` <em>${esc(v.rarity)}</em>` : ''}</span>
+        <b>$${Number(v.price).toFixed(2)}</b></div>`).join('')}
+    </div>` : '';
+
     const buys = Object.keys(MARKET).filter(key => MARKET[key].region === REGION).map(key => {
       const m = MARKET[key];
       return `<a href="${esc(buyUrl(key, c))}" target="_blank" rel="nofollow sponsored noopener">
@@ -231,6 +246,7 @@ window.CardDetail = (function () {
         <div class="cd-sub">${esc(c.card_id)}${c.set_name ? ' · ' + esc(c.set_name) : ''}</div>
         <div class="cd-chips">${chips.join('')}</div>
         ${traitsHtml}
+        ${pricesHtml}
         ${c.card_text ? `<div class="cd-text">${formatCardText(c.card_text)}</div>` : ''}
         <div class="cd-buyrow">${buys}</div>
         ${regionBar}
