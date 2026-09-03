@@ -23,12 +23,18 @@ BASE = "https://optcgapi.com/api"
 ENDPOINTS = ["allSetCards", "allSTCards", "allPromoCards"]
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-# Markers in a card name that denote a non-base printing.
+# Markers in a card name that denote a visually-DISTINCT alternate printing.
+# Deliberately excludes "reprint" -- a reprint is the SAME art reissued in another
+# set at a different price, so showing it as a separate "version" (2 prices, 1
+# visible card) just confuses people. Its entry is skipped entirely (see seed()).
 _VARIANT_RE = re.compile(
     r"\((parallel|sp|alternate[^)]*|super[^)]*|manga[^)]*|special[^)]*|box[^)]*|"
     r"pre-release[^)]*|championship[^)]*|winner[^)]*|judge[^)]*|serial[^)]*|"
-    r"reprint[^)]*|textured[^)]*|full art[^)]*|promo[^)]*|gift[^)]*|anime[^)]*|"
+    r"textured[^)]*|full art[^)]*|promo[^)]*|gift[^)]*|anime[^)]*|"
     r"wanted[^)]*|jolly[^)]*|foil[^)]*)\)", re.IGNORECASE)
+
+# Same-art reissues we drop entirely (not a distinct version to a viewer).
+_SKIP_RE = re.compile(r"\(reprint[^)]*\)", re.IGNORECASE)
 
 
 def _price(v):
@@ -72,6 +78,8 @@ def seed():
             if not cid:
                 continue
             name = c.get("card_name") or ""
+            if _SKIP_RE.search(name):   # skip plain reprints (same art, just confusing)
+                continue
             label = _label(name)
             if label:
                 vid = f"{cid}#{_slug(label)}"
