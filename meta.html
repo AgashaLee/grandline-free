@@ -472,7 +472,7 @@
       
       filtered.forEach((d, idx) => {
         const tr = document.createElement('tr');
-        tr.onclick = () => renderDeckDetails(d.id);
+        tr.onclick = () => { location.hash = 'deck=' + encodeURIComponent(d.id); };
         tr.innerHTML = `
           <td><div class="leader-thumb" id="leader-thumb-${idx}"></div></td>
           <td>
@@ -525,7 +525,7 @@
       });
 
       let html = `<div class="deck-detail">
-        <button class="back-btn" onclick="renderDecks()">⬅️ Back to Decklists</button>
+        <button class="back-btn" onclick="location.hash=''">⬅️ Back to Decklists</button>
 
         <div class="deck-header">
           <div class="leader-img" id="detail-leader-img"></div>
@@ -624,13 +624,25 @@
         .catch(() => {});
     }
 
+    // Deck selection lives in the URL hash (#deck=<id>) so a refresh (or a shared
+    // link) restores the open deck instead of dropping back to the list.
+    function route() {
+      const m = location.hash.match(/^#deck=(.+)$/);
+      if (m && globalDecks.length) {
+        const id = decodeURIComponent(m[1]);
+        if (globalDecks.some(d => d.id === id)) { renderDeckDetails(id); return; }
+      }
+      renderDecks();
+    }
+    window.addEventListener('hashchange', route);
+
     async function load() {
       loadCatalog();
       try {
         const res = await fetch('/api/meta', {method: 'POST', body: '{}'});
         const data = await res.json();
         globalDecks = data.decks;
-        renderDecks();
+        route();
       } catch (e) {
         document.getElementById('content').innerHTML = '<div style="color:white;padding:40px;text-align:center">Error loading decks. Make sure the server is running.</div>';
       }
