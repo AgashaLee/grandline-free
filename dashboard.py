@@ -569,7 +569,17 @@ def api_market(payload: dict) -> dict:
     except (TypeError, ValueError):
         window = 7
     window = max(1, min(window, 90))
-    limit = 25
+    # Value tier: min baseline price to qualify. Lets visitors surface high-value
+    # movers (e.g. $20+ manga/SEC/alt-art) instead of only volatile penny cards,
+    # WITHOUT exposing exact prices (only the tier label is shown). Restricted to
+    # a fixed set so an arbitrary value can't be probed to reveal a price.
+    try:
+        min_price = float((payload or {}).get("min", _MOVER_MIN_PRICE))
+    except (TypeError, ValueError):
+        min_price = _MOVER_MIN_PRICE
+    if min_price not in (0.25, 5.0, 20.0):
+        min_price = _MOVER_MIN_PRICE
+    limit = 50
 
     # No history table yet (snapshot job never ran) -> not ready.
     try:
@@ -598,7 +608,7 @@ def api_market(payload: dict) -> dict:
              JOIN price_history o ON o.card_id = n.card_id AND o.date = ?
              JOIN cards c        ON c.card_id = n.card_id
             WHERE n.date = ? AND o.price >= ? AND o.price > 0""",
-        (baseline, latest, _MOVER_MIN_PRICE),
+        (baseline, latest, min_price),
     ).fetchall()
 
     movers = []
@@ -626,6 +636,7 @@ def api_market(payload: dict) -> dict:
         "latest": latest,
         "baseline": baseline,
         "window": window,
+        "min": min_price,
         "compared": len(movers),
         "gainers": gainers,
         "losers": losers,

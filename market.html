@@ -108,6 +108,11 @@
         <button data-w="7" class="on">7d</button>
         <button data-w="30">30d</button>
       </div>
+      <div class="windows" id="tiers" title="Filter by card value">
+        <button data-m="0.25" class="on">All cards</button>
+        <button data-m="5">$5+</button>
+        <button data-m="20">$20+</button>
+      </div>
       <div class="asof" id="asof"></div>
     </div>
 
@@ -136,6 +141,7 @@
   <script src="/carddetail.js"></script>
   <script>
     let WINDOW = 7;
+    let MINPRICE = 0.25;    // value tier: All ($0.25) / $5+ / $20+
     const cardsById = {};   // filled from /api/database so clicks open the detail modal
 
     function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -181,7 +187,7 @@
       let d;
       try{
         const res = await fetch('/api/market', {method:'POST', headers:{'Content-Type':'application/json'},
-                                                body: JSON.stringify({window: WINDOW})});
+                                                body: JSON.stringify({window: WINDOW, min: MINPRICE})});
         d = await res.json();
       }catch(e){
         content.innerHTML = `<div class="state"><div class="big">⚠️</div><h3>Couldn’t load market data</h3><p>Please try again in a moment.</p></div>`;
@@ -197,8 +203,9 @@
         return;
       }
 
+      const tierNote = (d.min && d.min >= 5) ? ` · $${d.min >= 20 ? '20' : '5'}+ cards` : '';
       document.getElementById('asof').textContent =
-        `${fmtDate(d.baseline)} → ${fmtDate(d.latest)} · ${d.compared} cards compared`;
+        `${fmtDate(d.baseline)} → ${fmtDate(d.latest)} · ${d.compared} cards compared${tierNote}`;
       content.innerHTML = `<div class="cols">
         ${panel('Top Gainers','🚀','gain', d.gainers)}
         ${panel('Top Losers','📉','lose', d.losers)}
@@ -210,6 +217,13 @@
       const b = e.target.closest('button'); if(!b) return;
       WINDOW = parseInt(b.dataset.w,10);
       document.querySelectorAll('#windows button').forEach(x=>x.classList.toggle('on', x===b));
+      load();
+    });
+
+    document.getElementById('tiers').addEventListener('click', e=>{
+      const b = e.target.closest('button'); if(!b) return;
+      MINPRICE = parseFloat(b.dataset.m);
+      document.querySelectorAll('#tiers button').forEach(x=>x.classList.toggle('on', x===b));
       load();
     });
 
