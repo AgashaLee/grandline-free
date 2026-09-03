@@ -622,7 +622,7 @@ def api_market(payload: dict) -> dict:
             "set_id": r["set_id"], "set_name": r["set_name"],
             "rarity": r["rarity"], "card_type": r["card_type"],
             "card_color": r["card_color"], "image_url": r["image_url"],
-            "pct": pct,
+            "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
         })
 
     movers.sort(key=lambda m: m["pct"], reverse=True)
