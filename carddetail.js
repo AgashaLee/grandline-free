@@ -81,6 +81,7 @@ window.CardDetail = (function () {
     t = t.replace(/\[([^\]]+)\]/g, (m, kw) => {
       const low = kw.toLowerCase().trim();
       const cls = /don!!/.test(low) ? 'cd-kw cd-kw-don'
+                : /once per/.test(low) ? 'cd-kw cd-kw-once'
                 : /trigger/.test(low) ? 'cd-kw cd-kw-trig'
                 : /counter/.test(low) ? 'cd-kw cd-kw-counter'
                 : /^(blocker|rush|double attack|banish)$/.test(low) ? 'cd-kw cd-kw-ability'
@@ -135,6 +136,7 @@ window.CardDetail = (function () {
   .cd-kw-counter{background:#e23b3b;color:#fff}
   .cd-kw-ability{background:#e8820e;color:#fff}
   .cd-kw-don{background:#1a1a1a;color:#fff}
+  .cd-kw-once{background:#e0459a;color:#fff}
   .cd-trait{font-weight:700;color:#c62828}
   .cd-trigger{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed #ecdcc2}
   .cd-buyrow{display:flex;gap:10px;flex-wrap:wrap}
