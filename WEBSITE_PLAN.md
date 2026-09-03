@@ -78,9 +78,9 @@ Everything below is DONE & tested locally; the free site is **NOT deployed yet**
   `python seed_meta_tcgportal_jp.py`.
 
 ### ADDING A NEW SET (e.g. EB05) — 2026-09-03
-Auto-updating: **news** (30min), **prices/Market Watch** (daily snapshot), **meta decks** (weekly,
-Mon) — all via `scheduler.py`. NOT auto: the **card catalog** (new sets). When a set releases, run
-in Railway Console: **`python add_new_set.py`** — additive (INSERT OR IGNORE; never DROPs, so it's
+Auto-updating (all via `scheduler.py`): **news** (30min), **prices/Market Watch** (daily snapshot),
+**meta decks** (weekly, Mon), and **new card sets** (weekly, Mon — `add_new_set.py`, 2026-09-03).
+The site is now fully self-updating. Manual run still available: **`python add_new_set.py`** — additive (INSERT OR IGNORE; never DROPs, so it's
 safe even while the promo endpoint is 404, unlike `seed_cards.py`). It adds new card rows + rebuilds
 `card_variants` (prices). Optional extras for a new set: `seed_alt_arts.py`/`seed_set_alt_arts.py`
 (nicer alt-art gallery), `scrape_boxes.py` (box tile — source onepiecetopdecks is IP-blocked, will
