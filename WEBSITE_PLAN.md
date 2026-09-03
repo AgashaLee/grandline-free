@@ -2,7 +2,20 @@
 
 Handoff note so a new chat can continue without losing context.
 
-## ⭐ LATEST SNAPSHOT (2026-09-03) — read this first
+## ⭐ LATEST SNAPSHOT (2026-09-04) — read this first
+**Market Watch glitch-guard (2026-09-04):** the day-1 baseline snapshot (2026-09-02) captured
+**massively corrupt OPTCGAPI prices** — on the first day-2-vs-day-1 comparison, ~440 of 723 pairs
+(60%) were bad (a common Luffy read ~$1075 one day, $0.43 the next → +700% / -100% "movers").
+Fixed in `api_market` with a price-**ratio** sanity guard (`_MOVER_MAX_RATIO = 5.0`, i.e. max/min > 5×
+→ dropped from both gainers & losers; also drops a zeroed new price). Ratio, not raw %, so it catches
+BOTH a corrupt-low baseline (huge gainer) and a corrupt-high one (bounded -100% loser). Verified live:
+top mover now +215% / -80% (was +731% / -100%), `compared` 723→283. Corrupt day-1 still ages out of
+the window on its own (24h view clean from the 2026-09-04 day-3 snapshot; out of 7d view after
+2026-09-09). **OPTIONAL cleaner launch:** delete the corrupt 2026-09-02 rows on the live volume so
+Market Watch shows an honest "collecting data" for a day rather than inflated-but-capped movers —
+Railway Console: `python -c "import database; db=database.get_db(); db.execute(\"DELETE FROM price_history WHERE date='2026-09-02'\"); db.commit(); print('deleted', db.total_changes)"`. Not done — user's call.
+
+## ⭐ SNAPSHOT (2026-09-03)
 **LIVE & deployed:** https://grandline.up.railway.app — Railway project `faithful-passion`, service
 `web`, from GitHub repo **`AgashaLee/grandline-free`** (branch `main`; local git remote = `freesite`,
 push via PowerShell: `git push freesite HEAD:main`). Volume `web-volume` at `/data`,
