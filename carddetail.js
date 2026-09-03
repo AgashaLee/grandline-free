@@ -191,16 +191,27 @@ window.CardDetail = (function () {
   function open(c) {
     if (!c) return;
     ensureDom();
-    const arts = [c.image_url, ...(c.alt_arts || [])].filter(Boolean);
+    // Build the art strip: base image, then each priced variant's image (so
+    // every price has a matching thumbnail), then gallery alt-arts. De-duped
+    // case-insensitively (same art in two casings 404s on the server).
+    const arts = [];
+    const _seen = new Set();
+    const _push = u => { if (u) { const k = String(u).toLowerCase(); if (!_seen.has(k)) { _seen.add(k); arts.push(u); } } };
+    _push(c.image_url);
+    (c.variants || []).forEach(v => { if (!v.is_base) _push(v.image); });
+    (c.alt_arts || []).forEach(_push);
+    // Broken thumbnails hide themselves rather than showing a broken-image icon.
+    const onerr = "this.style.display='none'";
     let img;
     if (arts.length) {
       const thumbs = arts.length > 1
         ? `<div class="cd-thumbs">${arts.map((u, i) =>
-             `<img src="${esc(u)}" class="${i === 0 ? 'sel' : ''}" loading="lazy"
+             `<img src="${esc(u)}" class="${i === 0 ? 'sel' : ''}" loading="lazy" onerror="${onerr}"
                    onclick="CardDetail._swap(this,'${esc(u)}')" alt="art ${i + 1}">`).join('')}
            </div><div class="cd-altnote">${arts.length} versions — includes alternate art. Click to view.</div>`
         : '';
-      img = `<img id="cdArtMain" class="main" src="${esc(arts[0])}" alt="${esc(c.name)}">${thumbs}`;
+      img = `<img id="cdArtMain" class="main" src="${esc(arts[0])}" alt="${esc(c.name)}"
+                  onerror="this.style.display='none'">${thumbs}`;
     } else {
       img = '<span style="color:#9c8a76">No image</span>';
     }

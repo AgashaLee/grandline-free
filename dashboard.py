@@ -526,7 +526,14 @@ def api_database(payload: dict) -> dict:
     # Table may not exist yet if seed_alt_arts.py hasn't been run -- treat as none.
     try:
         alt: dict[str, list[str]] = {}
+        seen_alt: dict[str, set] = {}
         for cid, url in db.execute("SELECT card_id, image_url FROM card_alt_arts"):
+            # De-dupe case-insensitively: the same art saved under two casings
+            # (e.g. ...EB24.png / ...eb24.png) 404s on the case-sensitive server.
+            key = (url or "").lower()
+            if not url or key in seen_alt.setdefault(cid, set()):
+                continue
+            seen_alt[cid].add(key)
             alt.setdefault(cid, []).append(url)
         for c in cards:
             arts = alt.get(c["card_id"])
@@ -546,6 +553,7 @@ def api_database(payload: dict) -> dict:
             vmap.setdefault(r["card_id"], []).append({
                 "label": r["variant_label"] or "Base", "rarity": r["rarity"],
                 "price": r["market_price"], "is_base": r["is_base"],
+                "image": r["image_url"],
             })
             if r["is_base"] and r["image_url"]:
                 base_img[r["card_id"]] = r["image_url"]
