@@ -72,6 +72,21 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // The default keyword badges (Once Per Turn etc.) follow the card's colour,
+  // like the printed card. Returns [background, text] for the first colour.
+  const CARD_COLOR = {
+    Red:    ['#e23b5a', '#fff'],  // rose-red (reads as "pink" on red cards)
+    Blue:   ['#1799d6', '#fff'],
+    Green:  ['#2e9e5b', '#fff'],
+    Purple: ['#8e44ad', '#fff'],
+    Yellow: ['#e0a800', '#4a2f10'],
+    Black:  ['#3a3a3a', '#fff'],
+  };
+  function kwColors(cardColor) {
+    const first = (cardColor || '').split(/[\/\s]+/)[0];
+    return CARD_COLOR[first] || ['#1799d6', '#fff'];
+  }
+
   // Format effect text like the printed card: keyword tags -> badges, {traits}
   // emphasised, and the [Trigger] clause on its own line.
   function formatCardText(text) {
@@ -125,7 +140,10 @@ window.CardDetail = (function () {
   .cd-traits b{color:#9c8a76;font-weight:700}
   .cd-text{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:12px 14px;
     font-size:12.5px;line-height:1.9;margin-bottom:16px}
-  .cd-kw{display:inline-block;background:#1799d6;color:#fff;border-radius:5px;padding:0 6px;
+  /* Default timing keywords (Once Per Turn, Activate:Main…) take the card's own
+     colour via --cd-kw-bg (set per card in open()); the game-standard tags below
+     keep their fixed meaning colours. */
+  .cd-kw{display:inline-block;background:var(--cd-kw-bg,#1799d6);color:var(--cd-kw-fg,#fff);border-radius:5px;padding:0 6px;
     font-size:11px;font-weight:700;margin:0 3px 0 0;vertical-align:1px}
   .cd-kw-trig{background:#f6b93b;color:#4a2f10}
   .cd-kw-counter{background:#e23b3b;color:#fff}
@@ -140,7 +158,22 @@ window.CardDetail = (function () {
   .cd-region a{color:#0d6ea3;font-weight:700;text-decoration:none;cursor:pointer}
   .cd-region a:hover{text-decoration:underline}
   .cd-buynote{color:#9c8a76;font-size:10.5px;margin-top:6px;text-align:center}
-  @media (max-width:620px){ .cd-box{grid-template-columns:1fr} }
+  @media (max-width:620px){
+    .cd-modal{padding:0}
+    .cd-box{grid-template-columns:1fr;max-width:100%;max-height:100vh;border-radius:0;border-width:0}
+    .cd-img{padding:14px 14px 6px}
+    .cd-img img.main{max-height:52vh}
+    .cd-body{padding:18px 18px 30px}
+    .cd-box h2{font-size:21px;margin-right:44px}
+    .cd-sub{font-size:13px}
+    .cd-chip{font-size:13px;padding:5px 12px}
+    .cd-traits{font-size:13.5px}
+    .cd-text{font-size:14.5px;line-height:1.85}
+    .cd-kw{font-size:12.5px;padding:1px 7px}
+    .cd-buybtn{padding:13px;font-size:14.5px}
+    .cd-close{width:36px;height:36px;font-size:17px}
+    .cd-region,.cd-buynote{font-size:12.5px}
+  }
   `;
 
   let ready = false;
@@ -201,7 +234,11 @@ window.CardDetail = (function () {
     const regionBar = `<div class="cd-region">Showing <b>${here}</b> stores ·
       <a href="#" onclick="CardDetail.switchRegion();return false;">switch to ${other}</a></div>`;
 
-    document.getElementById('cdBox').innerHTML = `
+    const box = document.getElementById('cdBox');
+    const [kwBg, kwFg] = kwColors(c.card_color);
+    box.style.setProperty('--cd-kw-bg', kwBg);
+    box.style.setProperty('--cd-kw-fg', kwFg);
+    box.innerHTML = `
       <div class="cd-img">${img}</div>
       <div class="cd-body">
         <button class="cd-close" onclick="CardDetail.close()" aria-label="Close">✕</button>

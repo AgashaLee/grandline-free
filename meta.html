@@ -72,10 +72,15 @@
     .filters label { font-size: 12px; color: #a1a1aa; display: flex; align-items: center; gap: 4px; }
 
     /* Meta Table */
+    /* Horizontal scroll wrapper so the wide table never squishes/overflows
+       messily on small screens -- it scrolls cleanly instead. */
+    .meta-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch;
+      border-radius: 8px; border: 1px solid #2a2a2e; }
     .meta-table {
-      width: 100%; border-collapse: collapse; font-size: 13px;
-      background: #1c1c1e; border-radius: 8px; overflow: hidden;
+      width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px;
+      background: #1c1c1e; overflow: hidden;
     }
+    .meta-table td, .meta-table th { white-space: nowrap; }
     .meta-table thead { background: #e74c3c; }
     .meta-table thead th {
       padding: 10px 12px; font-weight: 700; font-size: 12px;
@@ -358,6 +363,7 @@
           <label>Search: <input type="text" id="filter-search" placeholder="Search by deck, player, host..." oninput="applyFilters()"></label>
         </div>
 
+        <div class="meta-table-wrap">
         <table class="meta-table">
           <thead>
             <tr>
@@ -374,6 +380,7 @@
           <tbody id="deck-tbody">
           </tbody>
         </table>
+        </div>
       `;
       document.getElementById('content').innerHTML = html;
 
