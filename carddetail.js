@@ -75,12 +75,12 @@ window.CardDetail = (function () {
   // The default keyword badges (Once Per Turn etc.) follow the card's colour,
   // like the printed card. Returns [background, text] for the first colour.
   const CARD_COLOR = {
-    Red:    ['#e23b5a', '#fff'],  // rose-red (reads as "pink" on red cards)
-    Blue:   ['#1799d6', '#fff'],
-    Green:  ['#2e9e5b', '#fff'],
-    Purple: ['#8e44ad', '#fff'],
-    Yellow: ['#e0a800', '#4a2f10'],
-    Black:  ['#3a3a3a', '#fff'],
+    Red:    ['#e13d3d', '#fff'],  // true card colours (match the card, not a tint)
+    Blue:   ['#1f8fd6', '#fff'],
+    Green:  ['#1f9d55', '#fff'],
+    Purple: ['#9b59b6', '#fff'],
+    Yellow: ['#f1c40f', '#4a2f10'],
+    Black:  ['#2f2f2f', '#fff'],
   };
   function kwColors(cardColor) {
     const first = (cardColor || '').split(/[\/\s]+/)[0];
