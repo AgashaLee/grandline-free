@@ -320,6 +320,33 @@
       return (colorStr + leader + setSuffix).trim() + ' (jp)';
     }
 
+    // Translate Japanese tournament/event names to English + " (jp)". Ordered
+    // longest-first so multi-word phrases resolve before their sub-terms. Unknown
+    // fragments stay as-is (still tagged jp). West names pass through unchanged.
+    const JP_TOURNEY = [
+      ['ONEPIECEカードゲーム', 'One Piece Card Game '], ['ワンピースカードゲーム', 'One Piece Card Game '],
+      ['エクストラチャンピオンシップ', 'Extra Championship '], ['エクストラグランドバトル', 'Extra Grand Battle'],
+      ['グランドバトル', 'Grand Battle'], ['フラッグシップバトル', 'Flagship Battle'],
+      ['スタンダードバトル', 'Standard Battle'], ['チャンピオンシップ', 'Championship '],
+      ['エリア決勝大会', 'Area Final'], ['決勝大会', 'Final'], ['店舗予選', 'Store Qualifier'],
+      ['予選大会', 'Qualifier'], ['予選', 'Qualifier'], ['大会', 'Tournament'], ['会場', ' Venue'],
+      ['バトル', 'Battle'], ['優勝', 'Winner'],
+      ['京都', 'Kyoto'], ['東京', 'Tokyo'], ['大阪', 'Osaka'], ['名古屋', 'Nagoya'],
+      ['福岡', 'Fukuoka'], ['札幌', 'Sapporo'], ['横浜', 'Yokohama'], ['仙台', 'Sendai'],
+      ['広島', 'Hiroshima'], ['神戸', 'Kobe'], ['千葉', 'Chiba'], ['埼玉', 'Saitama'],
+    ];
+    function translateTournament(name) {
+      if (!name || !hasJP(name)) return name;
+      let s = name;
+      for (const [jp, en] of JP_TOURNEY) s = s.split(jp).join(en);
+      s = s.replace(/[​‌‍﻿]/g, '')   // strip zero-width chars from the source
+           .replace(/\s+/g, ' ')
+           .replace(/([^\s(])\(/g, '$1 (')           // ensure a space before "("
+           .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')')
+           .trim();
+      return s + ' (jp)';
+    }
+
     // Bar chart of how many decklists each leader/archetype has (meta share).
     function metaShareChart() {
       const counts = {};
@@ -409,7 +436,7 @@
       const countrySelect = document.getElementById('filter-country');
       countrySet.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; countrySelect.appendChild(o); });
       const tournamentSelect = document.getElementById('filter-tournament');
-      tournamentSet.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tournamentSelect.appendChild(o); });
+      tournamentSet.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = translateTournament(t); tournamentSelect.appendChild(o); });
 
       applyFilters();
     }
@@ -456,7 +483,7 @@
           <td><span class="country-flag">${getCountryEmoji(d.country)} ${d.country || '-'}</span></td>
           <td style="font-weight:500">${d.winner || '-'}</td>
           <td><span class="placement-badge ${getPlacementClass(d.players)}">${d.players || '-'}</span></td>
-          <td style="color:#a1a1aa; font-size:12px">${d.event_type || '-'}</td>
+          <td style="color:#a1a1aa; font-size:12px">${translateTournament(d.event_type) || '-'}</td>
           <td style="color:#71717a; font-size:12px">-</td>
         `;
         tbody.appendChild(tr);
@@ -513,7 +540,7 @@
             </div>
             <div class="meta" style="margin-top:4px">
               <span>🎴 Leader: <strong>${deck.leader_id || translateArchetype(deck.event_name) || '—'}</strong></span>
-              <span>📊 ${deck.event_type || '-'}</span>
+              <span>📊 ${translateTournament(deck.event_type) || '-'}</span>
             </div>
           </div>
         </div>
