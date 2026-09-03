@@ -597,14 +597,18 @@ def api_meta(payload: dict) -> dict:
 #: real signal. Kept modest so genuine sub-$1 movers still show.
 _MOVER_MIN_PRICE = 0.25
 
-#: Sanity ceiling on a single day's percentage move. OPTCGAPI occasionally emits
-#: a garbage price for a card on one snapshot (e.g. a common that reads $1000 for
-#: a day), which then shows up as a +700% / -100% "mover" that is pure data noise
-#: and swamps the real signal. A real established card essentially never moves
-#: beyond this over the window, so anything past it is a bad data point, not a
-#: market move -- drop it from both lists. (The corrupt snapshot still ages out of
-#: the window on its own; this just stops it polluting movers in the meantime.)
-_MOVER_MAX_PCT = 300.0
+#: Sanity ceiling on a single window's move, expressed as a PRICE RATIO
+#: (max(old,new) / min(old,new)) because prices move multiplicatively. OPTCGAPI
+#: occasionally emits a garbage price for a card on one snapshot (e.g. a common
+#: that reads ~$1075 one day, $0.43 the next), which then surfaces as a +700%
+#: gainer or a -100% loser -- pure data noise that swamps the real signal. A
+#: ratio guard catches BOTH directions symmetrically (a plain percentage ceiling
+#: misses the loss side, since a bogus drop is bounded at -100% however corrupt
+#: the baseline was). 5x  = +400% up or -80% down; the observed glitches are 7-8x
+#: (gains) and 100-2500x (losses), while real card moves stay under ~3x, so this
+#: cleanly separates them. The corrupt snapshot still ages out of the window on
+#: its own; this just stops it polluting movers meanwhile and guards future ones.
+_MOVER_MAX_RATIO = 5.0
 
 
 def api_market(payload: dict) -> dict:
@@ -694,9 +698,11 @@ def api_market(payload: dict) -> dict:
         pct = round((new - old) / old * 100, 1)
         if pct == 0:
             continue
-        # Drop physically-implausible single-window moves: these are OPTCGAPI
-        # snapshot glitches, not real price action (see _MOVER_MAX_PCT).
-        if abs(pct) > _MOVER_MAX_PCT:
+        # Drop physically-implausible single-window moves (both directions):
+        # these are OPTCGAPI snapshot glitches, not real price action. Compared
+        # by price ratio so a corrupt high baseline (-100%-ish loser) is caught
+        # too, not just a corrupt low one (huge gainer). See _MOVER_MAX_RATIO.
+        if new <= 0 or max(old, new) / min(old, new) > _MOVER_MAX_RATIO:
             continue
         movers.append({
             "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
