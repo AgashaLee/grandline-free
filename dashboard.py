@@ -597,6 +597,15 @@ def api_meta(payload: dict) -> dict:
 #: real signal. Kept modest so genuine sub-$1 movers still show.
 _MOVER_MIN_PRICE = 0.25
 
+#: Sanity ceiling on a single day's percentage move. OPTCGAPI occasionally emits
+#: a garbage price for a card on one snapshot (e.g. a common that reads $1000 for
+#: a day), which then shows up as a +700% / -100% "mover" that is pure data noise
+#: and swamps the real signal. A real established card essentially never moves
+#: beyond this over the window, so anything past it is a bad data point, not a
+#: market move -- drop it from both lists. (The corrupt snapshot still ages out of
+#: the window on its own; this just stops it polluting movers in the meantime.)
+_MOVER_MAX_PCT = 300.0
+
 
 def api_market(payload: dict) -> dict:
     """Biggest price gainers / losers for the free Market Watch page.
@@ -684,6 +693,10 @@ def api_market(payload: dict) -> dict:
         old, new = r["old_price"], r["new_price"]
         pct = round((new - old) / old * 100, 1)
         if pct == 0:
+            continue
+        # Drop physically-implausible single-window moves: these are OPTCGAPI
+        # snapshot glitches, not real price action (see _MOVER_MAX_PCT).
+        if abs(pct) > _MOVER_MAX_PCT:
             continue
         movers.append({
             "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
