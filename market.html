@@ -5,115 +5,109 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Market Watch - Grand Line</title>
 <meta name="description" content="Biggest One Piece TCG price gainers and losers this week.">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
-    --sea:#1799d6; --sea-deep:#0d6ea3;
-    --red:#e74c3c; --red-deep:#c0392b;
-    --gold:#f6b93b; --gold-deep:#e58e26;
-    --up:#22c55e; --up-bg:rgba(34,197,94,.12);
-    --down:#ef4444; --down-bg:rgba(239,68,68,.12);
-    --page-bg:#0f0f0f;
-    --surface:#17171b; --surface-head:#1c1c1e;
-    --ink:#e4e4e7; --muted:#a1a1aa; --line:#2a2a30;
-    --btn-bg:#1c1c1e; --btn-hover:#2a2a2e;
-    --shadow:0 6px 18px rgba(0,0,0,.35);
+    --sea: #0ea5e9; --sea-deep: #0284c7;
+    --red: #ef4444; --red-deep: #dc2626;
+    --gold: #f59e0b; --gold-deep: #d97706;
+    --up: #10b981; --up-bg: rgba(16, 185, 129, 0.1);
+    --down: #ef4444; --down-bg: rgba(239, 68, 68, 0.1);
+    --page-bg: #09090b;
+    --surface: #18181b; --surface-head: #121214;
+    --ink: #f4f4f5; --muted: #a1a1aa; --line: #27272a;
+    --btn-bg: #18181b; --btn-hover: #27272a;
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
   }
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
        color:var(--ink);font-size:13px;padding:0 0 48px;min-height:100vh;overflow-x:hidden;
        background:var(--page-bg)}
-  h1,h2,h3{font-family:'Fredoka',sans-serif}
-  .header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
-          border-bottom:3px solid var(--red);padding:14px 22px;
-          display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
-          position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(0,0,0,.35)}
-  .header h1{font-size:20px;font-weight:700;color:#fff}
-  .sub{color:#a1a1aa;font-size:11px;margin-top:2px}
-  .nav{display:flex;gap:10px;flex-wrap:wrap}
-  button{background:var(--btn-bg);color:var(--ink);border:2px solid var(--line);
-         border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;font-weight:600}
-  button:hover{background:var(--btn-hover);border-color:var(--gold)}
-  button.primary{background:var(--sea);border-color:var(--sea-deep);color:#fff;box-shadow:0 3px 0 var(--sea-deep)}
-  button.primary:hover{background:var(--sea-deep)}
-  button.cta{background:var(--gold);border-color:var(--gold-deep);color:#4a2f10;box-shadow:0 3px 0 var(--gold-deep)}
-  button.cta:hover{background:#ffd06b}
-  .wrap{max-width:1120px;margin:22px auto;padding:0 18px}
+  h1,h2,h3{font-family:'Fredoka',sans-serif;letter-spacing:-0.01em;}
 
-  .toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
-  .windows{display:flex;gap:8px}
-  .windows button.on{background:var(--sea);border-color:var(--sea-deep);color:#fff}
-  .asof{color:var(--muted);font-size:11.5px}
+  /* Header */
+  .header{background:rgba(9, 9, 11, 0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+          border-bottom:1px solid var(--line);padding:16px 24px;
+          display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+          position:sticky;top:0;z-index:100;}
+  .header > div:first-child{display:flex;flex-direction:column;gap:2px;}
+  .header h1{font-size:22px;font-weight:600;color:#fff;line-height:1;}
+  .sub{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
+  .nav{display:flex;gap:8px;flex-wrap:wrap}
 
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:760px){.cols{grid-template-columns:1fr}}
-  .panel{background:var(--surface);border:2px solid var(--line);border-radius:16px;
-         box-shadow:var(--shadow);overflow:hidden}
-  .panel h2{font-size:15px;padding:14px 16px;border-bottom:2px solid var(--line);
-            display:flex;align-items:center;gap:8px}
-  .panel.gain h2{color:var(--up)}
-  .panel.lose h2{color:var(--down)}
+  button{background:var(--btn-bg);color:var(--ink);border:1px solid var(--line);
+         border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;cursor:pointer;
+         font-weight:600;font-family:'Inter',sans-serif;transition:all 0.2s ease;}
+  button:hover{background:var(--btn-hover);border-color:#3f3f46;}
+  button.primary{background:var(--ink);color:var(--page-bg);border-color:var(--ink);}
+  button.primary:hover{background:#d4d4d8;border-color:#d4d4d8;}
+  button.cta{background:var(--gold);color:#4a2f10;border-color:var(--gold);}
+  button.cta:hover{background:#fbbf24;border-color:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
 
-  .row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);
-       cursor:pointer;transition:background .12s}
-  .row:last-child{border-bottom:none}
-  .row:hover{background:var(--btn-hover)}
-  .rank{width:20px;text-align:center;color:var(--muted);font-weight:700;font-size:12px;flex:none}
-  .rthumb{width:42px;height:58px;flex:none;display:flex;align-items:center;justify-content:center;
-          background:#0f0f0f;border-radius:6px;overflow:hidden}
-  .rthumb img{max-width:100%;max-height:100%}
-  .rinfo{flex:1;min-width:0}
-  .rname{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rmeta{color:var(--muted);font-size:11px;margin-top:2px}
-  .pct{flex:none;font-weight:800;font-size:14px;padding:5px 9px;border-radius:8px;min-width:70px;text-align:right}
-  .pct.up{color:var(--up);background:var(--up-bg)}
-  .pct.down{color:var(--down);background:var(--down-bg)}
+  .wrap{max-width:1200px;margin:32px auto;padding:0 24px}
 
-  /* gumgum-style toggles + views */
-  .seg{display:flex;gap:6px}
-  .seg button.on{background:var(--sea);border-color:var(--sea-deep);color:#fff}
-  .count{color:var(--muted);font-size:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px;
+           background:var(--surface);padding:16px;border-radius:var(--radius-md);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
+  .toolbar-group{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .windows{display:flex;gap:4px;background:var(--page-bg);padding:4px;border-radius:var(--radius-sm);border:1px solid var(--line);}
+  .windows button{border:none;background:transparent;padding:6px 14px;border-radius:6px;}
+  .windows button:hover{background:var(--btn-hover);}
+  .windows button.on{background:var(--surface);box-shadow:var(--shadow-sm);color:var(--ink);}
+
+  .seg{display:flex;gap:4px;background:var(--page-bg);padding:4px;border-radius:var(--radius-sm);border:1px solid var(--line);}
+  .seg button{border:none;background:transparent;padding:6px 14px;border-radius:6px;}
+  .seg button:hover{background:var(--btn-hover);}
+  .seg button.on{background:var(--ink);color:var(--page-bg);}
+
+  .count{color:var(--muted);font-size:13px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-weight:500;}
   .up{color:var(--up)} .down{color:var(--down)}
 
   /* Cards view */
-  .mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
-  .mcard{cursor:zoom-in}
-  .mcard img{width:100%;display:block;border-radius:9px;background:#0f0f0f;aspect-ratio:5/7;
-             object-fit:contain;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .15s}
-  .mcard:hover img{transform:translateY(-3px)}
-  .mcard .mprice{font-weight:800;font-size:15px;margin-top:7px}
-  .mcard .mchg{font-size:12.5px;font-weight:700;margin-top:1px}
-  .mcard .mname{color:var(--muted);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}
+  .mcard{cursor:zoom-in;background:var(--surface);padding:16px;border-radius:var(--radius-md);border:1px solid var(--line);
+         box-shadow:var(--shadow-sm);transition:all 0.2s ease;}
+  .mcard img{width:100%;display:block;border-radius:8px;background:var(--page-bg);aspect-ratio:5/7;
+             object-fit:contain;border:1px solid var(--line);margin-bottom:12px;transition:transform 0.2s ease;}
+  .mcard:hover{border-color:#3f3f46;transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .mcard:hover img{border-color:var(--muted);}
+  .mcard .mprice{font-weight:700;font-size:16px;color:var(--ink);}
+  .mcard .mchg{font-size:13px;font-weight:600;margin-top:2px;display:inline-block;}
+  .mcard .mchg.up{color:var(--up);}
+  .mcard .mchg.down{color:var(--down);}
+  .mcard .mname{color:var(--muted);font-size:12px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
 
   /* Table view */
-  .mtable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
-  .mtable{width:100%;border-collapse:collapse;font-size:13px;min-width:520px;background:var(--surface)}
-  .mtable th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;
-             padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
-  .mtable td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+  .mtable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);}
+  .mtable{width:100%;border-collapse:collapse;font-size:14px;min-width:600px;background:var(--surface)}
+  .mtable th{text-align:left;color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;
+             padding:14px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-head);}
+  .mtable td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
   .mtable tr:last-child td{border-bottom:none}
-  .mtable tbody tr{cursor:pointer}
+  .mtable tbody tr{cursor:pointer;transition:background 0.2s;}
   .mtable tbody tr:hover td{background:var(--btn-hover)}
-  .mtable .tt{width:38px;height:53px;border-radius:5px;overflow:hidden;background:#0f0f0f}
-  .mtable .tt img{width:100%;height:100%;object-fit:cover}
-  .mtable .num{text-align:right;font-weight:700}
-  .mtable .nm{font-weight:600}
-  .mtable .cd{color:var(--muted);font-size:11px}
+  .mtable .tt{width:40px;height:56px;border-radius:6px;overflow:hidden;background:var(--page-bg);border:1px solid var(--line);}
+  .mtable .tt img{width:100%;height:100%;object-fit:contain}
+  .mtable .num{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+  .mtable .nm{font-weight:600;color:var(--ink);}
+  .mtable .cd{color:var(--muted);font-size:12px;margin-top:4px;}
 
-  .state{text-align:center;padding:60px 24px;color:var(--muted)}
-  .state .big{font-size:40px;margin-bottom:14px}
-  .state h3{color:var(--ink);font-size:17px;margin-bottom:8px}
-  .state p{font-size:13px;line-height:1.7;max-width:440px;margin:0 auto}
+  .state{text-align:center;padding:80px 24px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);}
+  .state .big{font-size:48px;margin-bottom:20px}
+  .state h3{color:var(--ink);font-size:20px;margin-bottom:12px;font-weight:600;}
+  .state p{font-size:14px;line-height:1.6;max-width:480px;margin:0 auto}
 
-  .note{color:var(--muted);font-size:11.5px;text-align:center;margin-top:18px;line-height:1.7}
-  .note a{color:var(--gold);text-decoration:none}
+  .note{color:var(--muted);font-size:13px;text-align:center;margin-top:32px;line-height:1.6}
+  .note a{color:var(--ink);text-decoration:underline;text-underline-offset:2px;font-weight:500;}
+  .note a:hover{color:#fff;}
 
-  .gl-footer{border-top:2px solid var(--line);margin-top:40px;padding:30px 24px 10px;text-align:center}
-  .gl-cta{display:inline-block;background:var(--gold);color:#4a2f10;font-weight:700;font-size:14px;
-          padding:13px 26px;border-radius:10px;text-decoration:none;box-shadow:0 3px 0 var(--gold-deep)}
-  .gl-cta:hover{background:#ffd06b}
-  .gl-legal{color:var(--muted);font-size:11.5px;line-height:1.8;margin-top:20px}
+  .gl-footer{border-top:1px solid var(--line);margin-top:64px;padding:40px 24px;text-align:center}
+  .gl-cta{display:inline-block;background:var(--gold);color:#4a2f10;font-weight:600;font-size:14px;
+          padding:14px 28px;border-radius:var(--radius-md);text-decoration:none;transition:all 0.2s;}
+  .gl-cta:hover{background:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
+  .gl-legal{color:var(--muted);font-size:12px;line-height:1.6;margin-top:24px;max-width:800px;margin-left:auto;margin-right:auto;}
 </style>
 </head>
 <body>
@@ -134,30 +128,34 @@
 
   <div class="wrap">
     <div class="toolbar">
-      <div class="windows" id="windows" title="Time window">
-        <button data-w="1">24h</button>
-        <button data-w="7" class="on">7d</button>
-        <button data-w="30">30d</button>
+      <div class="toolbar-group">
+        <div class="windows" id="windows" title="Time window">
+          <button data-w="1">24h</button>
+          <button data-w="7" class="on">7d</button>
+          <button data-w="30">30d</button>
+        </div>
+        <div class="seg" id="dir" title="Gainers or losers">
+          <button data-d="high" class="on">🚀 Gainers</button>
+          <button data-d="low">📉 Losers</button>
+        </div>
       </div>
-      <div class="seg" id="dir" title="Gainers or losers">
-        <button data-d="high" class="on">🚀 Gainers</button>
-        <button data-d="low">📉 Losers</button>
-      </div>
-      <div class="seg" id="metric" title="Sort by percent or dollar change">
-        <button data-x="pct" class="on">%</button>
-        <button data-x="usd">$</button>
-      </div>
-      <div class="windows" id="tiers" title="Filter by card value">
-        <button data-m="0.25" class="on">All cards</button>
-        <button data-m="5">$5+</button>
-        <button data-m="20">$20+</button>
-      </div>
-      <div class="seg" id="view" title="Card grid or table">
-        <button data-v="cards" class="on">▦ Cards</button>
-        <button data-v="table">☰ Table</button>
+      <div class="toolbar-group">
+        <div class="seg" id="metric" title="Sort by percent or dollar change">
+          <button data-x="pct" class="on">% Change</button>
+          <button data-x="usd">$ Change</button>
+        </div>
+        <div class="windows" id="tiers" title="Filter by card value">
+          <button data-m="0.25" class="on">All cards</button>
+          <button data-m="5">$5+</button>
+          <button data-m="20">$20+</button>
+        </div>
+        <div class="seg" id="view" title="Card grid or table">
+          <button data-v="cards" class="on">▦ Grid</button>
+          <button data-v="table">☰ Table</button>
+        </div>
       </div>
     </div>
-    <div class="count" id="asof" style="margin:-6px 0 16px"></div>
+    <div class="count" id="asof" style="margin:-8px 0 24px"></div>
 
     <div id="content">
       <div class="state"><div class="big">⏳</div><h3>Loading movers…</h3></div>
@@ -171,7 +169,7 @@
 
   <footer class="gl-footer">
     <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
-      &#9733; Track your collection with the Grand Line tracker &mdash; $1.99/mo
+      ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
     </a>
     <div class="gl-legal">
       Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
@@ -183,13 +181,13 @@
 
   <script src="/carddetail.js"></script>
   <script>
-    let WINDOW = 7;          // 1 / 7 / 30 days
-    let MINPRICE = 0.25;     // value tier: All / $5+ / $20+
-    let DIR = 'high';        // 'high' (gainers) | 'low' (losers)
-    let METRIC = 'pct';      // 'pct' | 'usd'
-    let VIEW = 'cards';      // 'cards' | 'table'
-    let LAST = null;         // last /api/market response (re-rendered without refetch)
-    const cardsById = {};    // /api/database, so a click opens the detail modal
+    let WINDOW = 7;
+    let MINPRICE = 0.25;
+    let DIR = 'high';
+    let METRIC = 'pct';
+    let VIEW = 'cards';
+    let LAST = null;
+    const cardsById = {};
 
     function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
     function fmtDate(d){ if(!d) return '';
@@ -197,7 +195,6 @@
     const money = n => '$' + Math.abs(n).toFixed(2);
     const dsign = n => (n >= 0 ? '+' : '−');
 
-    // The sorted list for the current Gainers/Losers + %/$ choice.
     function currentList(){
       if(!LAST || !LAST.ready) return [];
       const list = (DIR === 'high' ? LAST.gainers : LAST.losers).slice();
@@ -242,7 +239,7 @@
       content.innerHTML = VIEW === 'cards'
         ? `<div class="mcards">${list.map(cardCell).join('')}</div>`
         : `<div class="mtable-wrap"><table class="mtable"><thead><tr>
-             <th></th><th>Name</th><th class="num">Price</th><th class="num">Diff</th><th class="num">% Diff</th>
+             <th>Card</th><th>Details</th><th class="num">Price</th><th class="num">Diff</th><th class="num">% Diff</th>
            </tr></thead><tbody>${list.map(tableRow).join('')}</tbody></table></div>`;
       bindClicks();
     }
@@ -268,11 +265,10 @@
       }
       const n = (LAST.gainers.length + LAST.losers.length);
       document.getElementById('asof').innerHTML =
-        `<span>🃏 ${LAST.compared} cards</span><span>🕒 updated ${fmtDate(LAST.latest)}</span>`;
+        `<span>🃏 ${LAST.compared} cards tracked</span><span>🕒 Updated ${fmtDate(LAST.latest)}</span>`;
       render();
     }
 
-    // Toggles that need a refetch (server-side window / value tier)
     function segRefetch(id, set){
       document.getElementById(id).addEventListener('click', e=>{
         const b = e.target.closest('button'); if(!b) return;
@@ -281,7 +277,6 @@
         load();
       });
     }
-    // Toggles that only re-render (client-side)
     function segRender(id, set){
       document.getElementById(id).addEventListener('click', e=>{
         const b = e.target.closest('button'); if(!b) return;
@@ -296,7 +291,6 @@
     segRender('metric', b => METRIC = b.dataset.x);
     segRender('view',   b => VIEW = b.dataset.v);
 
-    // Load the catalog in the background so a click opens the shared detail modal.
     (async ()=>{
       try{
         const res = await fetch('/api/database', {method:'POST', body:'{}'});

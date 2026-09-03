@@ -6,89 +6,115 @@
   <title>One Piece TCG News - Grand Line</title>
   <meta name="description" content="The latest One Piece Card Game news — new sets, spoilers, tournaments and product announcements, updated daily.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sea: #0ea5e9; --sea-deep: #0284c7;
+      --red: #ef4444; --red-deep: #dc2626;
+      --gold: #f59e0b; --gold-deep: #d97706;
+      --page-bg: #09090b;
+      --surface: #18181b; --surface-head: #121214;
+      --ink: #f4f4f5; --muted: #a1a1aa; --line: #27272a;
+      --btn-bg: #18181b; --btn-hover: #27272a;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+      --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+    }
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
-    body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: #e4e4e7; min-height: 100vh; overflow-x: hidden; }
+    body { font-family: 'Inter', sans-serif; background: var(--page-bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
+    h1, h2, h3 { font-family: 'Fredoka', sans-serif; letter-spacing: -0.01em; }
 
+    /* Header */
     .header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      border-bottom: 3px solid #e74c3c; padding: 16px 24px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      background: rgba(9, 9, 11, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line); padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+      position: sticky; top: 0; z-index: 100;
     }
-    .header .logo h1 { font-family: 'Fredoka'; font-size: 22px; color: #fff; }
-    .header .logo span { color: #a1a1aa; font-size: 12px; }
+    .header .logo { display: flex; flex-direction: column; gap: 2px; }
+    .header .logo h1 { font-size: 22px; color: #fff; line-height: 1; font-weight: 600; }
+    .header .logo span { color: var(--muted); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
     .header .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
     .header .nav-btns button {
-      padding: 8px 16px; border-radius: 8px; border: 1px solid #333;
-      background: #1c1c1e; color: #e4e4e7; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .2s;
+      padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+      background: var(--btn-bg); color: var(--ink); cursor: pointer; font-size: 13px;
+      font-weight: 600; font-family: 'Inter', sans-serif; transition: all .2s ease;
     }
-    .header .nav-btns button:hover { background: #2a2a2e; border-color: #555; }
-    .header .nav-btns button.primary { background: #e74c3c; border-color: #e74c3c; color: #fff; }
-    .header .nav-btns button.cta { background: #f6b93b; border-color: #f6b93b; color: #1a1a2e; }
-    .header .nav-btns button.cta:hover { background: #ffd06b; border-color: #ffd06b; }
+    .header .nav-btns button:hover { background: var(--btn-hover); border-color: #3f3f46; }
+    .header .nav-btns button.primary { background: var(--ink); border-color: var(--ink); color: var(--page-bg); }
+    .header .nav-btns button.primary:hover { background: #d4d4d8; border-color: #d4d4d8; }
+    .header .nav-btns button.cta { background: var(--gold); border-color: var(--gold); color: #4a2f10; }
+    .header .nav-btns button.cta:hover { background: #fbbf24; border-color: #fbbf24; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.15); }
 
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .wrap { max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+
     .section-bar {
-      background: #000; color: #fff; text-align: center; padding: 10px 16px; border-radius: 8px;
-      font-weight: 700; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+      color: var(--ink); font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase;
+      margin: 0 0 32px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
     }
-    .section-bar small { display: block; font-size: 11px; font-weight: 400; letter-spacing: 1px; color: #a1a1aa; margin-top: 3px; }
+    .section-bar small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 1px; color: var(--muted); margin-top: 4px; text-transform: none; }
 
-    .subhead { font-family:'Fredoka'; color:#f6b93b; font-size:16px; margin:22px 2px 12px; }
-    .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .subhead { font-family: 'Inter'; font-weight: 700; color: var(--ink); font-size: 16px; margin: 32px 0 16px; letter-spacing: 0; }
+    .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
 
-    /* News card: themed gradient + a big category icon related to the headline */
+    /* News card */
     .ncard {
-      position: relative; border: 1px solid #2a2a30; border-radius: 14px; padding: 18px;
-      display: flex; flex-direction: column; justify-content: flex-end; transition: all .2s;
-      min-height: 190px; overflow: hidden;
+      position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 24px; display: flex; flex-direction: column; justify-content: space-between; transition: all .2s ease;
+      min-height: 200px; overflow: hidden; box-shadow: var(--shadow-sm);
     }
-    .ncard:hover { border-color: #e74c3c; transform: translateY(-2px); }
+    .ncard:hover { border-color: #3f3f46; transform: translateY(-4px); box-shadow: var(--shadow-md); }
     .ncard > * { position: relative; z-index: 1; }
-    .ncard .nicon { position: absolute; top: 10px; right: 14px; font-size: 40px; opacity: .9;
-      z-index: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
-    .ncard .src { display: inline-block; align-self: flex-start; background: rgba(0,0,0,.4);
-      color: #ffd06b; border: 1px solid rgba(246,185,59,.4); border-radius: 20px;
-      padding: 3px 10px; font-size: 10.5px; font-weight: 700; margin-bottom: 10px; }
-    .ncard h3 { font-family: 'Inter'; font-size: 15.5px; font-weight: 700; color: #fff; line-height: 1.4;
-      text-shadow: 0 1px 5px rgba(0,0,0,.5); }
-    .ncard .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
-    .ncard .date { color: #d7d7de; font-size: 11.5px; }
-    .ncard .read { color: #ffd06b; font-size: 12px; font-weight: 700; }
-    /* category themes */
-    .cat-set{background:linear-gradient(140deg,#3a2c6e 0%,#181826 75%)}
-    .cat-meta{background:linear-gradient(140deg,#7a5a1e 0%,#181826 75%)}
-    .cat-product{background:linear-gradient(140deg,#155e63 0%,#181826 75%)}
-    .cat-collab{background:linear-gradient(140deg,#7a1f2b 0%,#181826 75%)}
-    .cat-anniv{background:linear-gradient(140deg,#8a4b12 0%,#181826 75%)}
-    .cat-price{background:linear-gradient(140deg,#1e6b3a 0%,#181826 75%)}
-    .cat-default{background:linear-gradient(140deg,#2b2b3e 0%,#181826 75%)}
 
-    /* Your own featured posts — wider, distinct */
-    .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-    .fcardp { position: relative; border-radius: 14px; overflow: hidden; min-height: 240px;
-      display: flex; flex-direction: column; justify-content: flex-end; padding: 22px;
-      background-size: cover; background-position: center; border: 2px solid #f6b93b; }
+    /* Category accents - soft top borders instead of loud gradients */
+    .ncard::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--line); transition: background 0.2s; }
+    .cat-set:hover::before { background: var(--sea); }
+    .cat-meta:hover::before { background: var(--gold); }
+    .cat-product:hover::before { background: #10b981; }
+    .cat-collab:hover::before { background: var(--red); }
+    .cat-anniv:hover::before { background: #8b5cf6; }
+    .cat-price:hover::before { background: #10b981; }
+    .cat-default:hover::before { background: var(--ink); }
+
+    .ncard .nicon { position: absolute; top: 16px; right: 16px; font-size: 32px; opacity: 0.15; z-index: 0; transition: opacity 0.2s; }
+    .ncard:hover .nicon { opacity: 0.5; }
+
+    .ncard .src { display: inline-block; align-self: flex-start; background: rgba(255,255,255,0.05);
+      color: var(--muted); border: 1px solid var(--line); border-radius: 6px;
+      padding: 4px 8px; font-size: 11px; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .ncard h3 { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; color: #fff; line-height: 1.5; margin-bottom: 24px; }
+    .ncard .meta { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+    .ncard .date { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .ncard .read { color: var(--gold); font-size: 12px; font-weight: 600; transition: color 0.2s; }
+    .ncard:hover .read { color: #fbbf24; }
+
+    /* Featured posts */
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+    .fcardp { position: relative; border-radius: var(--radius-lg); overflow: hidden; min-height: 260px;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 24px;
+      background-size: cover; background-position: center; border: 1px solid var(--line); box-shadow: var(--shadow-sm); transition: all 0.2s ease; }
+    .fcardp:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--gold); }
     .fcardp::before { content:''; position:absolute; inset:0;
-      background: linear-gradient(180deg, rgba(26,26,46,.35) 0%, rgba(26,26,46,.9) 100%); }
-    .fcardp.nobg { background: linear-gradient(135deg,#1a1a2e,#16213e); }
+      background: linear-gradient(180deg, rgba(9,9,11,0.2) 0%, rgba(9,9,11,0.95) 100%); }
+    .fcardp.nobg { background: var(--surface); }
     .fcardp > * { position: relative; z-index:1; }
-    .fcardp .tag { align-self:flex-start; background:#f6b93b; color:#1a1a2e; font-weight:700;
-      font-size:10px; letter-spacing:.5px; text-transform:uppercase; padding:3px 9px; border-radius:20px; margin-bottom:10px; }
-    .fcardp h3 { font-family:'Fredoka'; font-size:19px; color:#fff; line-height:1.3; text-shadow:0 1px 6px rgba(0,0,0,.7); }
-    .fcardp p { color:#dcdce4; font-size:12.5px; line-height:1.6; margin-top:8px; text-shadow:0 1px 5px rgba(0,0,0,.7); }
-    .fcardp .date { color:#c9c9d1; font-size:11px; margin-top:12px; }
+    .fcardp .tag { align-self:flex-start; background:var(--gold); color:#4a2f10; font-weight:700;
+      font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:99px; margin-bottom:12px; }
+    .fcardp h3 { font-family:'Fredoka', sans-serif; font-size: 22px; color:#fff; line-height:1.3; font-weight: 600; }
+    .fcardp p { color:var(--muted); font-size:13px; line-height:1.6; margin-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .fcardp .date { color:var(--muted); font-size:12px; margin-top:16px; font-weight:500; }
 
-    .loading, .empty { color: #a1a1aa; text-align: center; padding: 50px 20px; }
+    .loading, .empty { color: var(--muted); text-align: center; padding: 80px 20px; font-size: 15px; }
 
-    .gl-footer { border-top: 1px solid #26262e; margin-top: 44px; padding: 30px 24px 40px; text-align: center; }
-    .gl-cta { display: inline-block; background: #f6b93b; color: #1a1a2e; font-weight: 700;
-      font-size: 14px; padding: 13px 26px; border-radius: 10px; text-decoration: none; }
-    .gl-cta:hover { background: #ffd06b; }
-    .gl-legal { color: #6f6f7a; font-size: 11.5px; line-height: 1.8; margin-top: 20px; }
+    .gl-footer { border-top: 1px solid var(--line); margin-top: 64px; padding: 40px 24px; text-align: center; }
+    .gl-cta { display: inline-block; background: var(--gold); color: #4a2f10; font-weight: 600;
+      font-size: 14px; padding: 14px 28px; border-radius: var(--radius-md); text-decoration: none; transition: all 0.2s; }
+    .gl-cta:hover { background: #fbbf24; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.15); }
+    .gl-legal { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 24px; max-width: 800px; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -108,13 +134,13 @@
   </div>
 
   <div class="wrap">
-    <div class="section-bar">One Piece TCG News<small>New sets · spoilers · tournaments · products</small></div>
+    <div class="section-bar">One Piece TCG News<small>New sets, spoilers, tournaments, and products</small></div>
     <div id="content"><div class="loading">Loading the latest news…</div></div>
   </div>
 
   <footer class="gl-footer">
     <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
-      &#9733; Track your collection with the Grand Line tracker &mdash; $1.99/mo
+      ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
     </a>
     <div class="gl-legal">
       News headlines are aggregated from public sources; each links to its original publisher.<br>
@@ -126,7 +152,6 @@
     function esc(s){ return String(s==null?'':s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    // "Wed, 01 Sep 2026 12:00:00 GMT" -> "Sep 1, 2026"
     function fmtDate(s){
       const d = new Date(s);
       if (isNaN(d)) return '';
@@ -135,7 +160,6 @@
 
     function bgStyle(url){ return url ? `style="background-image:url('${esc(url)}')"` : ''; }
 
-    // Pick an icon + colour theme that relates to the headline.
     function categorize(title){
       const t = (title || '').toLowerCase();
       if (/collab|collaborat|crossover/.test(t))              return {icon:'🤝', cls:'cat-collab'};
@@ -159,7 +183,6 @@
         const items = (data && data.items) || [];
         let html = '';
 
-        // Your own posts first
         if (featured.length){
           html += '<div class="subhead">📌 From Grand Line</div><div class="feat-grid">';
           for (const f of featured){
@@ -174,7 +197,6 @@
           html += '</div>';
         }
 
-        // Aggregated news
         if (items.length){
           html += '<div class="subhead">🗞️ Latest news</div><div class="news-grid">';
           for (const n of items){
@@ -183,7 +205,7 @@
               <span class="nicon">${c.icon}</span>
               ${n.source ? `<span class="src">${esc(n.source)}</span>` : ''}
               <h3>${esc(n.title)}</h3>
-              <div class="meta"><span class="date">${esc(fmtDate(n.date))}</span><span class="read">Read →</span></div>
+              <div class="meta"><span class="date">${esc(fmtDate(n.date))}</span><span class="read">Read Article →</span></div>
             </a>`;
           }
           html += '</div>';
