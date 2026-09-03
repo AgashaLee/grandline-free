@@ -62,6 +62,16 @@ def _run_meta_refresh():
             print(f"[scheduler] {mod} failed:\n" + traceback.format_exc())
 
 
+def _run_new_cards():
+    """Weekly: add any newly-released cards to the catalog. Safe (additive,
+    never wipes) so it's fine unattended -- adds a new set (e.g. EB05) on its own."""
+    try:
+        import add_new_set
+        add_new_set.add_new()
+    except Exception:
+        print("[scheduler] add_new_set failed:\n" + traceback.format_exc())
+
+
 def _loop():
     # Small startup delay so the web server is serving before we do network I/O.
     time.sleep(20)
@@ -71,6 +81,7 @@ def _loop():
                 print(f"[scheduler] running daily jobs for {_today()}")
                 _run_snapshot()
                 if _dt.date.today().weekday() == 0:  # Monday
+                    _run_new_cards()      # add any newly-released set
                     _run_meta_refresh()
         except Exception:
             print("[scheduler] loop error:\n" + traceback.format_exc())
