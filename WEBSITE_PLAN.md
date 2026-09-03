@@ -56,6 +56,17 @@ Everything below is DONE & tested locally; the free site is **NOT deployed yet**
 - **Daily jobs run in-process** (`scheduler.py`) — Market Watch fills in from the 2nd day (2026-09-03).
 - Repo has the paid tracker's git history tagged along (harmless); `git remote freesite` points at it.
 
+### HISTORICAL META BY SET-FORMAT (2026-09-03) — West + Japan
+- `/meta` now has **format pills** (All / OP17 / OP16 / OP15 / OP14 / OP13) filtering stats+chart+table;
+  combine with Country (JP/West). State in URL hash (`#format=OP16&deck=<id>`) survives refresh/share.
+- Seeders now import the **full history** and tag `set_format` (new column) via `meta_format.format_of`
+  = newest OP set among a deck's cards (region-agnostic, no release-date table): `seed_meta_limitless.py`
+  (West, 12-month window, ~286 decks) + `seed_meta_tcgportal_jp.py` (JP, all ~597). ~883 decks total.
+  Coverage: West OP13–OP16, JP OP13–OP17 (no data before ~mid-2025 — tcg-portal gap + onepiecetopdecks
+  blocked, so EB03-and-older is NOT available). Pills hide formats with <15 decks (straggler mis-buckets).
+- Refresh the LIVE volume with BOTH (Railway Console, in order): `python seed_meta_limitless.py` then
+  `python seed_meta_tcgportal_jp.py`.
+
 ### PENDING / NEXT
 1. ~~Deploy free site to Railway~~ ✅ DONE (above). Original prep notes: see
    **`DEPLOY_FREE_SITE.md`** for the exact runbook. Done in code: `DB_PATH` env
