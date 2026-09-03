@@ -551,6 +551,18 @@ def api_database(payload: dict) -> dict:
             if vs:
                 # Base first, then priciest variants.
                 vs.sort(key=lambda v: (0 if v["is_base"] else 1, -(v["price"] or 0)))
+                # Number repeated labels so identical-looking rows are
+                # distinguishable (e.g. two "Alternate Art" -> "Alternate Art" +
+                # "Alternate Art 2").
+                counts: dict = {}
+                for v in vs:
+                    counts[v["label"]] = counts.get(v["label"], 0) + 1
+                seen: dict = {}
+                for v in vs:
+                    if counts[v["label"]] > 1:
+                        seen[v["label"]] = seen.get(v["label"], 0) + 1
+                        if seen[v["label"]] > 1:
+                            v["label"] = f'{v["label"]} {seen[v["label"]]}'
                 c["variants"] = vs
     except Exception:
         pass
