@@ -89,7 +89,8 @@ def init_db():
     );
     """)
     # Non-destructive migrations: add columns introduced after the initial schema.
-    for ddl in ["ALTER TABLE meta_decks ADD COLUMN leader_image TEXT"]:
+    for ddl in ["ALTER TABLE meta_decks ADD COLUMN leader_image TEXT",
+                "ALTER TABLE meta_decks ADD COLUMN set_format TEXT"]:
         try:
             db.execute(ddl)
         except sqlite3.OperationalError:

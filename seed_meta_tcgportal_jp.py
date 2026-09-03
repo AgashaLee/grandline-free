@@ -32,6 +32,7 @@ from pathlib import Path
 
 import config
 from database import get_db
+from meta_format import format_of
 
 BASE = "https://tcg-portal.jp/api/onepiece"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -40,7 +41,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 CARD_MAP_FILE = config.BASE_DIR / "tcgportal_cardmap.json"
 CARD_MAP_MAX_AGE = 14 * 86400  # rebuild the map if older than this
-MAX_DECKS = 60                  # most-recent JP decks to import
+MAX_DECKS = 700                 # import the full history (~600 JP decks with lists)
 PAGE_DELAY = 0.2               # polite gap between paged requests
 
 # 優勝 = win, 準優勝 = runner-up, ベストN = Top N, N位 = Nth.
@@ -140,16 +141,17 @@ def seed(max_decks: int = MAX_DECKS) -> int:
         # The source has no leader card code, but does give the archetype's
         # representative card art -> use it as the leader thumbnail on /meta.
         leader_image = guide.get("representativeCardImage") or ""
+        set_format = format_of(counts.keys())   # OP13..OP17 era from the newest OP card
         date = (t.get("date") or "")[:10]  # YYYY-MM-DD
         deck_id = f"tcgportal-{t['id']}"
         db.execute(
             """INSERT OR REPLACE INTO meta_decks
                (id, event_date, country, event_name, event_type, players, winner,
-                leader_id, leader_image)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                leader_id, leader_image, set_format)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (deck_id, date, "JP", archetype,
              (t.get("tournamentName") or "Japan event").strip(),
-             _placement(t.get("rank")), "", "", leader_image),
+             _placement(t.get("rank")), "", "", leader_image, set_format),
         )
         db.execute("DELETE FROM meta_deck_cards WHERE deck_id=?", (deck_id,))
         for code, qty in counts.items():

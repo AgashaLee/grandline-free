@@ -15,10 +15,13 @@ import re
 
 from providers.limitless import _fetch, scrape_tournament_results, scrape_decklist
 from database import get_db
+from meta_format import format_of
 
 logging.basicConfig(level=logging.ERROR)
 
-TOURN_URL = "https://onepiece.limitlesstcg.com/tournaments"
+# 12-month window so the West meta spans several set formats (OP15..OP17), not
+# just the current one -- powers the per-format history on /meta.
+TOURN_URL = "https://onepiece.limitlesstcg.com/tournaments?time=12months&show=100"
 
 
 def recent_tournament_ids(limit: int) -> list[int]:
@@ -27,7 +30,7 @@ def recent_tournament_ids(limit: int) -> list[int]:
     return sorted(ids, reverse=True)[:limit]
 
 
-def seed(max_tournaments: int = 10, per_tournament: int = 8, total_cap: int = 70) -> int:
+def seed(max_tournaments: int = 40, per_tournament: int = 8, total_cap: int = 320) -> int:
     db = get_db()
 
     # 1) collect decklist ids from recent tournaments
@@ -57,12 +60,14 @@ def seed(max_tournaments: int = 10, per_tournament: int = 8, total_cap: int = 70
     for d in decks:
         db.execute(
             """INSERT OR REPLACE INTO meta_decks
-               (id, event_date, country, event_name, event_type, players, winner, leader_id)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               (id, event_date, country, event_name, event_type, players, winner,
+                leader_id, set_format)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (d["id"], d.get("event_date", ""), "West",
              d.get("leader_name") or d.get("deck_name") or "",   # deck profile / chart grouping
              d.get("event_name", ""),                             # tournament name
-             d.get("placement", ""), d.get("player", ""), d.get("leader_id", "")),
+             d.get("placement", ""), d.get("player", ""), d.get("leader_id", ""),
+             format_of(c["card_id"] for c in d["cards"])),
         )
         for c in d["cards"]:
             db.execute(

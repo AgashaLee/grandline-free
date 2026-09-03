@@ -67,6 +67,20 @@
     }
     .section-bar small { display: block; font-size: 11px; font-weight: 400; letter-spacing: 1px; color: #ccc; }
 
+    /* Format pills (set-era selector) */
+    .fmt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .fmt-bar > .fmt-label { font-size: 12px; color: #a1a1aa; font-weight: 600; flex: none; }
+    .fmt-pills { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    .fmt-pills::-webkit-scrollbar { height: 0; }
+    .fmt-pills button {
+      flex: 0 0 auto; white-space: nowrap; padding: 7px 14px; border-radius: 999px;
+      border: 1px solid #333; background: #1c1c1e; color: #e4e4e7; cursor: pointer;
+      font-size: 12px; font-weight: 700; font-family: 'Inter', sans-serif;
+    }
+    .fmt-pills button:hover { background: #2a2a2e; border-color: #555; }
+    .fmt-pills button.on { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+    @media (max-width: 640px) { .fmt-bar { flex-direction: column; align-items: stretch; gap: 6px; } }
+
     /* Filters */
     .filters {
       display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
@@ -267,6 +281,20 @@
   <script>
     let globalDecks = [];
     let cardsById = {};   // full card catalog, so a deck card can open its details
+    let SELECTED_FORMAT = '';   // '' = all set formats; else e.g. 'OP17'
+
+    // Decks in the currently selected set-format (all if none picked).
+    function activeDecks() {
+      return SELECTED_FORMAT ? globalDecks.filter(d => d.set_format === SELECTED_FORMAT) : globalDecks;
+    }
+    // Distinct formats with enough decks to be a real meta, newest first
+    // (OP17, OP16, ...). Tiny stragglers (a few off-meta decks the heuristic
+    // bucketed into an old set) are hidden from the pills; they still show under All.
+    function allFormats() {
+      const counts = {};
+      globalDecks.forEach(d => { if (d.set_format) counts[d.set_format] = (counts[d.set_format] || 0) + 1; });
+      return Object.keys(counts).filter(f => counts[f] >= 15).sort().reverse();
+    }
 
     // Open the shared detail modal for a card in a decklist.
     function openDeckCard(id){
@@ -350,7 +378,8 @@
     // Bar chart of how many decklists each leader/archetype has (meta share).
     function metaShareChart() {
       const counts = {};
-      globalDecks.forEach(d => {
+      const decks = activeDecks();
+      decks.forEach(d => {
         const k = (d.event_name || d.leader_id || 'Other').trim();
         counts[k] = (counts[k] || 0) + 1;
       });
@@ -368,20 +397,30 @@
         </div>`;
       }).join('');
       return `<div class="meta-chart">
-        <h3>Most-Played Leaders <span>· ${rows.length} archetypes across ${globalDecks.length} decks</span></h3>
+        <h3>Most-Played Leaders <span>· ${rows.length} archetypes across ${decks.length} decks</span></h3>
         <div class="mc-bars">${bars}</div>
         <div class="mc-hint">Click any row below to view a full decklist</div>
       </div>`;
     }
 
     function renderDecks() {
-      // Count stats
-      const countries = new Set(globalDecks.map(d => d.country));
-      const leaders = new Set(globalDecks.map(d => d.leader_id));
+      const decks = activeDecks();
+      const countries = new Set(decks.map(d => d.country));
+      const leaders = new Set(decks.map(d => d.leader_id));
+
+      // Format pills: All + each set-era (newest first).
+      const pills = ['<button data-f="" class="' + (SELECTED_FORMAT ? '' : 'on') + '">All</button>']
+        .concat(allFormats().map(f =>
+          `<button data-f="${f}" class="${f === SELECTED_FORMAT ? 'on' : ''}">${f}</button>`)).join('');
 
       let html = `
+        <div class="fmt-bar">
+          <span class="fmt-label">Format:</span>
+          <div class="fmt-pills" id="fmt-pills">${pills}</div>
+        </div>
+
         <div class="stats-row">
-          <div class="stat-card"><div class="value">${globalDecks.length}</div><div class="label">Decklists</div></div>
+          <div class="stat-card"><div class="value">${decks.length}</div><div class="label">Decklists</div></div>
           <div class="stat-card"><div class="value">${leaders.size}</div><div class="label">Unique Leaders</div></div>
           <div class="stat-card"><div class="value">${countries.size}</div><div class="label">Countries</div></div>
         </div>
@@ -432,12 +471,13 @@
 
       // Populate filter dropdowns
       const countrySet = [...new Set(globalDecks.map(d => d.country).filter(Boolean))].sort();
-      const tournamentSet = [...new Set(globalDecks.map(d => d.event_type).filter(Boolean))].sort();
+      const tournamentSet = [...new Set(activeDecks().map(d => d.event_type).filter(Boolean))].sort();
       const countrySelect = document.getElementById('filter-country');
       countrySet.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; countrySelect.appendChild(o); });
       const tournamentSelect = document.getElementById('filter-tournament');
       tournamentSet.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = translateTournament(t); tournamentSelect.appendChild(o); });
 
+      bindFormatPills();
       applyFilters();
     }
 
@@ -447,7 +487,7 @@
       const tournament = document.getElementById('filter-tournament').value;
       const search = document.getElementById('filter-search').value.toLowerCase();
 
-      let filtered = globalDecks;
+      let filtered = activeDecks();
       // We store the original "color" in the deck name or we can infer from leader
       // The event_name field stores the deck name from topdecks
       if (color) {
@@ -472,7 +512,7 @@
       
       filtered.forEach((d, idx) => {
         const tr = document.createElement('tr');
-        tr.onclick = () => { location.hash = 'deck=' + encodeURIComponent(d.id); };
+        tr.onclick = () => { setHash({ format: SELECTED_FORMAT, deck: d.id }); };
         tr.innerHTML = `
           <td><div class="leader-thumb" id="leader-thumb-${idx}"></div></td>
           <td>
@@ -525,7 +565,7 @@
       });
 
       let html = `<div class="deck-detail">
-        <button class="back-btn" onclick="location.hash=''">⬅️ Back to Decklists</button>
+        <button class="back-btn" onclick="backToList()">⬅️ Back to Decklists</button>
 
         <div class="deck-header">
           <div class="leader-img" id="detail-leader-img"></div>
@@ -624,14 +664,31 @@
         .catch(() => {});
     }
 
-    // Deck selection lives in the URL hash (#deck=<id>) so a refresh (or a shared
-    // link) restores the open deck instead of dropping back to the list.
+    // Format + open-deck both live in the URL hash (#format=OP17&deck=<id>) so a
+    // refresh or shared link restores the same view.
+    function parseHash() {
+      const p = new URLSearchParams(location.hash.slice(1));
+      return { format: p.get('format') || '', deck: p.get('deck') || '' };
+    }
+    function setHash(o) {
+      const p = new URLSearchParams();
+      if (o.format) p.set('format', o.format);
+      if (o.deck) p.set('deck', o.deck);
+      const s = p.toString();
+      if (('#' + s) !== location.hash && !(s === '' && location.hash === '')) location.hash = s;
+    }
+    function backToList() { setHash({ format: SELECTED_FORMAT }); }
+    function bindFormatPills() {
+      const bar = document.getElementById('fmt-pills');
+      if (bar) bar.onclick = e => {
+        const b = e.target.closest('button'); if (!b) return;
+        setHash({ format: b.dataset.f });   // switch format, drop any open deck
+      };
+    }
     function route() {
-      const m = location.hash.match(/^#deck=(.+)$/);
-      if (m && globalDecks.length) {
-        const id = decodeURIComponent(m[1]);
-        if (globalDecks.some(d => d.id === id)) { renderDeckDetails(id); return; }
-      }
+      const { format, deck } = parseHash();
+      SELECTED_FORMAT = allFormats().includes(format) ? format : '';
+      if (deck && globalDecks.some(d => d.id === deck)) { renderDeckDetails(deck); return; }
       renderDecks();
     }
     window.addEventListener('hashchange', route);
