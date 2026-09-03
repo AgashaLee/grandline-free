@@ -72,21 +72,6 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // The default keyword badges (Once Per Turn etc.) follow the card's colour,
-  // like the printed card. Returns [background, text] for the first colour.
-  const CARD_COLOR = {
-    Red:    ['#e13d3d', '#fff'],  // true card colours (match the card, not a tint)
-    Blue:   ['#1f8fd6', '#fff'],
-    Green:  ['#1f9d55', '#fff'],
-    Purple: ['#9b59b6', '#fff'],
-    Yellow: ['#f1c40f', '#4a2f10'],
-    Black:  ['#2f2f2f', '#fff'],
-  };
-  function kwColors(cardColor) {
-    const first = (cardColor || '').split(/[\/\s]+/)[0];
-    return CARD_COLOR[first] || ['#1799d6', '#fff'];
-  }
-
   // Format effect text like the printed card: keyword tags -> badges, {traits}
   // emphasised, and the [Trigger] clause on its own line.
   function formatCardText(text) {
@@ -95,7 +80,8 @@ window.CardDetail = (function () {
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
     t = t.replace(/\[([^\]]+)\]/g, (m, kw) => {
       const low = kw.toLowerCase().trim();
-      const cls = /trigger/.test(low) ? 'cd-kw cd-kw-trig'
+      const cls = /don!!/.test(low) ? 'cd-kw cd-kw-don'
+                : /trigger/.test(low) ? 'cd-kw cd-kw-trig'
                 : /counter/.test(low) ? 'cd-kw cd-kw-counter'
                 : /^(blocker|rush|double attack|banish)$/.test(low) ? 'cd-kw cd-kw-ability'
                 : 'cd-kw';
@@ -140,14 +126,15 @@ window.CardDetail = (function () {
   .cd-traits b{color:#9c8a76;font-weight:700}
   .cd-text{background:#fff;border:1px solid #ecdcc2;border-radius:10px;padding:12px 14px;
     font-size:12.5px;line-height:1.9;margin-bottom:16px}
-  /* Default timing keywords (Once Per Turn, Activate:Main…) take the card's own
-     colour via --cd-kw-bg (set per card in open()); the game-standard tags below
-     keep their fixed meaning colours. */
-  .cd-kw{display:inline-block;background:var(--cd-kw-bg,#1799d6);color:var(--cd-kw-fg,#fff);border-radius:5px;padding:0 6px;
+  /* Keyword tags are coloured by the keyword's OWN printed colour (as on the
+     card), not the card's frame colour: blue timing keywords, black [DON!!…],
+     red [Counter], gold [Trigger], orange keyword-abilities. */
+  .cd-kw{display:inline-block;background:#1799d6;color:#fff;border-radius:5px;padding:0 6px;
     font-size:11px;font-weight:700;margin:0 3px 0 0;vertical-align:1px}
   .cd-kw-trig{background:#f6b93b;color:#4a2f10}
   .cd-kw-counter{background:#e23b3b;color:#fff}
   .cd-kw-ability{background:#e8820e;color:#fff}
+  .cd-kw-don{background:#1a1a1a;color:#fff}
   .cd-trait{font-weight:700;color:#c62828}
   .cd-trigger{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed #ecdcc2}
   .cd-buyrow{display:flex;gap:10px;flex-wrap:wrap}
@@ -234,11 +221,7 @@ window.CardDetail = (function () {
     const regionBar = `<div class="cd-region">Showing <b>${here}</b> stores ·
       <a href="#" onclick="CardDetail.switchRegion();return false;">switch to ${other}</a></div>`;
 
-    const box = document.getElementById('cdBox');
-    const [kwBg, kwFg] = kwColors(c.card_color);
-    box.style.setProperty('--cd-kw-bg', kwBg);
-    box.style.setProperty('--cd-kw-fg', kwFg);
-    box.innerHTML = `
+    document.getElementById('cdBox').innerHTML = `
       <div class="cd-img">${img}</div>
       <div class="cd-body">
         <button class="cd-close" onclick="CardDetail.close()" aria-label="Close">✕</button>
