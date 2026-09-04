@@ -121,7 +121,10 @@ window.CardDetail = (function () {
   // Format effect text like the printed card: keyword tags -> badges, {traits}
   // emphasised, and the [Trigger] clause on its own line.
   function formatCardText(text) {
-    if (!text) return '';
+    // OPTCGAPI returns the literal string "NULL" for cards with no effect (e.g.
+    // vanilla characters) -- treat that (and blanks) as no text, so the effect
+    // box is hidden rather than showing "NULL".
+    if (!text || String(text).trim().toUpperCase() === 'NULL') return '';
     let t = esc(text).trim();
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
     t = t.replace(/\[([^\]]+)\]/g, (m, kw) => {
@@ -295,6 +298,9 @@ window.CardDetail = (function () {
     const traitsHtml = traits
       ? `<div class="cd-traits"><b>Traits:</b> ${esc(traits.replace(/\s*\/\s*/g, ' / '))}</div>` : '';
 
+    // Effect text -- empty (incl. OPTCGAPI's "NULL") hides the box entirely.
+    const cardTextInner = formatCardText(c.card_text);
+
     // Per-printing prices (base + alt-art/parallel), each with its own value.
     // We can show more artworks than we have prices for (images and prices come
     // from different sources), so note that when it happens.
@@ -328,7 +334,7 @@ window.CardDetail = (function () {
         ${traitsHtml}
         ${pricesHtml}
         ${showPrices ? '<div class="cd-chart" id="cdChart" hidden></div>' : ''}
-        ${c.card_text ? `<div class="cd-text">${formatCardText(c.card_text)}</div>` : ''}
+        ${cardTextInner ? `<div class="cd-text">${cardTextInner}</div>` : ''}
         <div class="cd-buyrow">${buys}</div>
         ${regionBar}
         <div class="cd-buynote">Opens a marketplace search for this card. Prices vary by seller.</div>
