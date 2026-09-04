@@ -78,53 +78,81 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Known MULTI-WORD One Piece traits. OPTCGAPI joins a card's traits with spaces
-  // and no delimiter ("Alabasta Straw Hat Crew" = Alabasta + Straw Hat Crew), and
-  // a single trait can itself contain spaces ("East Blue"), so they can't be split
-  // on spaces alone. We greedily match the longest known phrase from the front;
-  // unlisted single words fall through as their own trait. Only multi-word traits
-  // need listing (single-word ones split for free). Add new ones as sets ship.
+  // One Piece traits, for splitting OPTCGAPI's sub_types string. OPTCGAPI joins a
+  // card's traits with spaces and NO delimiter ("Water Seven The Franky Family" =
+  // Water Seven + The Franky Family), and a single trait can itself contain spaces
+  // ("East Blue", "The Franky Family"), so they can't be split on spaces alone.
+  // splitTraits() greedily matches the longest known trait from the front; any run
+  // of unknown words is kept together as ONE trait (never shattered into words),
+  // so an unlisted trait degrades to "whole", not "over-split". Vocab derived from
+  // the full catalog; add new ones as sets ship.
   const TRAIT_PHRASES = new Set([
-    'Straw Hat Crew', 'East Blue', 'Heart Pirates', 'Kid Pirates', 'Red-Haired Pirates',
-    'Whitebeard Pirates', 'Blackbeard Pirates', 'Big Mom Pirates', 'Animal Kingdom Pirates',
-    'Donquixote Pirates', 'Foxy Pirates', 'Kuja Pirates', 'Buggy Pirates', 'Alvida Pirates',
-    'Krieg Pirates', 'Arlong Pirates', 'Sun Pirates', 'New Fish-Man Pirates', 'Fish-Man Island',
-    'Golden Lion Pirates', 'Roger Pirates', 'Rocks Pirates', 'Beautiful Pirates', 'Barto Club',
-    'Fire Tank Pirates', 'On-Air Pirates', 'Bonney Pirates', 'Drake Pirates', 'Hawkins Pirates',
-    'Fallen Monk Pirates', 'Bellamy Pirates', 'Thriller Bark Pirates', 'Flying Pirates',
-    'Cross Guild', 'Spade Pirates', 'Ideo Pirates', 'Muggy Kingdom', 'Caribou Pirates',
-    'Black Cat Pirates', 'Usopp Pirates', 'Giant Warrior Pirates', 'Bluejam Pirates',
-    'Windmill Village', 'Neptune Army', 'Nox Pirates', 'Gyro Pirates', 'Mountain Bandits',
-    'Yonta Maria Grand Fleet', 'Tontatta Tribe', 'Happo Navy', 'Kingdom of Prodence',
-    'Kano Country', 'Wano Country', 'Land of Wano', 'Nine Red Scabbards', 'The Akazaya Nine',
-    'Kozuki Clan', 'Kurozumi Clan', 'Former Navy', 'Neo Navy', 'World Government', 'Former CP9',
-    'Cipher Pol', 'Seven Warlords of the Sea', 'The Four Emperors', 'Revolutionary Army',
-    'Impel Down', 'World Nobles', 'Germa 66', 'Vinsmoke Family', 'Charlotte Family',
-    'Sky Island', 'Hot Springs Island', 'Long Ring Long Land', 'Drum Kingdom', 'Amazon Lily',
-    'Water Seven', 'Enies Lobby', 'Punk Hazard', 'God Valley', 'Biological Weapon',
-    'Ancient Weapon', 'Former Baroque Works', 'Baroque Works', 'Former Rocks Pirates',
-    'Former Whitebeard Pirates', 'Former Roger Pirates', 'Celestial Dragons',
+    'Accino Family', 'Alabasta', 'Alvida Pirates', 'Amazon Lily', 'Ancient Weapon', 'Animal',
+    'Animal Kingdom Pirates', 'Arlong Pirates', 'Asuka Island', 'Baroque Works', 'Barto Club',
+    'Baterilla', 'Beautiful Pirates', 'Bellamy Pirates', 'Big Mom Pirates', 'Biological Weapon',
+    'Biologist', 'Black Cat Pirates', 'Blackbeard Pirates', 'Bluejam Pirates', 'Bonney Pirates',
+    'Botanist', 'Bowin Island', 'Brownbeard Pirates', 'Buggy Pirates', 'Buggy\'s Delivery',
+    'Caribou Pirates', 'Celestial Dragons', 'Charlotte Family', 'Cipher Pol', 'CP0', 'CP6', 'CP7',
+    'CP8', 'CP9', 'Cross Guild', 'Crown Island', 'Donquixote Pirates', 'Drake Pirates',
+    'Dressrosa', 'Drum Kingdom', 'East Blue', 'Egghead', 'Elbaph', 'Eldoraggo Crew', 'Enies Lobby',
+    'Fallen Monk Pirates', 'Film', 'FILM', 'Fire Tank Pirates', 'Firetank Pirates', 'Fish-Man',
+    'Fish-Man Island', 'Five Elders', 'Flevance', 'Flying Pirates', 'Foolshout Island',
+    'Former Baroque Works', 'Former CP9', 'Former Navy', 'Former Rocks Pirates',
+    'Former Roger Pirates', 'Former Rolling Pirates', 'Former Rumbar Pirates',
+    'Former Whitebeard Pirates', 'Foxy Pirates', 'Frost Moon Village', 'Galley-La Company',
+    'Gasparde Pirates', 'GERMA 66', 'Germa 66', 'Giant', 'Giant Warrior Pirates', 'Goa Kingdom',
+    'God Valley', 'Golden Lion Pirates', 'Gyro Pirates', 'Happo Navy', 'Happosui Army',
+    'Hawkins Pirates', 'Heart Pirates', 'Homies', 'Hot Springs Island', 'Ideo Pirates',
+    'Impel Down', 'Jailer Beast', 'Jaya', 'Jaya Botanist', 'Journalist', 'Kano Country',
+    'Kid Pirates', 'King of the Pirates', 'Kingdom of GERMA', 'Kingdom of Prodence',
+    'Kouzuki Clan', 'Kozuki Clan', 'Krieg Pirates', 'Kuja Pirates', 'Kurozumi Clan',
+    'Land of Wano', 'Long Ring Long Land', 'Lulucia Kingdom', 'Lunarian', 'Marine', 'Marineford',
+    'Mary Geoise', 'Mecha Island', 'Merfolk', 'Mink', 'Minks', 'Mogaro Kingdom',
+    'Monkey Mountain Alliance', 'Mountain Bandits', 'Muggy Kingdom', 'Music', 'Navy', 'Neo Navy',
+    'Neptune Army', 'Neptunian', 'New Fish-Man Pirates', 'Nine Red Scabbards', 'Nox Pirates',
+    'Numbers', 'ODYSSEY', 'Ohara', 'Omatsuri Island', 'On-Air Pirates', 'Pacifista',
+    'Peachbeard Pirates', 'Pirate Crew', 'Plague', 'Punk', 'Punk Hazard', 'Red-Haired Pirates',
+    'Revolutionary Army', 'Rocks Pirates', 'Roger Pirates', 'Rolling Pirates', 'Rumbar Pirates',
+    'Sabaody', 'Science', 'Scientist', 'Seraphim', 'Seven Warlords of the Sea', 'Shandian Warrior',
+    'Shipbuilding Town', 'Sky Island', 'Skypiea', 'SMILE', 'Sniper Island', 'Spade Pirates',
+    'Straw Hat Crew', 'Sun Pirates', 'Supernovas', 'The Akazaya Nine', 'The Flying Fish Riders',
+    'The Four Emperors', 'The Franky Family', 'The House of Lambs', 'The Moon',
+    'The Moon Space Pirates', 'The Owner of Cindry\'s Shadow', 'The Pirates Fest',
+    'The Victims\' Club', 'The Vinsmoke Family', 'Thriller Bark Pirates', 'Tontatta Tribe',
+    'Treasure Pirates', 'Trump Pirates', 'Usopp Pirates', 'Vinsmoke', 'Vinsmoke Family', 'Wano',
+    'Wano Country', 'Water Seven', 'Weevil\'s Mother', 'Whitebeard Pirates', 'Whole Cake Island',
+    'Windmill Village', 'World Government', 'World Nobles', 'World Pirates', 'Yonta Maria Fleet',
+    'Yonta Maria Grand Fleet', 'Zou',
   ]);
   let TRAIT_MAXWORDS = 1;
   TRAIT_PHRASES.forEach(p => { const n = p.split(' ').length; if (n > TRAIT_MAXWORDS) TRAIT_MAXWORDS = n; });
+  // Bad-data tokens that sometimes leak into sub_types (power values, NULL, an
+  // attribute) -- never shown as a trait.
+  const TRAIT_JUNK = /^(\d+|\?|null|special)$/i;
 
   function splitTraits(s) {
     s = (s || '').trim();
     if (!s) return [];
-    if (s.indexOf('/') >= 0) return s.split('/').map(x => x.trim()).filter(Boolean);
-    const toks = s.split(/\s+/);
-    const out = [];
-    let i = 0;
-    while (i < toks.length) {
-      let hit = null;
-      for (let L = Math.min(TRAIT_MAXWORDS, toks.length - i); L >= 2; L--) {
-        const phrase = toks.slice(i, i + L).join(' ');
-        if (TRAIT_PHRASES.has(phrase)) { hit = [phrase, L]; break; }
+    let parts;
+    if (s.indexOf('/') >= 0) {
+      parts = s.split('/').map(x => x.trim());
+    } else {
+      const toks = s.split(/\s+/);
+      parts = [];
+      let buf = [], i = 0;
+      while (i < toks.length) {
+        let hit = 0;
+        for (let L = Math.min(TRAIT_MAXWORDS, toks.length - i); L >= 1; L--) {
+          if (TRAIT_PHRASES.has(toks.slice(i, i + L).join(' '))) { hit = L; break; }
+        }
+        if (hit) {
+          if (buf.length) { parts.push(buf.join(' ')); buf = []; }
+          parts.push(toks.slice(i, i + hit).join(' ')); i += hit;
+        } else { buf.push(toks[i]); i++; }
       }
-      if (hit) { out.push(hit[0]); i += hit[1]; }
-      else { out.push(toks[i]); i++; }
+      if (buf.length) parts.push(buf.join(' '));
     }
-    return out;
+    return parts.filter(t => t && !TRAIT_JUNK.test(t));
   }
 
   function _fmtDay(d) {
