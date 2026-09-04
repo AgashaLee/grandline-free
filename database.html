@@ -48,6 +48,14 @@
   button.cta:hover{background:#fbbf24;border-color:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+  /* Phones: force a clean 2-column grid like iOS. auto-fill's 160px min fits
+     twice on a ~390px iPhone but not on a ~360px Android, where it collapses to
+     one giant card -- this pins both platforms to 2 columns. */
+  @media (max-width: 560px){
+    .grid{ grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid > *{ min-width: 0; }
+    .card{ padding: 14px; }
+  }
 
   /* Set Card */
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
