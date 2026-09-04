@@ -211,9 +211,10 @@ window.CardDetail = (function () {
   .cd-trait{font-weight:600;color:#ef4444;}
   .cd-trigger{display:block;margin-top:12px;padding-top:12px;border-top:1px dashed #e4e4e7}
 
-  .cd-buyrow{display:flex;gap:12px;flex-wrap:wrap}
-  .cd-buyrow a{flex:1;min-width:160px;text-decoration:none}
-  .cd-buybtn{width:100%;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;}
+  .cd-buyrow{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+  .cd-buyrow a{flex:1;min-width:160px;text-decoration:none;display:flex}
+  .cd-buybtn{width:100%;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.3;min-height:48px;}
   .cd-buybtn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
 
   .cd-region{color:#71717a;font-size:12px;margin-top:16px;text-align:center}
