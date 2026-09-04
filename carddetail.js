@@ -78,6 +78,55 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Known MULTI-WORD One Piece traits. OPTCGAPI joins a card's traits with spaces
+  // and no delimiter ("Alabasta Straw Hat Crew" = Alabasta + Straw Hat Crew), and
+  // a single trait can itself contain spaces ("East Blue"), so they can't be split
+  // on spaces alone. We greedily match the longest known phrase from the front;
+  // unlisted single words fall through as their own trait. Only multi-word traits
+  // need listing (single-word ones split for free). Add new ones as sets ship.
+  const TRAIT_PHRASES = new Set([
+    'Straw Hat Crew', 'East Blue', 'Heart Pirates', 'Kid Pirates', 'Red-Haired Pirates',
+    'Whitebeard Pirates', 'Blackbeard Pirates', 'Big Mom Pirates', 'Animal Kingdom Pirates',
+    'Donquixote Pirates', 'Foxy Pirates', 'Kuja Pirates', 'Buggy Pirates', 'Alvida Pirates',
+    'Krieg Pirates', 'Arlong Pirates', 'Sun Pirates', 'New Fish-Man Pirates', 'Fish-Man Island',
+    'Golden Lion Pirates', 'Roger Pirates', 'Rocks Pirates', 'Beautiful Pirates', 'Barto Club',
+    'Fire Tank Pirates', 'On-Air Pirates', 'Bonney Pirates', 'Drake Pirates', 'Hawkins Pirates',
+    'Fallen Monk Pirates', 'Bellamy Pirates', 'Thriller Bark Pirates', 'Flying Pirates',
+    'Cross Guild', 'Spade Pirates', 'Ideo Pirates', 'Muggy Kingdom', 'Caribou Pirates',
+    'Black Cat Pirates', 'Usopp Pirates', 'Giant Warrior Pirates', 'Bluejam Pirates',
+    'Windmill Village', 'Neptune Army', 'Nox Pirates', 'Gyro Pirates', 'Mountain Bandits',
+    'Yonta Maria Grand Fleet', 'Tontatta Tribe', 'Happo Navy', 'Kingdom of Prodence',
+    'Kano Country', 'Wano Country', 'Land of Wano', 'Nine Red Scabbards', 'The Akazaya Nine',
+    'Kozuki Clan', 'Kurozumi Clan', 'Former Navy', 'Neo Navy', 'World Government', 'Former CP9',
+    'Cipher Pol', 'Seven Warlords of the Sea', 'The Four Emperors', 'Revolutionary Army',
+    'Impel Down', 'World Nobles', 'Germa 66', 'Vinsmoke Family', 'Charlotte Family',
+    'Sky Island', 'Hot Springs Island', 'Long Ring Long Land', 'Drum Kingdom', 'Amazon Lily',
+    'Water Seven', 'Enies Lobby', 'Punk Hazard', 'God Valley', 'Biological Weapon',
+    'Ancient Weapon', 'Former Baroque Works', 'Baroque Works', 'Former Rocks Pirates',
+    'Former Whitebeard Pirates', 'Former Roger Pirates', 'Celestial Dragons',
+  ]);
+  let TRAIT_MAXWORDS = 1;
+  TRAIT_PHRASES.forEach(p => { const n = p.split(' ').length; if (n > TRAIT_MAXWORDS) TRAIT_MAXWORDS = n; });
+
+  function splitTraits(s) {
+    s = (s || '').trim();
+    if (!s) return [];
+    if (s.indexOf('/') >= 0) return s.split('/').map(x => x.trim()).filter(Boolean);
+    const toks = s.split(/\s+/);
+    const out = [];
+    let i = 0;
+    while (i < toks.length) {
+      let hit = null;
+      for (let L = Math.min(TRAIT_MAXWORDS, toks.length - i); L >= 2; L--) {
+        const phrase = toks.slice(i, i + L).join(' ');
+        if (TRAIT_PHRASES.has(phrase)) { hit = [phrase, L]; break; }
+      }
+      if (hit) { out.push(hit[0]); i += hit[1]; }
+      else { out.push(toks[i]); i++; }
+    }
+    return out;
+  }
+
   function _fmtDay(d) {
     try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
     catch (e) { return d; }
@@ -294,9 +343,9 @@ window.CardDetail = (function () {
       chips.push(`<span class="cd-chip"><b>Counter</b> +${esc(Number(c.counter))}</span>`);
     if (c.life != null && c.life !== '') chips.push(`<span class="cd-chip"><b>Life</b> ${esc(c.life)}</span>`);
 
-    const traits = (c.sub_types || '').trim();
-    const traitsHtml = traits
-      ? `<div class="cd-traits"><b>Traits:</b> ${esc(traits.replace(/\s*\/\s*/g, ' / '))}</div>` : '';
+    const traitList = splitTraits(c.sub_types);
+    const traitsHtml = traitList.length
+      ? `<div class="cd-traits"><b>Traits:</b> ${traitList.map(esc).join(' / ')}</div>` : '';
 
     // Effect text -- empty (incl. OPTCGAPI's "NULL") hides the box entirely.
     const cardTextInner = formatCardText(c.card_text);
