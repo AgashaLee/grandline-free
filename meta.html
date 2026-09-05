@@ -430,21 +430,10 @@
         tbody.appendChild(tr);
 
         if (d.leader_id) {
-          fetch('/api/image', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({card_id: d.leader_id, region: 'en', variant: 'Normal'})
-          })
-          .then(r => r.json())
-          .then(imgData => {
-            const el = document.getElementById('leader-thumb-' + idx);
-            if (el && imgData.image) {
-              el.innerHTML = `<img src="${imgData.image}" alt="${d.leader_id}">`;
-            }
-          }).catch(() => {});
+          fillCardImg(document.getElementById('leader-thumb-' + idx), d.leader_id, `alt="${d.leader_id}"`);
         } else if (d.leader_image) {
           const el = document.getElementById('leader-thumb-' + idx);
-          if (el) el.innerHTML = `<img src="${d.leader_image}" alt="${d.event_name || ''}">`;
+          if (el) el.innerHTML = `<img loading="lazy" src="${d.leader_image}" alt="${d.event_name || ''}">`;
         }
       });
     }
@@ -510,49 +499,50 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       if (deck.leader_id) {
-        fetch('/api/image', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({card_id: deck.leader_id, region: 'en', variant: 'Normal'})
-        })
-        .then(r => r.json())
-        .then(imgData => {
-          const el = document.getElementById('detail-leader-img');
-          if (el && imgData.image) {
-            el.innerHTML = `<img src="${imgData.image}" style="width:100%;height:100%;object-fit:contain">`;
-          }
-        }).catch(() => {});
+        fillCardImg(document.getElementById('detail-leader-img'), deck.leader_id, 'style="width:100%;height:100%;object-fit:contain"');
       } else if (deck.leader_image) {
         const el = document.getElementById('detail-leader-img');
-        if (el) el.innerHTML = `<img src="${deck.leader_image}" style="width:100%;height:100%;object-fit:contain">`;
+        if (el) el.innerHTML = `<img loading="lazy" src="${deck.leader_image}" style="width:100%;height:100%;object-fit:contain">`;
       }
 
       sortedCards.forEach((c, i) => {
-        fetch('/api/image', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({card_id: c.card_id, region: 'en', variant: 'Normal'})
-        })
-        .then(r => r.json())
-        .then(imgData => {
-          const el = document.getElementById('img-' + i);
-          if (el) {
-            if (imgData.image) {
-              el.outerHTML = `<img src="${imgData.image}" alt="${c.card_id}" style="width:100%;display:block;">`;
-            } else {
-              el.innerHTML = `<span style="color:var(--muted);font-size:11px">No image</span>`;
-            }
-          }
-        })
-        .catch(() => {});
+        fillCardImg(document.getElementById('img-' + i), c.card_id, `alt="${c.card_id}" style="width:100%;display:block;"`, true);
       });
     }
 
     function loadCatalog() {
-      fetch('/api/database', {method: 'POST', body: '{}'})
+      return fetch('/api/database', {method: 'POST', body: '{}'})
         .then(r => r.json())
         .then(d => { for (const c of (d.cards || [])) cardsById[c.card_id] = c; })
         .catch(() => {});
+    }
+
+    // Prefer the already-loaded catalog image (a plain URL, lazy-loaded by the
+    // browser) so we don't fire ~50 /api/image POSTs at once and 502 the server.
+    // Falls back to a single lazy /api/image fetch only for cards the catalog
+    // lacks (e.g. some promos). `el` is the target element; when `replace` is
+    // true the element itself is swapped for the <img> (so `.card-item img`
+    // styling applies), otherwise the <img> is placed inside a styled wrapper.
+    function fillCardImg(el, card_id, imgAttrs, replace) {
+      if (!el || !card_id) return;
+      const attrs = imgAttrs || 'style="width:100%;display:block;"';
+      const put = (url) => {
+        const tag = `<img loading="lazy" src="${url}" alt="${card_id}" ${attrs}>`;
+        if (replace) el.outerHTML = tag; else el.innerHTML = tag;
+      };
+      const cat = cardsById[card_id];
+      if (cat && cat.image_url) { put(cat.image_url); return; }
+      fetch('/api/image', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({card_id: card_id, region: 'en', variant: 'Normal'})
+      })
+      .then(r => r.json())
+      .then(imgData => {
+        if (imgData.image) put(imgData.image);
+        else el.innerHTML = `<span style="color:var(--muted);font-size:11px">No image</span>`;
+      })
+      .catch(() => {});
     }
 
     function parseHash() {
@@ -583,11 +573,14 @@
     window.addEventListener('hashchange', route);
 
     async function load() {
-      loadCatalog();
+      // Load the catalog first so deck thumbnails come from its plain image
+      // URLs (lazy <img>) instead of a burst of /api/image POSTs.
+      const catalog = loadCatalog();
       try {
         const res = await fetch('/api/meta', {method: 'POST', body: '{}'});
         const data = await res.json();
         globalDecks = data.decks;
+        await catalog;
         route();
       } catch (e) {
         document.getElementById('content').innerHTML = '<div style="color:white;padding:40px;text-align:center">Error loading decks. Make sure the server is running.</div>';
