@@ -36,8 +36,12 @@ errata removed, name code-suffix stripped (display-only, `_display_name`), chart
 `contain`, popup image 210px, mobile row = image+name header.
 
 **PENDING / NEXT (for the fresh chat):**
-1. (minor, optional) **/meta page /api/image 502s under burst** — meta.html fires ~50 /api/image
-   POSTs at once; our stdlib server 502s some. Fix: lazy-load meta deck thumbnails + cache. Not urgent.
+1. ~~**/meta page /api/image 502s under burst**~~ ✅ FIXED 2026-09-05 (commit `1222874`, pushed to
+   freesite/main). meta.html already loads the catalog into `cardsById`, so leader thumbnails +
+   detail leader image + the deck card grid now render straight from the catalog's plain `image_url`
+   (native lazy `<img>`) — zero /api/image POSTs (was ~50-per-deck burst). `/api/image` kept only as
+   a fallback for cards the catalog lacks (some promos); `load()` awaits the catalog before routing.
+   Verified locally: 18/18 card-grid images + leader load, 0 /api/image calls, 0 console errors.
 2. **www.grandline.id** — add as a Railway custom domain + Cloudflare CNAME, redirect apex↔www.
 3. **AdSense** — apply now that grandline.id is live (needs the real domain).
 4. **Affiliate IDs** — Shopee/Tokopedia via Involve Asia (apply with grandline.id); plug into
