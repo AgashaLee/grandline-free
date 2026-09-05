@@ -502,6 +502,28 @@ def api_deck_cost(payload: dict) -> dict:
         "missing_details": missing_details,
     }
 
+#: Trailing collector-number / card-code suffix OPTCGAPI appends to some card
+#: names ("Smoker (OP02-093)", "Charlotte Linlin (112)"). Redundant -- the card
+#: code is shown separately -- so strip it for a clean display name.
+_NAME_SUFFIX_RE = re.compile(r"\s*\((?:[A-Z]{1,4}\d{0,2}-)?\d{1,4}\)\s*$")
+#: The errata note OPTCGAPI tacks on ("This card has been officially errata'd.").
+#: Removed entirely from the effect text.
+_ERRATA_SENTENCE_RE = re.compile(
+    r"\s*This card has (?:been officially errata['’]?d|received an official errata)\.?",
+    re.IGNORECASE)
+
+
+def _clean_card_name(name: str | None) -> str:
+    return _NAME_SUFFIX_RE.sub("", name).strip() if name else (name or "")
+
+
+def _clean_effect_text(text: str | None) -> str | None:
+    if not text:
+        return text
+    t = _ERRATA_SENTENCE_RE.sub("", text)
+    return re.sub(r"\s{2,}", " ", t).strip()
+
+
 def api_database(payload: dict) -> dict:
     """Return the global card catalog for the public Database page.
 
@@ -582,6 +604,13 @@ def api_database(payload: dict) -> dict:
                 c["variants"] = vs
     except Exception:
         pass
+
+    # Tidy the display name (drop the redundant "(OP02-093)"/"(112)" suffix) and
+    # remove OPTCGAPI's errata sentence from the effect text.
+    for c in cards:
+        c["name"] = _clean_card_name(c.get("name"))
+        if "card_text" in c:
+            c["card_text"] = _clean_effect_text(c.get("card_text"))
 
     return {"cards": cards}
 
