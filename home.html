@@ -339,13 +339,13 @@
       'Jolly Roger Foil':'Foil', 'Textured Foil':'Foil',
       'Box Topper':'Box Topper', 'Wanted Poster':'Poster',
     };
+    // "Premium" = a special printing (alt/manga/SP/full art/foil…) or a SEC card.
     function movTag(m) {
       if (m.is_base === 0 && m.variant_label) return PRINT_LABEL[m.variant_label] || m.variant_label;
       if ((m.rarity || '').toUpperCase() === 'SEC') return 'SEC';
-      if ((m.rarity || '').toUpperCase() === 'L') return 'Leader';
       return '';
     }
-    const isPremium = m => (m.is_base === 0) || ['SEC','L','SP','SR'].includes((m.rarity||'').toUpperCase());
+    const isPremium = m => (m.is_base === 0) || (m.rarity || '').toUpperCase() === 'SEC';
     fetch('/api/market', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({window:'7d'}) })
       .then(r => r.json()).then(d => {
         const g = (d && d.gainers) || [];

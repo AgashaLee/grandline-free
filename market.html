@@ -75,8 +75,17 @@
   }
   .mcard{cursor:zoom-in;background:var(--surface);padding:16px;border-radius:var(--radius-md);border:1px solid var(--line);
          box-shadow:var(--shadow-sm);transition:all 0.2s ease;}
+  .mcard .imgwrap{position:relative;margin-bottom:12px;}
   .mcard img{width:100%;display:block;border-radius:8px;background:var(--page-bg);aspect-ratio:5/7;
-             object-fit:contain;border:1px solid var(--line);margin-bottom:12px;transition:transform 0.2s ease;}
+             object-fit:contain;border:1px solid var(--line);transition:transform 0.2s ease;}
+  /* Premium printing tag (alt/manga/SP/SEC/leader) — overlaid on the art in the grid */
+  .mtag{position:absolute;top:8px;left:8px;background:rgba(9,9,11,.85);color:var(--gold);
+        font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+        padding:3px 7px;border-radius:6px;border:1px solid rgba(245,158,11,.3);}
+  /* Inline printing tag used in the table view */
+  .mtag-inline{display:inline-block;margin-left:8px;background:rgba(245,158,11,.14);color:var(--gold);
+        font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+        padding:2px 6px;border-radius:5px;border:1px solid rgba(245,158,11,.28);vertical-align:middle;}
   .mcard:hover{border-color:#3f3f46;transform:translateY(-2px);box-shadow:var(--shadow-md);}
   .mcard:hover img{border-color:var(--muted);}
   .mcard .mprice{font-weight:700;font-size:16px;color:var(--ink);}
@@ -201,28 +210,54 @@
     const money = n => '$' + Math.abs(n).toFixed(2);
     const dsign = n => (n >= 0 ? '+' : '−');
 
+    // Premium printings (alt/manga/SP/SEC and the expensive ones) are surfaced
+    // first and tagged, matching the homepage "biggest movers" strip.
+    const PRINT_LABEL = {
+      'Alternate Art':'Alt Art', 'Super Alternate Art':'Super Alt',
+      'Super Leader Alternate Art':'Leader Alt', 'Full Art':'Full Art',
+      'Manga':'Manga', 'Sp':'SP', 'Parallel':'Parallel',
+      'Jolly Roger Foil':'Foil', 'Textured Foil':'Foil',
+      'Box Topper':'Box Topper', 'Wanted Poster':'Poster',
+    };
+    // "Premium" = a special printing (alt/manga/SP/full art/foil…) or a SEC card.
+    function movTag(m){
+      if (m.is_base === 0 && m.variant_label) return PRINT_LABEL[m.variant_label] || m.variant_label;
+      if ((m.rarity||'').toUpperCase() === 'SEC') return 'SEC';
+      return '';
+    }
+    // Prefer the catalog's cleaned base name ("Nami") over the raw variant name
+    // ("Nami (SP)") — the printing is already conveyed by the tag beside it.
+    function movName(m){ const c = cardsById[m.card_id]; return (c && c.name) || m.name || m.card_id; }
+
     function currentList(){
       if(!LAST || !LAST.ready) return [];
       const list = (DIR === 'high' ? LAST.gainers : LAST.losers).slice();
       const key = METRIC === 'usd' ? 'diff' : 'pct';
+      // Honest "biggest movers" order — the chosen metric decides rank; premium
+      // printings are identified by their tag, not by being pushed to the top.
       list.sort((a,b) => DIR === 'high' ? b[key]-a[key] : a[key]-b[key]);
       return list;
     }
 
     function cardCell(m){
       const up = m.pct > 0, cls = up ? 'up' : 'down';
-      return `<div class="mcard" data-id="${esc(m.card_id)}" title="${esc(m.name||'')}">
-        ${m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name||'')}" loading="lazy">` : ''}
+      const t = movTag(m), nm = movName(m);
+      return `<div class="mcard" data-id="${esc(m.card_id)}" title="${esc(nm)}">
+        <div class="imgwrap">
+          ${m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(nm)}" loading="lazy">` : ''}
+          ${t ? `<span class="mtag">${esc(t)}</span>` : ''}
+        </div>
         <div class="mprice">${money(m.price)}</div>
         <div class="mchg ${cls}">${dsign(m.diff)}${money(m.diff)} (${dsign(m.pct)}${Math.abs(m.pct)}%)</div>
-        <div class="mname">${esc(m.name || m.card_id)}</div>
+        <div class="mname">${esc(nm)}</div>
       </div>`;
     }
     function tableRow(m){
       const up = m.pct > 0, cls = up ? 'up' : 'down';
+      const t = movTag(m), nm = movName(m);
       return `<tr data-id="${esc(m.card_id)}">
         <td><div class="tt">${m.image_url ? `<img src="${esc(m.image_url)}" alt="" loading="lazy">` : ''}</div></td>
-        <td><div class="nm">${esc(m.name || m.card_id)}</div><div class="cd">${esc(m.card_id)}${m.set_name?' · '+esc(m.set_name):''}</div></td>
+        <td><div class="nm">${esc(nm)}${t ? `<span class="mtag-inline">${esc(t)}</span>` : ''}</div><div class="cd">${esc(m.card_id)}${m.set_name?' · '+esc(m.set_name):''}</div></td>
         <td class="num">${money(m.price)}</td>
         <td class="num ${cls}">${dsign(m.diff)}${money(m.diff)}</td>
         <td class="num ${cls}">${dsign(m.pct)}${Math.abs(m.pct)}%</td>
@@ -257,6 +292,7 @@
         const res = await fetch('/api/market', {method:'POST', headers:{'Content-Type':'application/json'},
                                                 body: JSON.stringify({window: WINDOW, min: MINPRICE})});
         LAST = await res.json();
+        await catalogReady;   // so movers show cleaned catalog names on first paint
       }catch(e){
         content.innerHTML = `<div class="state"><div class="big">⚠️</div><h3>Couldn’t load market data</h3><p>Please try again in a moment.</p></div>`;
         return;
@@ -297,7 +333,7 @@
     segRender('metric', b => METRIC = b.dataset.x);
     segRender('view',   b => VIEW = b.dataset.v);
 
-    (async ()=>{
+    const catalogReady = (async ()=>{
       try{
         const res = await fetch('/api/database', {method:'POST', body:'{}'});
         const data = await res.json();

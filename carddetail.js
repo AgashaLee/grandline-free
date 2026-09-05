@@ -239,7 +239,10 @@ window.CardDetail = (function () {
     max-height:90vh;overflow:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:grid;
     grid-template-columns:360px 1fr;color:#18181b;text-align:left;}
 
-  .cd-img{background:#f4f4f5;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;}
+  /* Pin the art to the TOP (not vertically centered): the right column grows a
+     little when the async price-history chart loads, and centering would make
+     the card visibly slide down each time it does. */
+  .cd-img{background:#f4f4f5;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 32px;}
   .cd-img img.main{max-width:100%;max-height:440px;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);}
   .cd-thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px}
   .cd-thumbs img{width:48px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;
@@ -280,6 +283,10 @@ window.CardDetail = (function () {
   .cd-ax{fill:#a1a1aa;font-size:10px;font-weight:500;}
   .cd-line{fill:none;stroke:#0ea5e9;stroke-width:2;vector-effect:non-scaling-stroke}
   .cd-chart-empty{font-size:12px;color:#71717a;background:#fff;border:1px dashed #e4e4e7;border-radius:10px;padding:24px;text-align:center}
+  /* Placeholder shown while the price history loads, sized like the real chart
+     so the card doesn't jump when it arrives. */
+  .cd-chart-loading{height:120px;background:#fff;border:1px solid #e4e4e7;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:12px}
 
   .cd-text{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px 20px;
     font-size:13px;line-height:1.7;margin-bottom:24px;box-shadow:0 1px 2px rgba(0,0,0,0.05);}
@@ -417,7 +424,7 @@ window.CardDetail = (function () {
         <div class="cd-chips">${chips.join('')}</div>
         ${traitsHtml}
         ${pricesHtml}
-        ${showPrices ? '<div class="cd-chart" id="cdChart" hidden></div>' : ''}
+        ${showPrices ? '<div class="cd-chart" id="cdChart"><div class="cd-chart-h">Price history</div><div class="cd-chart-body"><div class="cd-chart-loading">Loading price history…</div></div></div>' : ''}
         ${cardTextInner ? `<div class="cd-text">${cardTextInner}</div>` : ''}
         <div class="cd-buyrow">${buys}</div>
         ${regionBar}
@@ -434,7 +441,7 @@ window.CardDetail = (function () {
         body: JSON.stringify({ card_id: c.card_id }),
       }).then(r => r.json())
         .then(d => { if (_lastCard === c) renderChart((d && d.series) || []); })
-        .catch(() => {});
+        .catch(() => { if (_lastCard === c) { const el = document.getElementById('cdChart'); if (el) { el.hidden = true; el.innerHTML = ''; } } });
     }
   }
 
