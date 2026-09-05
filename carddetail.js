@@ -203,6 +203,9 @@ window.CardDetail = (function () {
     // box is hidden rather than showing "NULL".
     if (!text || String(text).trim().toUpperCase() === 'NULL') return '';
     let t = esc(text).trim();
+    // OPTCGAPI drops the minus in the DON!! activation cost ("DON!! 2:" should be
+    // "DON!! -2:"). That cost is always negative (you return DON), so restore it.
+    t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
     t = t.replace(/\[([^\]]+)\]/g, (m, kw) => {
       const low = kw.toLowerCase().trim();
@@ -335,12 +338,16 @@ window.CardDetail = (function () {
     opts = opts || {};
     const showPrices = !!opts.prices;  // prices + history chart are opt-in (Market Watch only)
     ensureDom();
-    // Build the art strip: base image, then each priced variant's image (so
-    // every price has a matching thumbnail), then gallery alt-arts. De-duped
-    // case-insensitively (same art in two casings 404s on the server).
+    // Build the art strip: base image, then each priced variant's image, then
+    // gallery alt-arts. De-duped by PRINTING (the "_pN" suffix, or "base" when
+    // absent) rather than by URL, because the same artwork often arrives under
+    // two different URLs -- OPTCGAPI's hosted copy (..._p1_xxxx.jpg) and our own
+    // downloaded copy (/assets/alt/..._p1.jpg) -- which would otherwise show the
+    // same picture twice (the "3 versions but 2 are identical" bug).
     const arts = [];
     const _seen = new Set();
-    const _push = u => { if (u) { const k = String(u).toLowerCase(); if (!_seen.has(k)) { _seen.add(k); arts.push(u); } } };
+    const _key = u => { const m = String(u).match(/_p(\d+)/i); return m ? 'p' + m[1] : 'base'; };
+    const _push = u => { if (u) { const k = _key(u); if (!_seen.has(k)) { _seen.add(k); arts.push(u); } } };
     _push(c.image_url);
     (c.variants || []).forEach(v => { if (!v.is_base) _push(v.image); });
     (c.alt_arts || []).forEach(_push);
