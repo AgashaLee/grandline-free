@@ -502,10 +502,14 @@ def api_deck_cost(payload: dict) -> dict:
         "missing_details": missing_details,
     }
 
-#: Trailing collector-number / card-code suffix OPTCGAPI appends to some card
-#: names ("Smoker (OP02-093)", "Charlotte Linlin (112)"). Redundant -- the card
-#: code is shown separately -- so strip it for a clean display name.
-_NAME_SUFFIX_RE = re.compile(r"\s*\((?:[A-Z]{1,4}\d{0,2}-)?\d{1,4}\)\s*$")
+#: Redundant collector-number / card-code OPTCGAPI puts in card names, in either
+#: format it uses -- parenthesised "(OP02-093)"/"(112)" or dash-prefixed
+#: " - OP14-041"/" - P-075" -- anywhere in the string (a variant word can follow
+#: it). The card code is shown separately, so strip it. Word parentheticals like
+#: "(Alternate Art)"/"(Manga)"/"(SP)" are kept.
+_NAME_SUFFIX_RE = re.compile(
+    r"\s*(?:-\s*[A-Za-z]{1,4}\d{0,2}-\d{1,4}"
+    r"|\(\s*(?:[A-Za-z]{1,4}\d{0,2}-\d{1,4}|\d{1,4})\s*\))")
 #: The errata note OPTCGAPI tacks on ("This card has been officially errata'd.").
 #: Removed entirely from the effect text.
 _ERRATA_SENTENCE_RE = re.compile(
@@ -514,7 +518,9 @@ _ERRATA_SENTENCE_RE = re.compile(
 
 
 def _clean_card_name(name: str | None) -> str:
-    return _NAME_SUFFIX_RE.sub("", name).strip() if name else (name or "")
+    if not name:
+        return name or ""
+    return re.sub(r"\s{2,}", " ", _NAME_SUFFIX_RE.sub("", name)).strip()
 
 
 def _clean_effect_text(text: str | None) -> str | None:
