@@ -707,6 +707,7 @@ def api_market(payload: dict) -> dict:
         rows = db.execute(
             """SELECT v.card_id AS card_id, v.name AS name, c.set_name AS set_name,
                       v.rarity AS rarity, v.image_url AS image_url,
+                      v.variant_label AS variant_label, v.is_base AS is_base,
                       o.price AS old_price, n.price AS new_price
                  FROM price_history n
                  JOIN price_history o  ON o.card_id = n.card_id AND o.date = ?
@@ -719,6 +720,7 @@ def api_market(payload: dict) -> dict:
         rows = db.execute(
             """SELECT n.card_id AS card_id, c.name AS name, c.set_name AS set_name,
                       c.rarity AS rarity, c.image_url AS image_url,
+                      '' AS variant_label, 1 AS is_base,
                       o.price AS old_price, n.price AS new_price
                  FROM price_history n
                  JOIN price_history o ON o.card_id = n.card_id AND o.date = ?
@@ -742,6 +744,7 @@ def api_market(payload: dict) -> dict:
         movers.append({
             "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
             "rarity": r["rarity"], "image_url": r["image_url"],
+            "variant_label": r["variant_label"] or "", "is_base": r["is_base"],
             "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
         })
 
