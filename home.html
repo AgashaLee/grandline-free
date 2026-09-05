@@ -99,7 +99,8 @@
     .scard { flex: 0 0 auto; width: 118px; cursor: pointer; scroll-snap-align: start; transition: transform .15s ease; }
     .scard:hover { transform: translateY(-4px); }
     .scard .img { width: 118px; aspect-ratio: 5/7; border-radius: 10px; border: 1px solid var(--line);
-      background: var(--surface) center/cover no-repeat; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
+      background: var(--surface); box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
+    .scard .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
     .scard .cap { font-size: 11px; color: var(--muted); margin-top: 7px; text-align: center;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 118px; }
     .scard .cap b { color: var(--ink); font-weight: 700; }
@@ -290,9 +291,11 @@
       if (c && window.CardDetail) CardDetail.open(c);   // prices off on the free site
     }
     function scard(id, imgUrl, capHtml, overlay) {
-      const style = imgUrl ? ` style="background-image:url('${esc(imgUrl)}')"` : '';
+      // lazy <img> (not a CSS background) so horizontally-offscreen strip cards
+      // don't all fetch at once and overwhelm the image host (502s).
+      const img = imgUrl ? `<img src="${esc(imgUrl)}" loading="lazy" alt="" onerror="this.style.display='none'">` : '';
       return `<div class="scard" onclick="openCard('${esc(id)}')" title="${esc(id)}">
-        <div class="img"${style}>${overlay || ''}</div>
+        <div class="img">${img}${overlay || ''}</div>
         <div class="cap">${capHtml}</div></div>`;
     }
     const RANK = { SEC:0, L:1, SP:2, SR:3, R:4, UC:5, C:6, P:7 };
