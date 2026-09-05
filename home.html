@@ -82,6 +82,33 @@
       margin: 64px 0 24px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
     }
 
+    /* Card-art showcase strips (newest set / movers / meta leaders) */
+    .showcase { margin: 44px 0; }
+    .showcase-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .showcase-head .t { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .showcase-head h3 { font-size: 21px; color: #fff; }
+    .showcase-head .sub { color: var(--muted); font-size: 13px; font-weight: 500; }
+    .showcase-head a.more { color: var(--gold); font-weight: 600; font-size: 13px; white-space: nowrap; }
+    .showcase-head a.more:hover { color: #fbbf24; }
+    .newpill { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 99px; background: rgba(14,165,233,0.14); color: var(--sea); border: 1px solid rgba(14,165,233,0.25); }
+    .strip { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 10px; scroll-snap-type: x proximity; }
+    .strip::-webkit-scrollbar { height: 8px; }
+    .strip::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+    .strip::-webkit-scrollbar-track { background: transparent; }
+    .scard { flex: 0 0 auto; width: 118px; cursor: pointer; scroll-snap-align: start; transition: transform .15s ease; }
+    .scard:hover { transform: translateY(-4px); }
+    .scard .img { width: 118px; aspect-ratio: 5/7; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--surface) center/cover no-repeat; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
+    .scard .cap { font-size: 11px; color: var(--muted); margin-top: 7px; text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 118px; }
+    .scard .cap b { color: var(--ink); font-weight: 700; }
+    .scard .badge { position: absolute; top: 6px; right: 6px; background: #10b981; color: #04110b;
+      font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,.5); }
+    .scard .rank { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.7); color: #fff;
+      font-size: 11px; font-weight: 800; width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .strip-empty { color: var(--muted); font-size: 13px; padding: 20px 0; }
+
     /* Free feature cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
     .fcard {
@@ -170,6 +197,31 @@
   </div>
 
   <div class="wrap">
+
+    <div class="showcase" id="scNewest" hidden>
+      <div class="showcase-head">
+        <div class="t"><span class="newpill">Newest set</span><h3 id="newestTitle"></h3></div>
+        <a class="more" href="/database">Browse the database →</a>
+      </div>
+      <div class="strip" id="newestStrip"></div>
+    </div>
+
+    <div class="showcase" id="scMovers" hidden>
+      <div class="showcase-head">
+        <div class="t"><h3>📈 This week's biggest movers</h3><span class="sub">by market price</span></div>
+        <a class="more" href="/market">See all movers →</a>
+      </div>
+      <div class="strip" id="moversStrip"></div>
+    </div>
+
+    <div class="showcase" id="scLeaders" hidden>
+      <div class="showcase-head">
+        <div class="t"><h3>🏆 Top meta leaders</h3><span class="sub">most-played in tournaments</span></div>
+        <a class="more" href="/meta">See the meta →</a>
+      </div>
+      <div class="strip" id="leadersStrip"></div>
+    </div>
+
     <div class="section-bar">Free tools</div>
     <div class="cards">
       <a href="/database" class="fcard">
@@ -226,24 +278,83 @@
     Some links are affiliate links - buying through them supports the site at no extra cost to you.
   </footer>
 
+  <script src="/carddetail.js"></script>
   <script>
-    fetch('/api/database', { method: 'POST', body: '{}' })
-      .then(r => r.json())
-      .then(d => {
-        const cards = (d && d.cards) || [];
-        if (!cards.length) return;
-        const sets = new Set(cards.map(c => c.card_id.split('-')[0]));
-        document.getElementById('statCards').textContent = cards.length.toLocaleString();
-        document.getElementById('statSets').textContent = sets.size;
-      })
-      .catch(() => {});
-    fetch('/api/meta', { method: 'POST', body: '{}' })
-      .then(r => r.json())
-      .then(d => {
-        const decks = (d && d.decks) || [];
-        if (decks.length) document.getElementById('statDecks').textContent = decks.length;
-      })
-      .catch(() => {});
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const post = (p) => fetch(p, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' }).then(r => r.json());
+    const cardsById = {};
+    let catalogReady = false, metaDecks = null;
+
+    function openCard(id) {
+      const c = cardsById[id];
+      if (c && window.CardDetail) CardDetail.open(c);   // prices off on the free site
+    }
+    function scard(id, imgUrl, capHtml, overlay) {
+      const style = imgUrl ? ` style="background-image:url('${esc(imgUrl)}')"` : '';
+      return `<div class="scard" onclick="openCard('${esc(id)}')" title="${esc(id)}">
+        <div class="img"${style}>${overlay || ''}</div>
+        <div class="cap">${capHtml}</div></div>`;
+    }
+    const RANK = { SEC:0, L:1, SP:2, SR:3, R:4, UC:5, C:6, P:7 };
+
+    // 1) Catalog -> counters, cardsById, newest-set showcase
+    post('/api/database').then(d => {
+      const cards = (d && d.cards) || [];
+      if (!cards.length) return;
+      cards.forEach(c => { cardsById[c.card_id] = c; });
+      const setIds = new Set(cards.map(c => c.set_id));
+      document.getElementById('statCards').textContent = cards.length.toLocaleString();
+      document.getElementById('statSets').textContent = setIds.size;
+
+      // newest main booster = highest "OP-NN"
+      let newest = null, best = -1, newestName = '';
+      cards.forEach(c => { const m = /^OP-(\d+)$/.exec(c.set_id || ''); if (m && +m[1] > best) { best = +m[1]; newest = c.set_id; newestName = c.set_name; } });
+      if (newest) {
+        const setCards = cards.filter(c => c.set_id === newest)
+          .sort((a, b) => (RANK[a.rarity] ?? 9) - (RANK[b.rarity] ?? 9)).slice(0, 16);
+        document.getElementById('newestTitle').textContent = `${newestName} (${newest})`;
+        document.getElementById('newestStrip').innerHTML =
+          setCards.map(c => scard(c.card_id, c.image_url, `<b>${esc(c.card_id)}</b>`)).join('');
+        document.getElementById('scNewest').hidden = false;
+      }
+      catalogReady = true;
+      renderLeaders();
+    }).catch(() => {});
+
+    // 2) Market movers (7d gainers)
+    fetch('/api/market', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({window:'7d'}) })
+      .then(r => r.json()).then(d => {
+        const g = (d && d.gainers) || [];
+        if (!g.length) return;
+        const strip = document.getElementById('moversStrip');
+        strip.innerHTML = g.slice(0, 12).map(m => {
+          if (!cardsById[m.card_id]) cardsById[m.card_id] = { card_id:m.card_id, name:m.name, image_url:m.image_url, set_name:m.set_name };
+          const badge = `<span class="badge">+${m.pct.toFixed(0)}%</span>`;
+          return scard(m.card_id, m.image_url, `<b>${esc((m.name||'').slice(0,16))}</b>`, badge);
+        }).join('');
+        document.getElementById('scMovers').hidden = false;
+      }).catch(() => {});
+
+    // 3) Top meta leaders (rendered once BOTH the catalog and meta are loaded,
+    //    so leader card art can be looked up from cardsById)
+    function renderLeaders() {
+      if (!catalogReady || !metaDecks) return;
+      const counts = {};
+      metaDecks.forEach(dk => { const id = dk.leader_id; if (id) counts[id] = (counts[id] || 0) + 1; });
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+      if (!top.length) return;
+      document.getElementById('leadersStrip').innerHTML = top.map(([id, n], i) => {
+        const c = cardsById[id];
+        return scard(id, c ? c.image_url : '', `<b>${esc((c ? c.name : id)).slice(0,16)}</b><br>${n} decks`,
+          `<span class="rank">${i+1}</span>`);
+      }).join('');
+      document.getElementById('scLeaders').hidden = false;
+    }
+    post('/api/meta').then(d => {
+      metaDecks = (d && d.decks) || [];
+      if (metaDecks.length) document.getElementById('statDecks').textContent = metaDecks.length;
+      renderLeaders();
+    }).catch(() => {});
   </script>
 </body>
 </html>
