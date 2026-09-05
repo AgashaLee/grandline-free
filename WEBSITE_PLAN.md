@@ -2,7 +2,50 @@
 
 Handoff note so a new chat can continue without losing context.
 
-## ⭐ LATEST SNAPSHOT (2026-09-04) — read this first
+## ⭐ LATEST SNAPSHOT (2026-09-05) — read this first
+**DOMAIN IS LIVE: grandline.id** — bought at Domainesia (2-yr), DNS moved to **Cloudflare**
+(free plan, nameservers aleena/nitin.ns.cloudflare.com). Cloudflare records: **CNAME `@` →
+lxqp0mee.up.railway.app (DNS only / grey cloud)** + **TXT `_railway-verify`**. Added as a Custom
+Domain on the Railway `web` service (port 8080). Cloudflare active + Railway issuing SSL as of
+this snapshot — https://grandline.id resolves to Railway's edge (69.46.46.67). **KEEP the CNAME
+DNS-only (grey), NOT proxied** — proxying breaks Railway's auto SSL renewal. `www` not set up yet.
+
+**Homepage revamp (2026-09-05):** home.html now has 3 auto-updating card-art strips below the hero
+(like gumgum/onepiecetopdecks), all data-driven so they self-refresh: (1) **Newest Set** = cards
+from the highest `OP-NN` set (currently OP-17), rarity-sorted; (2) **This week's biggest movers** =
+7d gainers from /api/market with +% badges; (3) **Top meta leaders** = most-played leader_ids from
+/api/meta, art from the catalog. Cards use lazy `<img>` (not CSS bg) + open the shared carddetail
+popup (prices off). Verified live: 40/40 images load, 0 errors.
+
+**Also shipped 2026-09-05 (free site):** card NAMES cleaned of redundant code suffixes in EITHER
+format — `(OP02-093)`/`(112)` and dash-form ` - OP14-041`/` - P-075` (kept variant words like
+`(Manga)`/`(SP)`); errata sentence removed from card_text; NULL card_text hidden; traits split with
+a comprehensive vocab + keep-whole tokenizer (`_split_traits` in dashboard.py, `splitTraits` in
+carddetail.js — SAME vocab, ~185 traits); DB grid + Market Watch grid pinned to 2 cols on phones
+(`@media max-width:560px`); Buy buttons equal-height; search placeholder shortened; meta nav wraps.
+
+**PAID TRACKER (AgashaLee/tcg-tracker at Documents/Rz/tcg_tracker) — shipped 2026-09-05:** Whop
+product "One Piece Card Tracker" ($1.99/mo) is **Visible + working** (gate→login→collection verified;
+member access proven). Whop delivery = the product just grants membership; members open the tracker
+URL and log in via Whop OAuth (owner is allowlisted). Product page description + FAQ written. Pending
+Whop **Discover** review (auto). Tracker features added this session: inline card thumbnails + a
+per-user daily portfolio value chart (users/<id>/value_history.json on volume; /api/history), card
+detail popup (chips+traits+effect via new /api/card_details from OPTCGAPI), DON!! `-N` minus restored,
+errata removed, name code-suffix stripped (display-only, `_display_name`), chart labels un-cropped
+(dropped currency prefix, mobile-sized viewBox, no preserveAspectRatio distortion), thumbnail 60x84
+`contain`, popup image 210px, mobile row = image+name header.
+
+**PENDING / NEXT (for the fresh chat):**
+1. (minor, optional) **/meta page /api/image 502s under burst** — meta.html fires ~50 /api/image
+   POSTs at once; our stdlib server 502s some. Fix: lazy-load meta deck thumbnails + cache. Not urgent.
+2. **www.grandline.id** — add as a Railway custom domain + Cloudflare CNAME, redirect apex↔www.
+3. **AdSense** — apply now that grandline.id is live (needs the real domain).
+4. **Affiliate IDs** — Shopee/Tokopedia via Involve Asia (apply with grandline.id); plug into
+   carddetail.js `AFFILIATE` block once approved. TCGplayer/eBay for intl.
+5. **Video/banner for Whop**: prompts saved in Gravity/tcg_tracker/video/video_prompts.md (3×10s
+   clips → 30s). Banner prompt given (16:9, teal-gold cards+phone+chart).
+
+## ⭐ SNAPSHOT (2026-09-04) — read this first
 **Market Watch glitch-guard (2026-09-04):** the day-1 baseline snapshot (2026-09-02) captured
 **massively corrupt OPTCGAPI prices** — on the first day-2-vs-day-1 comparison, ~440 of 723 pairs
 (60%) were bad (a common Luffy read ~$1075 one day, $0.43 the next → +700% / -100% "movers").
