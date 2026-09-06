@@ -847,14 +847,94 @@ def _own_posts() -> list:
     return []
 
 
-def api_news(payload: dict | None = None) -> dict:
-    """Return the site's own featured posts + recent OP TCG news headlines
-    (title, source, date, link, thumbnail image)."""
-    featured = _own_posts()
+# A "From Grand Line" post generated from our OWN auto-updating data (Market
+# Watch movers) so News stays fresh even when external news is quiet. Cached so
+# we don't recompute the market join on every page load.
+_DD_CACHE: dict = {"at": 0.0, "post": None}
+_DD_TTL = 1800
+
+
+def _movers_post() -> dict | None:
+    now = time.time()
+    if now - _DD_CACHE["at"] < _DD_TTL:
+        return _DD_CACHE["post"]
+    post = None
+    try:
+        m = api_market({"window": 7})
+        gainers = m.get("gainers") if isinstance(m, dict) else None
+        if m.get("ready") and gainers:
+            top = gainers[:4]
+            parts = [f'{(g.get("name") or g.get("card_id"))} +{int(round(g["pct"]))}%'
+                     for g in top]
+            post = {
+                "title": "📈 This week's biggest price movers",
+                "body": "Biggest 7-day gainers: " + ", ".join(parts)
+                        + ". See the full list on Market Watch.",
+                "date": m.get("latest") or "",
+                "link": "/market",
+            }
+    except Exception:
+        post = None
+    _DD_CACHE["post"], _DD_CACHE["at"] = post, now
+    return post
+
+
+# Active English One Piece TCG YouTube channels (the official channels are stale
+# / multi-game, so we use community channels). Pulled via each channel's Atom feed.
+_YT_CHANNELS = [
+    ("Joy Boys", "UC4H1zHvU2Z2YLo4MC42Flqg"),
+    ("StrawHatBrother", "UCdjjbk1udeQAV6EASIrCN0Q"),
+]
+_YT_CACHE: dict = {"at": 0.0, "items": []}
+_YT_TTL = 1800
+_YT_MAX_PER = 6
+
+
+def _youtube_items() -> list:
+    """Recent videos from our OP TCG YouTube channels, shaped as news items."""
+    now = time.time()
+    if _YT_CACHE["items"] and now - _YT_CACHE["at"] < _YT_TTL:
+        return _YT_CACHE["items"]
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    ns = {"a": "http://www.w3.org/2005/Atom", "media": "http://search.yahoo.com/mrss/"}
+    out = []
+    for name, cid in _YT_CHANNELS:
+        try:
+            url = f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}"
+            req = urllib.request.Request(url, headers={"User-Agent": _NEWS_UA})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                root = ET.fromstring(resp.read())
+        except Exception:
+            continue
+        for e in root.findall("a:entry", ns)[:_YT_MAX_PER]:
+            title = (e.findtext("a:title", namespaces=ns) or "").strip()
+            link_el = e.find("a:link", ns)
+            link = link_el.get("href") if link_el is not None else ""
+            pub = (e.findtext("a:published", namespaces=ns) or "").strip()
+            try:
+                ts = _dt.datetime.fromisoformat(pub.replace("Z", "+00:00")).timestamp() if pub else 0.0
+            except Exception:
+                ts = 0.0
+            thumb_el = e.find("media:group/media:thumbnail", ns)
+            out.append({
+                "title": title,
+                "link": link,
+                "source": f"YouTube · {name}",
+                "date": pub,
+                "image": thumb_el.get("url") if thumb_el is not None else "",
+                "_ts": ts,
+            })
+    if out:
+        _YT_CACHE["items"], _YT_CACHE["at"] = out, now
+    return out if out else _YT_CACHE["items"]
+
+
+def _google_news_items() -> list:
+    """Recent OP TCG headlines from Google News RSS (cached), each with a _ts."""
     now = time.time()
     if _NEWS_CACHE["items"] and now - _NEWS_CACHE["at"] < _NEWS_TTL:
-        return {"featured": featured, "items": _NEWS_CACHE["items"], "cached": True}
-
+        return _NEWS_CACHE["items"]
     import email.utils
     import urllib.request
     import xml.etree.ElementTree as ET
@@ -862,37 +942,52 @@ def api_news(payload: dict | None = None) -> dict:
         req = urllib.request.Request(_NEWS_URL, headers={"User-Agent": _NEWS_UA})
         with urllib.request.urlopen(req, timeout=15) as resp:
             root = ET.fromstring(resp.read())
-        items = []
-        for it in root.findall(".//item"):
-            title = (it.findtext("title") or "").strip()
-            src = it.find("source")
-            source = (src.text or "").strip() if src is not None else ""
-            if source and title.endswith(f" - {source}"):
-                title = title[: -(len(source) + 3)].strip()
-            pub = (it.findtext("pubDate") or "").strip()
-            try:
-                ts = email.utils.parsedate_to_datetime(pub).timestamp() if pub else 0.0
-            except Exception:
-                ts = 0.0
-            items.append({
-                "title": title,
-                "link": (it.findtext("link") or "").strip(),
-                "source": source,
-                "date": pub,
-                "_ts": ts,
-            })
-        # Newest first, then keep a generous number (was hard-capped at 18).
-        items.sort(key=lambda x: x["_ts"], reverse=True)
-        items = items[:_NEWS_MAX]
-        for x in items:
-            x.pop("_ts", None)
-        if items:
-            _NEWS_CACHE["items"], _NEWS_CACHE["at"] = items, now
-        return {"featured": featured, "items": items}
     except Exception:
-        if _NEWS_CACHE["items"]:
-            return {"featured": featured, "items": _NEWS_CACHE["items"], "stale": True}
-        return {"featured": featured, "items": [], "error": "News is unavailable right now — try again soon."}
+        return _NEWS_CACHE["items"]  # serve last-good on failure
+    items = []
+    for it in root.findall(".//item"):
+        title = (it.findtext("title") or "").strip()
+        src = it.find("source")
+        source = (src.text or "").strip() if src is not None else ""
+        if source and title.endswith(f" - {source}"):
+            title = title[: -(len(source) + 3)].strip()
+        pub = (it.findtext("pubDate") or "").strip()
+        try:
+            ts = email.utils.parsedate_to_datetime(pub).timestamp() if pub else 0.0
+        except Exception:
+            ts = 0.0
+        items.append({
+            "title": title,
+            "link": (it.findtext("link") or "").strip(),
+            "source": source,
+            "date": pub,
+            "_ts": ts,
+        })
+    items.sort(key=lambda x: x["_ts"], reverse=True)
+    items = items[:_NEWS_MAX]
+    if items:
+        _NEWS_CACHE["items"], _NEWS_CACHE["at"] = items, now
+    return items
+
+
+def api_news(payload: dict | None = None) -> dict:
+    """Return the site's own featured posts (incl. a data-driven movers recap)
+    plus recent OP TCG news — Google News headlines + our YouTube channels —
+    merged newest-first."""
+    featured = _own_posts()
+    mv = _movers_post()
+    if mv:
+        featured = featured + [mv]
+
+    merged = list(_google_news_items()) + list(_youtube_items())
+    merged.sort(key=lambda x: x.get("_ts", 0.0), reverse=True)
+    merged = merged[:_NEWS_MAX]
+    items = [{k: v for k, v in x.items() if k != "_ts"} for x in merged]
+
+    if not items and not featured:
+        return {"featured": featured, "items": [],
+                "error": "News is unavailable right now — try again soon."}
+    return {"featured": featured, "items": items}
 
 
 ROUTES = {
