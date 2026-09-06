@@ -49,7 +49,15 @@ errata removed, name code-suffix stripped (display-only, `_display_name`), chart
    https://grandline.id/market (path preserved, valid SSL). NOTE (optional, not done): Cloudflare
    flags @grandline.id email as spoofable — only relevant if we ever send/receive mail from the
    domain (add MX + SPF/DKIM/DMARC then); does not affect the website.
-3. **AdSense** — apply now that grandline.id is live (needs the real domain).
+3. **AdSense** — apply LATER, not now. Two hurdles for this site: (a) new site + low traffic → Google
+   usually rejects "insufficient content"; wait until there's real traffic; (b) copyright — the site
+   shows Bandai's card images, a genuine AdSense policy risk (the fan-made disclaimer helps, not
+   bulletproof). Before applying, add a **Privacy Policy page + ads.txt + cookie-consent notice**.
+   **DECISION (2026-09-06): keep ads LIGHT & non-intrusive** — normal in-content/sidebar display units
+   only; explicitly DISABLE interstitial/vignette/video ads (the onepiecetopdecks "watch a video before
+   you see the cards" gate). Rationale: the free site's job is a clean funnel to the paid tracker;
+   aggressive ads would cut paid conversions + affiliate clicks + SEO (Google penalizes intrusive
+   interstitials). Order of revenue priority: Shopee/Tokopedia affiliate first, AdSense later.
 4. **Affiliate IDs** — Shopee/Tokopedia via Involve Asia (apply with grandline.id); plug into
    carddetail.js `AFFILIATE` block once approved. TCGplayer/eBay for intl.
 5. **Video/banner for Whop**: prompts saved in Gravity/tcg_tracker/video/video_prompts.md (3×10s
