@@ -144,6 +144,10 @@
   <div class="wrap">
     <div class="toolbar">
       <div class="toolbar-group">
+        <div class="seg" id="mkt" title="Market">
+          <button data-mk="west" class="on">🌍 West</button>
+          <button data-mk="jp">🇯🇵 Japan</button>
+        </div>
         <div class="windows" id="windows" title="Time window">
           <button data-w="1">24h</button>
           <button data-w="7" class="on">7d</button>
@@ -202,13 +206,17 @@
     let DIR = 'high';
     let METRIC = 'pct';
     let VIEW = 'cards';
+    let MK = 'west';        // market: 'west' (OPTCGAPI $) or 'jp' (Yuyu-tei ¥)
     let LAST = null;
     const cardsById = {};
 
     function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
     function fmtDate(d){ if(!d) return '';
       try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(e){ return d; } }
-    const money = n => '$' + Math.abs(n).toFixed(2);
+    // Currency-aware: Japan is yen (¥, whole numbers), West is USD ($, cents).
+    const money = n => (LAST && LAST.currency === 'JPY')
+      ? '¥' + Math.round(Math.abs(n)).toLocaleString()
+      : '$' + Math.abs(n).toFixed(2);
     const dsign = n => (n >= 0 ? '+' : '−');
 
     // Premium printings (alt/manga/SP/SEC and the expensive ones) are surfaced
@@ -291,7 +299,7 @@
       content.innerHTML = `<div class="state"><div class="big">⏳</div><h3>Loading movers…</h3></div>`;
       try{
         const res = await fetch('/api/market', {method:'POST', headers:{'Content-Type':'application/json'},
-                                                body: JSON.stringify({window: WINDOW, min: MINPRICE})});
+                                                body: JSON.stringify({window: WINDOW, min: MINPRICE, market: MK})});
         LAST = await res.json();
         await catalogReady;   // so movers show cleaned catalog names on first paint
       }catch(e){
@@ -328,6 +336,13 @@
         render();
       });
     }
+    segRefetch('mkt', b => {
+      MK = b.dataset.mk;
+      const jp = MK === 'jp';
+      const tiers = document.getElementById('tiers');
+      if (tiers) tiers.style.display = jp ? 'none' : '';  // $ value tiers don't apply to ¥
+      if (jp) MINPRICE = 0.25;
+    });
     segRefetch('windows', b => WINDOW = parseInt(b.dataset.w,10));
     segRefetch('tiers',   b => MINPRICE = parseFloat(b.dataset.m));
     segRender('dir',    b => DIR = b.dataset.d);

@@ -661,6 +661,61 @@ _MOVER_MIN_PRICE = 0.25
 _MOVER_MAX_RATIO = 5.0
 
 
+def _market_jp(db, window: int) -> dict:
+    """Japan Market Watch: yen movers from the Yuyu-tei snapshots
+    (``price_history_jp``, one base price per card). Mirrors the West logic but
+    joins the catalog directly (no per-printing variants in v1) and returns JPY."""
+    try:
+        dates = [r[0] for r in db.execute(
+            "SELECT DISTINCT date FROM price_history_jp ORDER BY date").fetchall()]
+    except Exception:
+        return {"ready": False, "reason": "no-history", "market": "jp", "currency": "JPY"}
+    if len(dates) < 2:
+        return {"ready": False, "reason": "collecting", "market": "jp", "currency": "JPY",
+                "days": len(dates), "latest": dates[-1] if dates else None}
+
+    latest = dates[-1]
+    cutoff = (_dt.date.fromisoformat(latest) - _dt.timedelta(days=window)).isoformat()
+    baseline = next((d for d in reversed(dates) if d <= cutoff), dates[0])
+    if baseline == latest:
+        baseline = dates[0]
+
+    rows = db.execute(
+        """SELECT n.card_id AS card_id, c.name AS name, c.set_name AS set_name,
+                  c.rarity AS rarity, c.image_url AS image_url,
+                  o.price AS old_price, n.price AS new_price
+             FROM price_history_jp n
+             JOIN price_history_jp o ON o.card_id = n.card_id AND o.date = ?
+             JOIN cards c            ON c.card_id = n.card_id
+            WHERE n.date = ? AND o.price >= 50 AND o.price > 0""",
+        (baseline, latest),
+    ).fetchall()
+
+    movers = []
+    for r in rows:
+        old, new = r["old_price"], r["new_price"]
+        if not old:
+            continue
+        pct = round((new - old) / old * 100, 1)
+        if pct == 0:
+            continue
+        if new <= 0 or max(old, new) / min(old, new) > _MOVER_MAX_RATIO:
+            continue
+        movers.append({
+            "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
+            "rarity": r["rarity"], "image_url": r["image_url"],
+            "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
+        })
+    movers.sort(key=lambda m: m["pct"], reverse=True)
+    gainers = [m for m in movers if m["pct"] > 0][:50]
+    losers = sorted([m for m in movers if m["pct"] < 0], key=lambda m: m["pct"])[:50]
+    return {
+        "ready": True, "latest": latest, "baseline": baseline, "window": window,
+        "market": "jp", "currency": "JPY", "compared": len(movers),
+        "gainers": gainers, "losers": losers,
+    }
+
+
 def api_market(payload: dict) -> dict:
     """Biggest price gainers / losers for the free Market Watch page.
 
@@ -680,6 +735,12 @@ def api_market(payload: dict) -> dict:
     except (TypeError, ValueError):
         window = 7
     window = max(1, min(window, 90))
+
+    # Japan market (Yuyu-tei, ¥) is a separate snapshot table -- handled apart
+    # from the West (OPTCGAPI, $) logic below.
+    if str((payload or {}).get("market", "")).lower() == "jp":
+        return _market_jp(db, window)
+
     # Value tier: min baseline price to qualify. Lets visitors surface high-value
     # movers (e.g. $20+ manga/SEC/alt-art) instead of only volatile penny cards,
     # WITHOUT exposing exact prices (only the tier label is shown). Restricted to
@@ -775,6 +836,8 @@ def api_market(payload: dict) -> dict:
         "baseline": baseline,
         "window": window,
         "min": min_price,
+        "market": "west",
+        "currency": "USD",
         "compared": len(movers),
         "gainers": gainers,
         "losers": losers,

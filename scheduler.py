@@ -49,6 +49,16 @@ def _run_snapshot():
         print("[scheduler] snapshot failed:\n" + traceback.format_exc())
 
 
+def _run_snapshot_jp():
+    """Daily Japan price snapshot (Yuyu-tei, ¥). Best-effort -- scrapes an
+    external site, so it must never take the web service down."""
+    try:
+        import snapshot_prices_jp
+        snapshot_prices_jp.snapshot()
+    except Exception:
+        print("[scheduler] JP snapshot failed:\n" + traceback.format_exc())
+
+
 def _run_meta_refresh():
     """Best-effort weekly meta refresh (West + JP). Never fatal."""
     for mod in ("seed_meta_limitless", "seed_meta_tcgportal_jp"):
@@ -80,6 +90,7 @@ def _loop():
             if not _snapshot_done_today():
                 print(f"[scheduler] running daily jobs for {_today()}")
                 _run_snapshot()
+                _run_snapshot_jp()    # Japan (Yuyu-tei ¥) snapshot
                 if _dt.date.today().weekday() == 0:  # Monday
                     _run_new_cards()      # add any newly-released set
                     _run_meta_refresh()
