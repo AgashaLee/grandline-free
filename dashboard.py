@@ -532,10 +532,16 @@ _ERRATA_SENTENCE_RE = re.compile(
     re.IGNORECASE)
 
 
+#: Bare rarity tag some names carry, e.g. "Enel (SPR)" -- not a descriptive
+#: variant word, and the rarity is shown separately, so strip it from the name.
+_NAME_RARITY_RE = re.compile(r"\s*\(\s*SPR\s*\)", re.IGNORECASE)
+
+
 def _clean_card_name(name: str | None) -> str:
     if not name:
         return name or ""
-    return re.sub(r"\s{2,}", " ", _NAME_SUFFIX_RE.sub("", name)).strip()
+    name = _NAME_RARITY_RE.sub("", _NAME_SUFFIX_RE.sub("", name))
+    return re.sub(r"\s{2,}", " ", name).strip()
 
 
 def _clean_effect_text(text: str | None) -> str | None:

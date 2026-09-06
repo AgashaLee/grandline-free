@@ -207,7 +207,13 @@ window.CardDetail = (function () {
     // "DON!! -2:"). That cost is always negative (you return DON), so restore it.
     t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
-    t = t.replace(/\[([^\]]+)\]/g, (m, kw) => {
+    // Only turn SHORT, self-contained "[...]" into a keyword badge. OPTCGAPI
+    // sometimes ships a malformed, never-closed bracket (e.g. Arlong's
+    // "[When Attacking (1) (... DON!! cards ...)"); matching "[^\]]+" would let
+    // it swallow a whole sentence into one badge -- and because that sentence
+    // contains "DON!!" it rendered as a big black block. Requiring no inner
+    // bracket and a max length keeps badges to real keywords.
+    t = t.replace(/\[([^\[\]]{1,40})\]/g, (m, kw) => {
       const low = kw.toLowerCase().trim();
       const cls = /don!!/.test(low) ? 'cd-kw cd-kw-don'
                 : /once per/.test(low) ? 'cd-kw cd-kw-once'
@@ -217,6 +223,7 @@ window.CardDetail = (function () {
                 : 'cd-kw';
       return `<span class="${cls}">${kw}</span>`;
     });
+    t = t.replace(/[\[\]]/g, '');  // drop any orphan brackets left by malformed source text
     t = t.replace(/\{([^}]+)\}/g, '<span class="cd-trait">$1</span>');
     return t.replace(/\n/g, '<br>');
   }
@@ -231,13 +238,20 @@ window.CardDetail = (function () {
   const CSS = `
   .cd-modal{display:none;position:fixed;inset:0;z-index:2000;background:rgba(9,9,11,0.8);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:32px;
-    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    touch-action:manipulation;overscroll-behavior:contain;}
+  /* When a card is open, lock the page behind so touch-scrolling stays in the
+     popup instead of moving/zooming the page. */
+  body.cd-open{overflow:hidden;}
   .cd-modal.open{display:flex;animation:modalFadeIn 0.2s ease;}
   @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   .cd-box{background:#fafaf9;border-radius:24px;max-width:880px;width:100%;
     max-height:90vh;overflow:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:grid;
-    grid-template-columns:360px 1fr;color:#18181b;text-align:left;}
+    grid-template-columns:360px 1fr;color:#18181b;text-align:left;
+    /* keep scrolling inside the popup: don't chain to the page behind, and
+       give it momentum scrolling on iOS. */
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 
   /* Pin the art to the TOP (not vertically centered): the right column grows a
      little when the async price-history chart loads, and centering would make
@@ -433,6 +447,7 @@ window.CardDetail = (function () {
     _lastCard = c;
     _lastOpts = opts;
     document.getElementById('cdModal').classList.add('open');
+    document.body.classList.add('cd-open');   // lock page scroll behind the popup
 
     // Load the price-history chart (async, non-blocking) — only when prices are shown.
     if (showPrices && c.card_id) {
@@ -448,6 +463,7 @@ window.CardDetail = (function () {
   function close() {
     const m = document.getElementById('cdModal');
     if (m) m.classList.remove('open');
+    document.body.classList.remove('cd-open');   // restore page scroll
   }
 
   // Flip Indonesia <-> International, remember it, and re-render the open card.
