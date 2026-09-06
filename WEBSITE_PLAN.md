@@ -42,7 +42,13 @@ errata removed, name code-suffix stripped (display-only, `_display_name`), chart
    (native lazy `<img>`) — zero /api/image POSTs (was ~50-per-deck burst). `/api/image` kept only as
    a fallback for cards the catalog lacks (some promos); `load()` awaits the catalog before routing.
    Verified locally: 18/18 card-grid images + leader load, 0 /api/image calls, 0 console errors.
-2. **www.grandline.id** — add as a Railway custom domain + Cloudflare CNAME, redirect apex↔www.
+2. ~~**www.grandline.id**~~ ✅ DONE 2026-09-06. Done entirely in Cloudflare (no Railway change):
+   (a) DNS CNAME `www` → `grandline.id`, **Proxied (orange)** — apex `@` stays DNS-only/grey;
+   (b) Rules → Redirect Rules → template "Redirect from WWW to root": wildcard `https://www.*`
+   → `https://${1}`, **301** (Active). Verified live: https://www.grandline.id/market 301s to
+   https://grandline.id/market (path preserved, valid SSL). NOTE (optional, not done): Cloudflare
+   flags @grandline.id email as spoofable — only relevant if we ever send/receive mail from the
+   domain (add MX + SPF/DKIM/DMARC then); does not affect the website.
 3. **AdSense** — apply now that grandline.id is live (needs the real domain).
 4. **Affiliate IDs** — Shopee/Tokopedia via Involve Asia (apply with grandline.id); plug into
    carddetail.js `AFFILIATE` block once approved. TCGplayer/eBay for intl.
