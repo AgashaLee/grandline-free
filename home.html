@@ -92,7 +92,9 @@
     .showcase-head a.more:hover { color: #fbbf24; }
     .newpill { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
       padding: 3px 9px; border-radius: 99px; background: rgba(14,165,233,0.14); color: var(--sea); border: 1px solid rgba(14,165,233,0.25); }
-    .strip { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 10px; scroll-snap-type: x proximity; }
+    /* Reserve the strip's height so cards filling in later don't push the page
+       down (prevents layout shift / CLS). ~118px card image (5:7) + caption. */
+    .strip { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 10px; scroll-snap-type: x proximity; min-height: 222px; }
     .strip::-webkit-scrollbar { height: 8px; }
     .strip::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
     .strip::-webkit-scrollbar-track { background: transparent; }
@@ -203,15 +205,15 @@
 
   <div class="wrap">
 
-    <div class="showcase" id="scNewest" hidden>
+    <div class="showcase" id="scNewest">
       <div class="showcase-head">
-        <div class="t"><span class="newpill">Newest set</span><h3 id="newestTitle"></h3></div>
+        <div class="t"><span class="newpill">Newest set</span><h3 id="newestTitle">Newest set</h3></div>
         <a class="more" href="/database">Browse the database →</a>
       </div>
       <div class="strip" id="newestStrip"></div>
     </div>
 
-    <div class="showcase" id="scMovers" hidden>
+    <div class="showcase" id="scMovers">
       <div class="showcase-head">
         <div class="t"><h3>📈 This week's biggest movers</h3><span class="sub">by market price</span></div>
         <a class="more" href="/market">See all movers →</a>
@@ -219,7 +221,7 @@
       <div class="strip" id="moversStrip"></div>
     </div>
 
-    <div class="showcase" id="scLeaders" hidden>
+    <div class="showcase" id="scLeaders">
       <div class="showcase-head">
         <div class="t"><h3>🏆 Top meta leaders</h3><span class="sub">most-played in tournaments</span></div>
         <a class="more" href="/meta">See the meta →</a>
@@ -323,7 +325,8 @@
         document.getElementById('newestTitle').textContent = `${newestName} (${newest})`;
         document.getElementById('newestStrip').innerHTML =
           setCards.map(c => scard(c.card_id, c.image_url, `<b>${esc(c.card_id)}</b>`)).join('');
-        document.getElementById('scNewest').hidden = false;
+      } else {
+        document.getElementById('scNewest').hidden = true;   // no data -> collapse
       }
       catalogReady = true;
       renderLeaders();
@@ -350,7 +353,7 @@
     fetch('/api/market', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({window:'7d'}) })
       .then(r => r.json()).then(d => {
         const g = (d && d.gainers) || [];
-        if (!g.length) return;
+        if (!g.length) { document.getElementById('scMovers').hidden = true; return; }  // no data -> collapse
         // Premium first (priciest first — "expensive cards to show up"), then
         // the rest by % so the strip always fills to 12.
         const premium = g.filter(isPremium).sort((a,b) => (b.price||0) - (a.price||0));
@@ -374,7 +377,7 @@
       const counts = {};
       metaDecks.forEach(dk => { const id = dk.leader_id; if (id) counts[id] = (counts[id] || 0) + 1; });
       const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-      if (!top.length) return;
+      if (!top.length) { document.getElementById('scLeaders').hidden = true; return; }  // no data -> collapse
       document.getElementById('leadersStrip').innerHTML = top.map(([id, n], i) => {
         const c = cardsById[id];
         return scard(id, c ? c.image_url : '', `<b>${esc((c ? c.name : id)).slice(0,16)}</b><br>${n} decks`,
