@@ -125,15 +125,30 @@ def _static(name: str) -> bytes:
     return (config.BASE_DIR / name).read_bytes()
 
 
+# Cloudflare Web Analytics beacon — injected into every page so pageviews are
+# tracked even though the apex is DNS-only (grey cloud), where Cloudflare's
+# automatic injection can't reach. Cookieless/privacy-friendly; loads from
+# Cloudflare's CDN.
+_CF_ANALYTICS = (
+    "<!-- Cloudflare Web Analytics -->"
+    "<script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js\" "
+    "data-cf-beacon='{\"token\": \"0d429c31874d480896ab0579c4160e42\"}'></script>"
+    "<!-- End Cloudflare Web Analytics -->"
+)
+
+
 def _page(name: str) -> bytes:
     """Read an HTML page, filling in the site-wide funnel links.
 
     Keeps the Whop/tracker URLs in one place (and env-overridable) instead of
-    hard-coded into three templates.
+    hard-coded into three templates. Also injects the Cloudflare Web Analytics
+    beacon before </body> so every page is tracked from one spot.
     """
     html = (config.BASE_DIR / name).read_text(encoding="utf-8")
-    return (html.replace("{{TRACKER_URL}}", TRACKER_URL)
-                .replace("{{WHOP_URL}}", WHOP_STORE_URL)).encode("utf-8")
+    html = (html.replace("{{TRACKER_URL}}", TRACKER_URL)
+                .replace("{{WHOP_URL}}", WHOP_STORE_URL))
+    html = html.replace("</body>", _CF_ANALYTICS + "</body>")
+    return html.encode("utf-8")
 
 
 def build_payload() -> dict:
