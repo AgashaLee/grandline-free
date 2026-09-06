@@ -2,7 +2,40 @@
 
 Handoff note so a new chat can continue without losing context.
 
-## ⭐ LATEST SNAPSHOT (2026-09-05) — read this first
+## ⭐ LATEST SNAPSHOT (2026-09-06) — read this first
+All shipped to freesite/main and live on grandline.id this session:
+- **www.grandline.id** ✅ — Cloudflare CNAME `www`→`grandline.id` (Proxied/orange) + Redirect Rule
+  (wildcard `https://www.*`→`https://${1}`, 301). Apex stays DNS-only/grey. Verified 301 w/ path.
+- **contact@grandline.id** ✅ — Cloudflare Email Routing → owner Gmail (`wandersync.travel@gmail.com`,
+  verified). Visible **footer link** "Questions or partnerships? contact@grandline.id" on all 5 pages.
+- **Cloudflare Web Analytics** ✅ — manual JS beacon (token `0d429c31...`) injected in `_page()` before
+  `</body>` on every page (automatic mode can't reach the grey-cloud apex). View at Cloudflare →
+  Analytics → Web Analytics → grandline.id.
+- **Homepage + /market premium tags** ✅ — movers show alt/manga/SP/SEC first (homepage) / tagged
+  (market); "premium" = special printing OR SEC; api_market returns `variant_label`/`is_base`.
+- **Card popup jump fix** ✅ — art pinned top + reserved chart space (carddetail.js).
+- **News page revamp** ✅ — two "From Grand Line" cards (Welcome w/ Luffy `/assets/P.jpg` + auto
+  **movers recap** from api_market, plain card); Latest news merges Google News **+ YouTube** (Joy Boys
+  `UC4H1zHvU2Z2YLo4MC42Flqg`, StrawHatBrother `UCdjjbk1udeQAV6EASIrCN0Q`) via Atom feeds, English only.
+  (Considered Indonesian Google News + a changing card-art bg — user rejected both; kept clean 2-card EN.)
+- **JAPAN Market Watch (Yuyu-tei ¥)** ✅ — `/market` has a **🌍 West / 🇯🇵 Japan** toggle. New
+  `snapshot_prices_jp.py` scrapes yen prices by SET search (`yuyu-tei.jp/sell/opc/s/search?search_word=<SET>`,
+  ~60 throttled reqs, reachable from Railway) → `price_history_jp` (base ¥ price per card, additive, never
+  touches West `price_history`). `api_market` `market=jp` branch returns yen movers; `market.html` formats ¥
+  and hides $ tiers in JP. Scheduler runs it daily. **Day-1 seeded 2026-09-06 (2,237 prices)** via
+  `python snapshot_prices_jp.py` in Railway Console; JP movers appear once day-2 lands (needs 2 days).
+  v1 = base card price only; alt-art/manga JP movers = future.
+
+**PENDING / NEXT:**
+1. **Affiliate (Involve Asia)** — account created, property **pending approval (~48h from 2026-09-06)**.
+   When approved: apply Shopee ID (Influencer)+Bonus + Tokopedia, Create Deeplink, wire aff_id into
+   carddetail.js. See memory `grandline-affiliate-involveasia`. (Shopee direct affiliate = "Globalshopperz"
+   at affiliate.shopee.co.id, kept for manual social posts only — can't template per-card links.)
+2. **AdSense** — apply LATER (needs traffic + Privacy Policy page + ads.txt); keep ads LIGHT/non-intrusive.
+3. **eBay (EPN) + TCGplayer (Impact)** — apply once site has traffic (international buyers, lower priority).
+4. **Sponsorship/"Advertise with us" page** — once traffic stats exist; contact email already live.
+
+## ⭐ SNAPSHOT (2026-09-05)
 **DOMAIN IS LIVE: grandline.id** — bought at Domainesia (2-yr), DNS moved to **Cloudflare**
 (free plan, nameservers aleena/nitin.ns.cloudflare.com). Cloudflare records: **CNAME `@` →
 lxqp0mee.up.railway.app (DNS only / grey cloud)** + **TXT `_railway-verify`**. Added as a Custom
