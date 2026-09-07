@@ -78,7 +78,7 @@ window.CardDetail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // One Piece traits, for splitting OPTCGAPI's sub_types string. OPTCGAPI joins a
+  // One Piece traits, for splitting the card API's sub_types string. the card API joins a
   // card's traits with spaces and NO delimiter ("Water Seven The Franky Family" =
   // Water Seven + The Franky Family), and a single trait can itself contain spaces
   // ("East Blue", "The Franky Family"), so they can't be split on spaces alone.
@@ -198,16 +198,16 @@ window.CardDetail = (function () {
   // Format effect text like the printed card: keyword tags -> badges, {traits}
   // emphasised, and the [Trigger] clause on its own line.
   function formatCardText(text) {
-    // OPTCGAPI returns the literal string "NULL" for cards with no effect (e.g.
+    // the card API returns the literal string "NULL" for cards with no effect (e.g.
     // vanilla characters) -- treat that (and blanks) as no text, so the effect
     // box is hidden rather than showing "NULL".
     if (!text || String(text).trim().toUpperCase() === 'NULL') return '';
     let t = esc(text).trim();
-    // OPTCGAPI drops the minus in the DON!! activation cost ("DON!! 2:" should be
+    // the card API drops the minus in the DON!! activation cost ("DON!! 2:" should be
     // "DON!! -2:"). That cost is always negative (you return DON), so restore it.
     t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
-    // Only turn SHORT, self-contained "[...]" into a keyword badge. OPTCGAPI
+    // Only turn SHORT, self-contained "[...]" into a keyword badge. the card API
     // sometimes ships a malformed, never-closed bracket (e.g. Arlong's
     // "[When Attacking (1) (... DON!! cards ...)"); matching "[^\]]+" would let
     // it swallow a whole sentence into one badge -- and because that sentence
@@ -362,7 +362,7 @@ window.CardDetail = (function () {
     // Build the art strip: base image, then each priced variant's image, then
     // gallery alt-arts. De-duped by PRINTING (the "_pN" suffix, or "base" when
     // absent) rather than by URL, because the same artwork often arrives under
-    // two different URLs -- OPTCGAPI's hosted copy (..._p1_xxxx.jpg) and our own
+    // two different URLs -- the card API's hosted copy (..._p1_xxxx.jpg) and our own
     // downloaded copy (/assets/alt/..._p1.jpg) -- which would otherwise show the
     // same picture twice (the "3 versions but 2 are identical" bug).
     const arts = [];
@@ -403,7 +403,7 @@ window.CardDetail = (function () {
     const traitsHtml = traitList.length
       ? `<div class="cd-traits"><b>Traits:</b> ${traitList.map(esc).join(' / ')}</div>` : '';
 
-    // Effect text -- empty (incl. OPTCGAPI's "NULL") hides the box entirely.
+    // Effect text -- empty (incl. the card API's "NULL") hides the box entirely.
     const cardTextInner = formatCardText(c.card_text);
 
     // Per-printing prices (base + alt-art/parallel), each with its own value.
