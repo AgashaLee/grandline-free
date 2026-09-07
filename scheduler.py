@@ -41,6 +41,22 @@ def _snapshot_done_today() -> bool:
         return False  # table missing -> not done
 
 
+#: A real JP scrape writes ~2,200 rows; anything well below that means today's
+#: scrape failed or was throttled, so it should be retried (not marked done).
+_JP_MIN_ROWS = 500
+
+
+def _jp_snapshot_done_today() -> bool:
+    from database import get_db
+    try:
+        n = get_db().execute(
+            "SELECT COUNT(*) FROM price_history_jp WHERE date=?", (_today(),)
+        ).fetchone()[0]
+        return n >= _JP_MIN_ROWS
+    except Exception:
+        return False  # table missing / error -> not done
+
+
 def _run_snapshot():
     try:
         import snapshot_prices
@@ -90,12 +106,20 @@ def _loop():
             if not _snapshot_done_today():
                 print(f"[scheduler] running daily jobs for {_today()}")
                 _run_snapshot()
-                _run_snapshot_jp()    # Japan (Yuyu-tei ¥) snapshot
                 if _dt.date.today().weekday() == 0:  # Monday
                     _run_new_cards()      # add any newly-released set
                     _run_meta_refresh()
         except Exception:
             print("[scheduler] loop error:\n" + traceback.format_exc())
+        # Japan (Yuyu-tei ¥) snapshot has its OWN gate: if today's scrape failed
+        # or came back partial (< _JP_MIN_ROWS), retry it on the next hourly wake
+        # instead of being blocked by the West snapshot's "done today" flag.
+        try:
+            if not _jp_snapshot_done_today():
+                print(f"[scheduler] running JP snapshot for {_today()}")
+                _run_snapshot_jp()
+        except Exception:
+            print("[scheduler] JP loop error:\n" + traceback.format_exc())
         time.sleep(_CHECK_EVERY)
 
 

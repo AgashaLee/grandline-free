@@ -25,7 +25,9 @@ from database import get_db
 
 _BASE = "https://yuyu-tei.jp"
 _SEARCH = _BASE + "/sell/opc/s/search?search_word={code}&rare=&type=&kizu=0"
-_DELAY = 1.5          # seconds between set requests (be polite)
+_DELAY = 2.0          # seconds between set requests (be polite / avoid throttling)
+_RETRY_BACKOFF = 4.0  # base seconds to wait before retrying a failed set page
+_MAX_ATTEMPTS = 3     # retry a set page a few times (handles transient 403/429/timeouts)
 _JPY_FLOOR = 50       # ignore sub-¥50 noise
 _HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -109,20 +111,36 @@ def snapshot(day: str | None = None, codes: list[str] | None = None) -> int:
 
     session = requests.Session()
     session.headers.update(_HEADERS)
+
+    def _fetch(code: str) -> str | None:
+        """Fetch a set page, retrying transient failures (403/429/timeout)."""
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                resp = session.get(_SEARCH.format(code=code), timeout=25)
+                if resp.status_code == 200:
+                    return resp.text
+                last = f"HTTP {resp.status_code}"
+            except Exception as exc:
+                last = str(exc)
+            if attempt < _MAX_ATTEMPTS - 1:
+                time.sleep(_RETRY_BACKOFF * (attempt + 1))  # 4s, 8s backoff
+        print(f"  {code}: failed after {_MAX_ATTEMPTS} tries ({last}) -- skipped")
+        return None
+
     prices: dict[str, float] = {}
+    failed = 0
     for i, code in enumerate(codes):
-        try:
-            resp = session.get(_SEARCH.format(code=code), timeout=25)
-            if resp.status_code != 200:
-                print(f"  {code}: HTTP {resp.status_code} -- skipped")
-            else:
-                found = _base_price_for_page(resp.text)
-                prices.update(found)
-                print(f"  {code}: {len(found)} cards priced")
-        except Exception as exc:
-            print(f"  {code}: fetch failed ({exc})")
+        html = _fetch(code)
+        if html is None:
+            failed += 1
+        else:
+            found = _base_price_for_page(html)
+            prices.update(found)
+            print(f"  {code}: {len(found)} cards priced")
         if i < len(codes) - 1:
             time.sleep(_DELAY)
+    if failed:
+        print(f"  ({failed}/{len(codes)} set pages failed)")
 
     if not prices:
         print("No JP prices scraped -- aborting (nothing written). "
