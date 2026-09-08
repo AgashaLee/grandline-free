@@ -112,10 +112,24 @@ def _run_jp_leader_backfill():
         print("[scheduler] JP leader backfill failed:\n" + traceback.format_exc())
 
 
+def _run_promo_details_backfill():
+    """Fill gameplay details on older promo cards that lack them (fast, no
+    network, idempotent). Runs once at startup so the live volume gets the
+    details without waiting for a reseed."""
+    try:
+        import seed_promo_details
+        n = seed_promo_details.seed()
+        if n:
+            print(f"[scheduler] promo details backfill filled {n} cards")
+    except Exception:
+        print("[scheduler] promo details backfill failed:\n" + traceback.format_exc())
+
+
 def _loop():
     # Small startup delay so the web server is serving before we do network I/O.
     time.sleep(20)
     _run_jp_leader_backfill()
+    _run_promo_details_backfill()
     while True:
         try:
             if not _snapshot_done_today():
