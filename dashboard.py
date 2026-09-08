@@ -1382,6 +1382,8 @@ class Handler(BaseHTTPRequestHandler):
         for k, v in (extra_headers or []):
             self.send_header(k, v)
         self.end_headers()
+        if getattr(self, "_head_only", False):
+            return  # HEAD request: headers only, no body
         self.wfile.write(body)
 
     def _redirect(self, url: str, extra_headers=None) -> None:
@@ -1482,6 +1484,15 @@ class Handler(BaseHTTPRequestHandler):
     def _logout(self) -> None:
         auth.drop_session(self._cookie(auth.COOKIE_SESSION))
         self._redirect("/", extra_headers=[("Set-Cookie", f"{auth.COOKIE_SESSION}=; Path=/; Max-Age=0")])
+
+    def do_HEAD(self) -> None:  # noqa: N802 - stdlib naming
+        # Reuse do_GET's routing but emit headers only (crawlers / sitemap
+        # checkers ping URLs with HEAD; without this the stdlib returns 501).
+        self._head_only = True
+        try:
+            self.do_GET()
+        finally:
+            self._head_only = False
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib naming
         path, _, query = self.path.partition("?")
