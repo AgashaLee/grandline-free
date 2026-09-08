@@ -1081,7 +1081,11 @@ def _fmt_effect_html(text: str | None) -> str:
     if not t.strip():
         return ""
     t = re.sub(r"DON!!\s*(\d+)\s*:", r"DON!! -\1:", t)
-    t = re.sub(r"(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)", r"\1-\2\3", t)
+    # Restore the minus the source drops on opponent power DEBUFFS (e.g. "give ...
+    # -2000 power"), but NOT on THRESHOLDS like "3000 power or less" (which target
+    # characters whose power is at/under that value and are correctly positive).
+    t = re.sub(r"(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)"
+               r"(?!\s+or\s+(?:less|more|higher|lower|greater))", r"\1-\2\3", t)
     return _h(t).replace("\n", "<br>")
 
 

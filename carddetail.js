@@ -217,8 +217,10 @@ window.CardDetail = (function () {
     t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
     // The card API also drops the minus on opponent power debuffs
     // ("your opponent's Characters -1000 power" -> "1000 power"), which reverses
-    // the meaning. You only ever REDUCE an opponent's power, so restore the minus.
-    t = t.replace(/(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)/g, '$1-$2$3');
+    // the meaning. You only ever REDUCE an opponent's power, so restore the minus --
+    // but NOT on thresholds like "3000 power or less" (those target characters whose
+    // power is at/under that value and are correctly positive).
+    t = t.replace(/(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)(?!\s+or\s+(?:less|more|higher|lower|greater))/g, '$1-$2$3');
     t = t.replace(/\s*\[Trigger\]/gi, '\n<span class="cd-trigger"></span>[Trigger]');
     // Only turn SHORT, self-contained "[...]" into a keyword badge. the card API
     // sometimes ships a malformed, never-closed bracket (e.g. Arlong's
