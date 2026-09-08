@@ -1335,6 +1335,28 @@ def render_leader_page(code: str) -> bytes | None:
     return _seo_shell(title, desc, canonical, body)
 
 
+def render_sitemap() -> bytes:
+    """XML sitemap listing the main pages + every card and leader page, so
+    Google can discover and index them all (they aren't in the nav)."""
+    db = get_db()
+    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news")]
+    try:
+        urls += [f"{_SITE_URL}/card/{r[0]}" for r in
+                 db.execute("SELECT card_id FROM cards ORDER BY card_id")]
+        urls += [f"{_SITE_URL}/leader/{r[0]}" for r in
+                 db.execute("SELECT DISTINCT leader_id FROM meta_decks WHERE leader_id<>''")]
+    except Exception:
+        pass
+    body = ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + "".join(f"<url><loc>{_h(u)}</loc></url>" for u in urls)
+            + "</urlset>")
+    return body.encode("utf-8")
+
+
+_ROBOTS = (f"User-agent: *\nAllow: /\n\nSitemap: {_SITE_URL}/sitemap.xml\n").encode("utf-8")
+
+
 ROUTES = {
     "/api/lookup": api_lookup,
     "/api/add": api_add,
@@ -1509,6 +1531,12 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/api/data"):
             payload = cached_payload(force="refresh=1" in query)
             self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
+            return
+        elif path == "/sitemap.xml":
+            self._send(200, render_sitemap(), "application/xml; charset=utf-8")
+            return
+        elif path == "/robots.txt":
+            self._send(200, _ROBOTS, "text/plain; charset=utf-8")
             return
         elif path.startswith("/card/"):
             code = path[len("/card/"):].strip("/").upper()

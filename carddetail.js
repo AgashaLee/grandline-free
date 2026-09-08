@@ -447,7 +447,8 @@ window.CardDetail = (function () {
       <div class="cd-body">
         <button class="cd-close" onclick="CardDetail.close()" aria-label="Close">✕</button>
         <h2>${esc(c.name)}</h2>
-        <div class="cd-sub">${esc(c.card_id)}${c.set_name ? ' · ' + esc(c.set_name) : ''}</div>
+        <div class="cd-sub">${esc(c.card_id)}${c.set_name ? ' · ' + esc(c.set_name) : ''}
+          · <a href="/card/${esc(c.card_id)}" style="color:#0ea5e9;font-weight:600;text-decoration:none">View full page →</a></div>
         <div class="cd-chips">${chips.join('')}</div>
         ${traitsHtml}
         ${pricesHtml}
