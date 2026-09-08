@@ -154,6 +154,18 @@
       return [order[type] !== undefined ? order[type] : 9, type, num];
     }
 
+    // Open a specific set's card grid if the URL points to one
+    // (e.g. /database#OP01 — used by "Back to database" links from card pages).
+    function renderFromHash() {
+      const set = decodeURIComponent((location.hash || '').replace(/^#/, '')).trim().toUpperCase();
+      if (set && globalCardsBySet[set]) { renderCards(set); }
+      else { renderSets(); }
+    }
+    window.addEventListener('hashchange', function(){
+      // Only react when we actually have data loaded.
+      if (Object.keys(globalCardsBySet).length > 0) renderFromHash();
+    });
+
     function renderSets() {
       const keys = Object.keys(globalCardsBySet).sort((a, b) => {
         const ka = setSortKey(a), kb = setSortKey(b);
@@ -307,7 +319,7 @@
 
         if (Object.keys(globalCardsBySet).length > 0) {
           buildFilterOptions();
-          renderSets();
+          renderFromHash();
         } else {
           document.getElementById('content').innerHTML = 'No cards found.';
         }

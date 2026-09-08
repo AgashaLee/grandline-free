@@ -1259,7 +1259,8 @@ def render_card_page(code: str) -> bytes | None:
         '<div class="buynote">Opens a marketplace search for this card. Prices vary by seller.</div>'
         f'</div></div>{effect_html}{decks_html}'
         '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
-        '<a href="/database" style="color:var(--gold)">← Back to the full card database</a></p>')
+        f'<a href="/database#{_h(code.split("-")[0])}" style="color:var(--gold)">'
+        '← Back to the full card database</a></p>')
     title = f"{name} ({code}) — One Piece Card Price & Decks | Grand Line"
     desc = (f"{name} ({code}) One Piece Card Game price, stats and the meta decks that use it. "
             + (f"Market price ${float(price):.2f}. " if price else "")
