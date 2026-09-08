@@ -1268,6 +1268,26 @@ def render_card_page(code: str) -> bytes | None:
     return _seo_shell(title, desc, canonical, body)
 
 
+_ORD_RE = re.compile(r"(\d{1,2})(st|nd|rd|th)", re.IGNORECASE)
+
+
+def _event_date_key(s) -> _dt.date:
+    """Sort key for event dates stored as text like '3rd May 2026'.
+
+    They are TEXT, so ORDER BY sorts them alphabetically (March lands between
+    May and June). Parse to a real date; unparseable values sink to the bottom.
+    """
+    if not s:
+        return _dt.date.min
+    txt = _ORD_RE.sub(r"\1", str(s)).strip()
+    for fmt in ("%d %B %Y", "%d %b %Y"):
+        try:
+            return _dt.datetime.strptime(txt, fmt).date()
+        except ValueError:
+            continue
+    return _dt.date.min
+
+
 def render_leader_page(code: str) -> bytes | None:
     db = get_db()
     c = db.execute("SELECT card_id,name,set_name,card_color,image_url,card_text FROM cards WHERE card_id=?",
@@ -1287,9 +1307,10 @@ def render_leader_page(code: str) -> bytes | None:
                       (code,)).fetchone()[0]
     share = round(n / total * 100, 1)
 
-    recent = db.execute(
-        "SELECT event_name,event_date,country,players,winner FROM meta_decks WHERE leader_id=? "
-        "ORDER BY event_date DESC LIMIT 10", (code,)).fetchall()
+    _all_recent = db.execute(
+        "SELECT event_name,event_date,country,players,winner FROM meta_decks WHERE leader_id=?",
+        (code,)).fetchall()
+    recent = sorted(_all_recent, key=lambda r: _event_date_key(r["event_date"]), reverse=True)[:10]
     rows = "".join(
         f'<tr><td>{_h(r["event_name"] or "-")}</td><td>{_h(r["event_date"] or "-")}</td>'
         f'<td>{_h(r["country"] or "-")}</td><td><span class="pill">{_h(r["players"] or "-")}</span></td>'
@@ -1329,7 +1350,7 @@ def render_leader_page(code: str) -> bytes | None:
         '<div class="buynote">Buy the leader card. Opens a marketplace search.</div>'
         f'</div></div>{recent_html}{used_html}'
         '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
-        '<a href="/meta" style="color:var(--gold)">← See the full meta</a></p>')
+        f'<a href="/meta#leader={_h(code)}" style="color:var(--gold)">← See all {_h(name)} decks</a></p>')
     title = f"{name} Deck — One Piece TCG Meta, Decklists & Cards | Grand Line"
     desc = (f"{name} ({code}) One Piece Card Game deck: {n} tournament decks, {wins} wins, "
             f"{share}% meta share. Winning decklists, most-used cards and prices.")

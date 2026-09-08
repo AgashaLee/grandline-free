@@ -547,12 +547,13 @@
 
     function parseHash() {
       const p = new URLSearchParams(location.hash.slice(1));
-      return { format: p.get('format') || '', deck: p.get('deck') || '' };
+      return { format: p.get('format') || '', deck: p.get('deck') || '', leader: p.get('leader') || '' };
     }
     function setHash(o) {
       const p = new URLSearchParams();
       if (o.format) p.set('format', o.format);
       if (o.deck) p.set('deck', o.deck);
+      if (o.leader) p.set('leader', o.leader);
       const s = p.toString();
       if (('#' + s) !== location.hash && !(s === '' && location.hash === '')) location.hash = s;
     }
@@ -565,10 +566,16 @@
       };
     }
     function route() {
-      const { format, deck } = parseHash();
+      const { format, deck, leader } = parseHash();
       SELECTED_FORMAT = allFormats().includes(format) ? format : '';
       if (deck && globalDecks.some(d => d.id === deck)) { renderDeckDetails(deck); return; }
+      // Coming from a leader page: show that leader's decks across all formats.
+      if (leader) { SELECTED_FORMAT = ''; }
       renderDecks();
+      if (leader) {
+        const s = document.getElementById('filter-search');
+        if (s) { s.value = leader; applyFilters(); }
+      }
     }
     window.addEventListener('hashchange', route);
 
