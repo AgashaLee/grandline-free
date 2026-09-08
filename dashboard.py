@@ -1280,7 +1280,7 @@ def render_card_page(code: str) -> bytes | None:
                   f'<small id="usLabel">US market · {_h(featured["label"])}</small></div>')
         # Japan is a separate market (one Yuyu-tei price per card), NOT a
         # conversion of the US price — so label it plainly, no "≈".
-        jp_line = f'<div class="jpline">Japan market <b>¥{int(jp):,}</b></div>' if jp else ""
+        jp_line = f'<div class="jpline">Japan market · regular <b>¥{int(jp):,}</b></div>' if jp else ""
         price_html = f'{us}{jp_line}'
 
     decks_html = ""
