@@ -15,7 +15,8 @@ APIs used (both public, GET, JSON):
 Notes / limitations:
   * A OP deck is 50 cards + a separate leader; tcg-portal stores the leader only
     as a Japanese archetype label (deckGuide.name, e.g. 緑ミホーク), not a leader
-    card code. So event_name = that JP archetype and leader_id is left blank.
+    card code. event_name = that JP archetype; leader_id is recovered from it via
+    `jp_leader_match.resolve_leader_id` (blank only when we can't place it safely).
   * Card codes are the JP printing codes; ones our EN catalog lacks simply won't
     have an image (the code is still stored).
 
@@ -33,6 +34,7 @@ from pathlib import Path
 import config
 from database import get_db
 from meta_format import format_of
+from jp_leader_match import load_leaders, resolve_leader_id
 
 BASE = "https://tcg-portal.jp/api/onepiece"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -117,6 +119,10 @@ def seed(max_decks: int = MAX_DECKS) -> int:
     raw = _fetch_recent_decks(max_decks)
     print(f"fetched {len(raw)} JP tournament decks from tcg-portal.")
 
+    # Recover a leader card code from each Japanese archetype label so JP decks
+    # link to their leader page and feed that leader's tournament data.
+    leaders = load_leaders(db)
+
     # This source replaces the older JP pulls -> clear both, keep West (limitless).
     for prefix in ("tcgportal-", "cardrush-"):
         old = [r[0] for r in db.execute("SELECT id FROM meta_decks WHERE id LIKE ?", (prefix + "%",))]
@@ -144,6 +150,7 @@ def seed(max_decks: int = MAX_DECKS) -> int:
         set_format = format_of(counts.keys())   # OP13..OP17 era from the newest OP card
         date = (t.get("date") or "")[:10]  # YYYY-MM-DD
         deck_id = f"tcgportal-{t['id']}"
+        leader_id = resolve_leader_id(leaders, archetype)
         db.execute(
             """INSERT OR REPLACE INTO meta_decks
                (id, event_date, country, event_name, event_type, players, winner,
@@ -151,7 +158,7 @@ def seed(max_decks: int = MAX_DECKS) -> int:
                VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (deck_id, date, "JP", archetype,
              (t.get("tournamentName") or "Japan event").strip(),
-             _placement(t.get("rank")), "", "", leader_image, set_format),
+             _placement(t.get("rank")), "", leader_id, leader_image, set_format),
         )
         db.execute("DELETE FROM meta_deck_cards WHERE deck_id=?", (deck_id,))
         for code, qty in counts.items():

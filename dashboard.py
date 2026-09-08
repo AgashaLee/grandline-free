@@ -1347,7 +1347,7 @@ def _event_date_key(s) -> _dt.date:
     if not s:
         return _dt.date.min
     txt = _ORD_RE.sub(r"\1", str(s)).strip()
-    for fmt in ("%d %B %Y", "%d %b %Y"):
+    for fmt in ("%d %B %Y", "%d %b %Y", "%Y-%m-%d"):  # West "3rd May 2026" + JP "2026-09-02"
         try:
             return _dt.datetime.strptime(txt, fmt).date()
         except ValueError:

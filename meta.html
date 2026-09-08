@@ -465,7 +465,7 @@
               <span>📋 <strong>${totalCards} cards</strong></span>
             </div>
             <div class="meta" style="margin-top:8px">
-              <span>🎴 Leader: <strong>${deck.leader_id || translateArchetype(deck.event_name) || '—'}</strong>${deck.leader_id ? ` &middot; <a href="/leader/${deck.leader_id}" style="color:#0ea5e9;font-weight:600">meta page →</a>` : ''}</span>
+              <span>🎴 Leader: <strong>${(hasJP(deck.event_name) ? translateArchetype(deck.event_name) : (deck.leader_id || deck.event_name)) || '—'}</strong>${deck.leader_id ? ` &middot; <a href="/leader/${deck.leader_id}" style="color:#0ea5e9;font-weight:600">meta page →</a>` : ''}</span>
               <span>📊 <strong>${translateTournament(deck.event_type) || '-'}</strong></span>
             </div>
           </div>

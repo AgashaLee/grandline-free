@@ -98,9 +98,24 @@ def _run_new_cards():
         print("[scheduler] add_new_set failed:\n" + traceback.format_exc())
 
 
+def _run_jp_leader_backfill():
+    """Fill leader_id on JP decks that lack one (fast, no network, idempotent).
+    Runs once at startup so existing rows on the live volume get codes without
+    waiting for the weekly re-seed."""
+    try:
+        import jp_leader_match
+        from database import get_db
+        n = jp_leader_match.backfill(get_db())
+        if n:
+            print(f"[scheduler] JP leader backfill filled {n} decks")
+    except Exception:
+        print("[scheduler] JP leader backfill failed:\n" + traceback.format_exc())
+
+
 def _loop():
     # Small startup delay so the web server is serving before we do network I/O.
     time.sleep(20)
+    _run_jp_leader_backfill()
     while True:
         try:
             if not _snapshot_done_today():
