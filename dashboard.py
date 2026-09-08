@@ -1129,8 +1129,14 @@ h1{font-size:28px;color:#fff;margin-bottom:4px}
 .chip b{color:var(--muted);font-weight:600;margin-right:4px}
 .traits{color:var(--muted);font-size:13px;margin-bottom:16px}
 .traits b{color:var(--ink)}
-.price{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px}
-.price .jp{font-size:15px;color:var(--muted);font-weight:600;margin-left:10px}
+.price{font-size:22px;font-weight:800;color:#fff;margin-bottom:2px}
+.price small{font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
+.jpline{color:var(--muted);font-size:13px;font-weight:600;margin-bottom:14px}
+.jpline b{color:var(--ink);font-weight:700}
+.vthumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;max-width:300px}
+.vthumb{width:52px;height:73px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;background:var(--surface)}
+.vthumb:hover{border-color:var(--muted)}
+.vthumb.sel{border-color:var(--sea)}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:22px 0}
 .box h2{font-size:16px;color:#fff;margin-bottom:12px}
 .effect{line-height:1.7;font-size:13px}
@@ -1175,6 +1181,33 @@ def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes
         '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
         f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
     return doc.encode("utf-8")
+
+
+def _printings(db, code: str, c: dict) -> list[dict]:
+    """All priced printings for a card (base first, then dearest), each with its
+    own label, image and price — so the page can show a price per version
+    instead of one number that may belong to a different printing than the art.
+    """
+    rows: list[dict] = []
+    try:
+        vs = db.execute(
+            "SELECT name, rarity, variant_label, image_url, market_price, is_base "
+            "FROM card_variants WHERE card_id=? ORDER BY is_base DESC, market_price DESC",
+            (code,)).fetchall()
+    except Exception:
+        vs = []
+    for v in vs:
+        lbl = (v["variant_label"] or "").strip()
+        if not lbl:
+            lbl = "SPR" if "(SPR)" in (v["name"] or "").upper() else "Base"
+        rows.append({"label": lbl, "rarity": v["rarity"] or "",
+                     "image": v["image_url"] or "", "price": v["market_price"],
+                     "is_base": v["is_base"]})
+    if not rows:
+        rows.append({"label": "Base", "rarity": c.get("rarity") or "",
+                     "image": c.get("image_url") or "", "price": c.get("market_price"),
+                     "is_base": 1})
+    return rows
 
 
 def render_card_page(code: str) -> bytes | None:
@@ -1233,10 +1266,22 @@ def render_card_page(code: str) -> bytes | None:
     effect = _fmt_effect_html(c.get("card_text"))
     effect_html = f'<div class="box"><h2>Effect</h2><div class="effect">{effect}</div></div>' if effect else ""
 
+    # Per-printing prices: pick a featured version for the headline, but keep
+    # each version's own price so switching art switches the price too.
+    prints = _printings(db, code, c)
+    featured = next((p for p in prints if p["is_base"]), prints[0])
+    if featured["price"] is not None:
+        price = featured["price"]  # keep title/description in sync with the headline
     price_html = ""
-    if price:
-        jp_html = f'<span class="jp">≈ ¥{int(jp):,} (JP)</span>' if jp else ""
-        price_html = f'<div class="price">${float(price):.2f} <span style="font-size:12px;color:var(--muted);font-weight:500">market (US)</span>{jp_html}</div>'
+    if featured["price"] is not None or jp:
+        us = ""
+        if featured["price"] is not None:
+            us = (f'<div class="price"><span id="usPrice">${float(featured["price"]):.2f}</span>'
+                  f'<small id="usLabel">US market · {_h(featured["label"])}</small></div>')
+        # Japan is a separate market (one Yuyu-tei price per card), NOT a
+        # conversion of the US price — so label it plainly, no "≈".
+        jp_line = f'<div class="jpline">Japan market <b>¥{int(jp):,}</b></div>' if jp else ""
+        price_html = f'{us}{jp_line}'
 
     decks_html = ""
     if deck_n:
@@ -1246,8 +1291,21 @@ def render_card_page(code: str) -> bytes | None:
         decks_html = (f'<div class="box"><h2>Used in {deck_n} meta deck{"s" if deck_n!=1 else ""}</h2>'
                       f'<div class="chips">{chips2}</div></div>')
 
-    img = (f'<img class="cardimg" src="{_h(c["image_url"])}" alt="{_h(name)} {_h(code)} One Piece card" loading="lazy">'
-           if c.get("image_url") else "")
+    # Main image = featured printing's art; thumbnails let visitors switch
+    # between printings (art + price update together via a tiny inline script).
+    main_src = featured["image"] or c.get("image_url") or ""
+    img = (f'<img id="cardMainImg" class="cardimg" src="{_h(main_src)}" '
+           f'alt="{_h(name)} {_h(code)} One Piece card" loading="lazy">' if main_src else "")
+    with_img = [p for p in prints if p["image"]]
+    if len(with_img) > 1:
+        thumbs = "".join(
+            f'<img class="vthumb{" sel" if p is featured else ""}" src="{_h(p["image"])}" '
+            f'data-img="{_h(p["image"])}" '
+            + (f'data-price="{float(p["price"]):.2f}" ' if p["price"] is not None else "")
+            + f'data-label="{_h(p["label"])}" loading="lazy" onclick="_pick(this)" '
+            f'alt="{_h(p["label"])} printing" onerror="this.style.display=\'none\'">'
+            for p in with_img)
+        img += f'<div class="vthumbs">{thumbs}</div>'
     canonical = f"{_SITE_URL}/card/{code}"
     setline = f' · {_h(c["set_name"])}' if c.get("set_name") else ""
     body = (
@@ -1260,7 +1318,16 @@ def render_card_page(code: str) -> bytes | None:
         f'</div></div>{effect_html}{decks_html}'
         '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
         f'<a href="/database#{_h(code.split("-")[0])}" style="color:var(--gold)">'
-        '← Back to the full card database</a></p>')
+        '← Back to the full card database</a></p>'
+        '<script>function _pick(el){'
+        "document.querySelectorAll('.vthumb').forEach(function(t){t.classList.remove('sel')});"
+        "el.classList.add('sel');"
+        "var m=document.getElementById('cardMainImg');if(m)m.src=el.getAttribute('data-img')||el.src;"
+        "var p=document.getElementById('usPrice'),l=document.getElementById('usLabel');"
+        "var pr=el.getAttribute('data-price'),lb=el.getAttribute('data-label');"
+        "if(p)p.textContent=pr?('$'+parseFloat(pr).toFixed(2)):'—';"
+        "if(l&&lb)l.textContent=pr?('US market · '+lb):(lb+' · no US price');"
+        '}</script>')
     title = f"{name} ({code}) — One Piece Card Price & Decks | Grand Line"
     desc = (f"{name} ({code}) One Piece Card Game price, stats and the meta decks that use it. "
             + (f"Market price ${float(price):.2f}. " if price else "")
