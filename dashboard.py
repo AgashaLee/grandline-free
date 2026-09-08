@@ -1059,6 +1059,282 @@ def api_news(payload: dict | None = None) -> dict:
     return {"featured": featured, "items": items}
 
 
+# ===========================================================================
+# Server-rendered, crawlable SEO pages: /card/<code> and /leader/<code>.
+# These turn data already in the DB into real URLs Google can index (unlike the
+# JS popups on /database and /meta), and cross-link to build an internal graph.
+# ===========================================================================
+_SITE_URL = os.environ.get("SITE_URL", "https://grandline.id").rstrip("/")
+
+
+def _h(s) -> str:
+    return (str("" if s is None else s).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _fmt_effect_html(text: str | None) -> str:
+    """Plain, readable effect text for SEO pages: strip errata, restore the
+    minus signs the source drops, escape, and turn newlines into <br>."""
+    if not text or str(text).strip().upper() == "NULL":
+        return ""
+    t = _clean_effect_text(text) or ""
+    if not t.strip():
+        return ""
+    t = re.sub(r"DON!!\s*(\d+)\s*:", r"DON!! -\1:", t)
+    t = re.sub(r"(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)", r"\1-\2\3", t)
+    return _h(t).replace("\n", "<br>")
+
+
+def _buy_query(code: str, name: str | None) -> str:
+    name = re.sub(r"\s*\(\d+\)\s*$", "", str(name or "")).strip()
+    return f"one piece card {code} {name}".strip()
+
+
+def _buy_buttons_html(code: str, name: str | None) -> str:
+    import urllib.parse
+    q = urllib.parse.quote(_buy_query(code, name))
+    shops = [
+        ("Shopee", "#ee4d2d", f"https://shopee.co.id/search?keyword={q}"),
+        ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={q}"),
+        ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={q}"),
+        ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={q}"),
+    ]
+    btns = "".join(
+        f'<a class="buybtn" style="background:{c}" href="{_h(u)}" target="_blank" '
+        f'rel="nofollow sponsored noopener">🛒 Buy on {_h(n)}</a>' for n, c, u in shops)
+    return f'<div class="buyrow">{btns}</div>'
+
+
+_SEO_CSS = """
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090b;--surface:#18181b;--line:#27272a;--ink:#f4f4f5;--muted:#a1a1aa;--gold:#f59e0b;--sea:#0ea5e9;--up:#10b981;--down:#ef4444}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;padding-bottom:48px}
+h1,h2,h3{font-family:'Fredoka',sans-serif;letter-spacing:-.01em}
+a{color:inherit;text-decoration:none}
+.nav{background:rgba(9,9,11,.85);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:50}
+.nav .brand{font-family:'Fredoka';font-weight:700;color:#fff;font-size:18px;margin-right:8px}
+.nav a{padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.nav a.cta{background:var(--gold);color:#4a2f10;border-color:var(--gold)}
+.wrap{max-width:1000px;margin:28px auto;padding:0 20px}
+.crumb{color:var(--muted);font-size:12px;margin-bottom:18px}
+.crumb a:hover{color:var(--ink)}
+.top{display:grid;grid-template-columns:300px 1fr;gap:28px}
+@media(max-width:720px){.top{grid-template-columns:1fr}}
+.cardimg{width:100%;max-width:300px;border-radius:14px;border:1px solid var(--line);background:var(--surface);aspect-ratio:5/7;object-fit:contain}
+h1{font-size:28px;color:#fff;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 11px;font-size:12px}
+.chip b{color:var(--muted);font-weight:600;margin-right:4px}
+.traits{color:var(--muted);font-size:13px;margin-bottom:16px}
+.traits b{color:var(--ink)}
+.price{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px}
+.price .jp{font-size:15px;color:var(--muted);font-weight:600;margin-left:10px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:22px 0}
+.box h2{font-size:16px;color:#fff;margin-bottom:12px}
+.effect{line-height:1.7;font-size:13px}
+.buyrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.buybtn{flex:1;min-width:150px;text-align:center;color:#fff;font-weight:700;font-size:13px;padding:12px;border-radius:9px}
+.buynote{color:var(--muted);font-size:11px;margin-top:8px;font-style:italic}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
+.mini{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+.mini img{width:100%;aspect-ratio:5/7;object-fit:contain;border-radius:6px}
+.mini .nm{font-size:11px;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .u{font-size:11px;color:var(--gold);font-weight:700}
+.statrow{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:120px}
+.stat .v{font-size:24px;font-weight:800;color:#fff;font-family:'Fredoka'}
+.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line)}
+.pill{display:inline-block;background:rgba(245,158,11,.14);color:var(--gold);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+.foot{border-top:1px solid var(--line);margin-top:48px;padding:30px 20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+.foot a{color:var(--gold)}
+"""
+
+
+def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes:
+    nav = (
+        '<header class="nav"><a class="brand" href="/">🏴‍☠️ Grand Line</a>'
+        '<a href="/database">Card Database</a><a href="/market">Market Watch</a>'
+        '<a href="/meta">Meta Decks</a><a href="/news">News</a>'
+        f'<a class="cta" href="{_h(WHOP_STORE_URL)}" target="_blank" rel="noopener">★ Get the Tracker</a></header>')
+    foot = (
+        '<footer class="foot">Questions or partnerships? '
+        '<a href="mailto:contact@grandline.id">contact@grandline.id</a><br>'
+        'Grand Line is a fan-made project, not endorsed by or affiliated with Bandai Namco or Toei '
+        'Animation. Card images and names are the property of their respective owners.<br>'
+        'Some links are affiliate links — buying through them supports the site at no extra cost.</footer>')
+    doc = (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        f'<title>{_h(title)}</title><meta name="description" content="{_h(description)}">'
+        f'<link rel="canonical" href="{_h(canonical)}">'
+        '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
+        f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
+    return doc.encode("utf-8")
+
+
+def render_card_page(code: str) -> bytes | None:
+    db = get_db()
+    c = db.execute(
+        "SELECT card_id,name,set_id,set_name,rarity,card_type,card_color,card_cost,"
+        "card_power,card_text,attribute,counter,sub_types,life,image_url,market_price "
+        "FROM cards WHERE card_id=?", (code,)).fetchone()
+    if not c:
+        return None
+    c = dict(c)
+    name = _clean_card_name(c["name"])
+    # Base price (prefer the plain-base variant, else the catalog value).
+    price = None
+    try:
+        r = db.execute("SELECT market_price FROM card_variants WHERE card_id=? AND is_base=1 "
+                       "AND market_price IS NOT NULL LIMIT 1", (code,)).fetchone()
+        price = r[0] if r else c.get("market_price")
+    except Exception:
+        price = c.get("market_price")
+    # Latest Japan price, if any.
+    jp = None
+    try:
+        r = db.execute("SELECT price FROM price_history_jp WHERE card_id=? ORDER BY date DESC LIMIT 1",
+                       (code,)).fetchone()
+        jp = r[0] if r else None
+    except Exception:
+        jp = None
+    # How many meta decks use this card, and the top leaders that run it.
+    deck_n, leaders = 0, []
+    try:
+        deck_n = db.execute("SELECT COUNT(DISTINCT deck_id) FROM meta_deck_cards WHERE card_id=?",
+                            (code,)).fetchone()[0]
+        leaders = db.execute(
+            "SELECT d.leader_id AS lid, ca.name AS lname, COUNT(DISTINCT d.id) AS n "
+            "FROM meta_deck_cards mdc JOIN meta_decks d ON d.id=mdc.deck_id "
+            "LEFT JOIN cards ca ON ca.card_id=d.leader_id "
+            "WHERE mdc.card_id=? AND d.leader_id<>'' GROUP BY d.leader_id "
+            "ORDER BY n DESC LIMIT 6", (code,)).fetchall()
+    except Exception:
+        pass
+
+    chips = []
+    for lbl, key in [("Rarity", "rarity"), ("Type", "card_type"), ("Color", "card_color"),
+                     ("Cost", "card_cost"), ("Power", "card_power"), ("Attribute", "attribute"),
+                     ("Life", "life")]:
+        v = c.get(key)
+        if v not in (None, ""):
+            chips.append(f'<span class="chip"><b>{lbl}</b>{_h(v)}</span>')
+    if c.get("counter") not in (None, "") and str(c["counter"]).strip("+").isdigit() and int(str(c["counter"]).strip("+")) > 0:
+        chips.append(f'<span class="chip"><b>Counter</b>+{_h(int(str(c["counter"]).strip("+")))}</span>')
+    _rawtr = (c.get("sub_types") or "").strip()
+    traits = [t.strip() for t in _rawtr.split("/") if t.strip()] if "/" in _rawtr else ([_rawtr] if _rawtr else [])
+    traits_html = (f'<div class="traits"><b>Traits:</b> {" / ".join(_h(t) for t in traits)}</div>'
+                   if traits else "")
+    effect = _fmt_effect_html(c.get("card_text"))
+    effect_html = f'<div class="box"><h2>Effect</h2><div class="effect">{effect}</div></div>' if effect else ""
+
+    price_html = ""
+    if price:
+        jp_html = f'<span class="jp">≈ ¥{int(jp):,} (JP)</span>' if jp else ""
+        price_html = f'<div class="price">${float(price):.2f} <span style="font-size:12px;color:var(--muted);font-weight:500">market (US)</span>{jp_html}</div>'
+
+    decks_html = ""
+    if deck_n:
+        chips2 = "".join(
+            f'<a class="chip" href="/leader/{_h(l["lid"])}"><b>{l["n"]}×</b>{_h(_clean_card_name(l["lname"]) or l["lid"])}</a>'
+            for l in leaders)
+        decks_html = (f'<div class="box"><h2>Used in {deck_n} meta deck{"s" if deck_n!=1 else ""}</h2>'
+                      f'<div class="chips">{chips2}</div></div>')
+
+    img = (f'<img class="cardimg" src="{_h(c["image_url"])}" alt="{_h(name)} {_h(code)} One Piece card" loading="lazy">'
+           if c.get("image_url") else "")
+    canonical = f"{_SITE_URL}/card/{code}"
+    setline = f' · {_h(c["set_name"])}' if c.get("set_name") else ""
+    body = (
+        f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / {_h(code)}</div>'
+        f'<div class="top"><div>{img}</div><div>'
+        f'<h1>{_h(name)}</h1><div class="sub">{_h(code)}{setline}</div>'
+        f'{price_html}<div class="chips">{"".join(chips)}</div>{traits_html}'
+        f'{_buy_buttons_html(code, name)}'
+        '<div class="buynote">Opens a marketplace search for this card. Prices vary by seller.</div>'
+        f'</div></div>{effect_html}{decks_html}'
+        '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
+        '<a href="/database" style="color:var(--gold)">← Back to the full card database</a></p>')
+    title = f"{name} ({code}) — One Piece Card Price & Decks | Grand Line"
+    desc = (f"{name} ({code}) One Piece Card Game price, stats and the meta decks that use it. "
+            + (f"Market price ${float(price):.2f}. " if price else "")
+            + "Compare prices and buy on Shopee, Tokopedia, TCGplayer & eBay.")
+    return _seo_shell(title, desc, canonical, body)
+
+
+def render_leader_page(code: str) -> bytes | None:
+    db = get_db()
+    c = db.execute("SELECT card_id,name,set_name,card_color,image_url,card_text FROM cards WHERE card_id=?",
+                   (code,)).fetchone()
+    total = db.execute("SELECT COUNT(*) FROM meta_decks").fetchone()[0] or 1
+    n = db.execute("SELECT COUNT(*) FROM meta_decks WHERE leader_id=?", (code,)).fetchone()[0]
+    if not c and not n:
+        return None
+    name = _clean_card_name(c["name"]) if c else code
+    color = (c["card_color"] if c else "") or ""
+    img = c["image_url"] if c else db.execute(
+        "SELECT leader_image FROM meta_decks WHERE leader_id=? AND leader_image<>'' LIMIT 1",
+        (code,)).fetchone()
+    img = (c["image_url"] if c and c["image_url"] else (img[0] if img else ""))
+    wins = db.execute("SELECT COUNT(*) FROM meta_decks WHERE leader_id=? AND "
+                      "(players LIKE '%1st%' OR players LIKE '%Winner%' OR players LIKE '%Champion%')",
+                      (code,)).fetchone()[0]
+    share = round(n / total * 100, 1)
+
+    recent = db.execute(
+        "SELECT event_name,event_date,country,players,winner FROM meta_decks WHERE leader_id=? "
+        "ORDER BY event_date DESC LIMIT 10", (code,)).fetchall()
+    rows = "".join(
+        f'<tr><td>{_h(r["event_name"] or "-")}</td><td>{_h(r["event_date"] or "-")}</td>'
+        f'<td>{_h(r["country"] or "-")}</td><td><span class="pill">{_h(r["players"] or "-")}</span></td>'
+        f'<td>{_h(r["winner"] or "-")}</td></tr>' for r in recent)
+    recent_html = (f'<div class="box"><h2>Recent tournament decks</h2>'
+                   f'<div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>Date</th>'
+                   f'<th>Region</th><th>Place</th><th>Player</th></tr></thead><tbody>{rows}</tbody></table></div></div>'
+                   ) if recent else ""
+
+    used = db.execute(
+        "SELECT mdc.card_id AS cid, ca.name AS nm, ca.image_url AS img, "
+        "COUNT(DISTINCT mdc.deck_id) AS decks FROM meta_deck_cards mdc "
+        "JOIN meta_decks d ON d.id=mdc.deck_id LEFT JOIN cards ca ON ca.card_id=mdc.card_id "
+        "WHERE d.leader_id=? AND mdc.card_id<>? GROUP BY mdc.card_id ORDER BY decks DESC LIMIT 12",
+        (code, code)).fetchall()
+    minis = "".join(
+        f'<a class="mini" href="/card/{_h(u["cid"])}">'
+        f'<img src="{_h(u["img"])}" alt="{_h(_clean_card_name(u["nm"]) or u["cid"])}" loading="lazy">'
+        f'<div class="nm">{_h(_clean_card_name(u["nm"]) or u["cid"])}</div>'
+        f'<div class="u">{u["decks"]}/{n} decks</div></a>' for u in used if u["img"])
+    used_html = (f'<div class="box"><h2>Most-used cards in {_h(name)} decks</h2>'
+                 f'<div class="grid">{minis}</div></div>') if minis else ""
+
+    imgtag = (f'<img class="cardimg" src="{_h(img)}" alt="{_h(name)} leader One Piece deck" loading="lazy">'
+              if img else "")
+    canonical = f"{_SITE_URL}/leader/{code}"
+    body = (
+        f'<div class="crumb"><a href="/">Home</a> / <a href="/meta">Meta Decks</a> / {_h(name)}</div>'
+        f'<div class="top"><div>{imgtag}</div><div>'
+        f'<h1>{_h(name)} Deck</h1><div class="sub">{_h(code)}{(" · "+_h(color)) if color else ""} · One Piece TCG meta</div>'
+        '<div class="statrow">'
+        f'<div class="stat"><div class="v">{n}</div><div class="l">Tournament decks</div></div>'
+        f'<div class="stat"><div class="v">{wins}</div><div class="l">1st-place finishes</div></div>'
+        f'<div class="stat"><div class="v">{share}%</div><div class="l">Meta share</div></div>'
+        '</div>'
+        f'{_buy_buttons_html(code, name)}'
+        '<div class="buynote">Buy the leader card. Opens a marketplace search.</div>'
+        f'</div></div>{recent_html}{used_html}'
+        '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
+        '<a href="/meta" style="color:var(--gold)">← See the full meta</a></p>')
+    title = f"{name} Deck — One Piece TCG Meta, Decklists & Cards | Grand Line"
+    desc = (f"{name} ({code}) One Piece Card Game deck: {n} tournament decks, {wins} wins, "
+            f"{share}% meta share. Winning decklists, most-used cards and prices.")
+    return _seo_shell(title, desc, canonical, body)
+
+
 ROUTES = {
     "/api/lookup": api_lookup,
     "/api/add": api_add,
@@ -1233,6 +1509,18 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/api/data"):
             payload = cached_payload(force="refresh=1" in query)
             self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
+            return
+        elif path.startswith("/card/"):
+            code = path[len("/card/"):].strip("/").upper()
+            body = render_card_page(code) if _looks_like_card_code(code) else None
+            self._send(200, body, "text/html; charset=utf-8") if body else \
+                self._send(404, b"Card not found", "text/plain")
+            return
+        elif path.startswith("/leader/"):
+            code = path[len("/leader/"):].strip("/").upper()
+            body = render_leader_page(code) if _looks_like_card_code(code) else None
+            self._send(200, body, "text/html; charset=utf-8") if body else \
+                self._send(404, b"Leader not found", "text/plain")
             return
 
         self._send(404, b"404 Not Found", "text/plain")

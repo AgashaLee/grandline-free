@@ -152,7 +152,16 @@ window.CardDetail = (function () {
       }
       if (buf.length) parts.push(buf.join(' '));
     }
-    return parts.filter(t => t && !TRAIT_JUNK.test(t));
+    // "The" is never a standalone trait -- it's the start of one (e.g. "The
+    // Seven Warlords of the Sea", whose vocab entry lacks the leading "The").
+    // Merge a lone "The" into the trait that follows it.
+    const merged = [];
+    for (let i = 0; i < parts.length; i++) {
+      const p = (parts[i] || '').trim();
+      if (p === 'The' && i + 1 < parts.length) { merged.push('The ' + String(parts[i + 1]).trim()); i++; }
+      else merged.push(p);
+    }
+    return merged.filter(t => t && !TRAIT_JUNK.test(t));
   }
 
   function _fmtDay(d) {
