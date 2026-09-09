@@ -531,6 +531,11 @@ _ERRATA_SENTENCE_RE = re.compile(
     r"\s*This card has (?:been officially errata['’]?d|received an official errata)\.?",
     re.IGNORECASE)
 
+#: A trailing "Disclaimer: ..." (reprint/border/copyright notes the data source
+#: appends) is not part of the card's effect and isn't printed on the card, so
+#: strip everything from that word to the end.
+_DISCLAIMER_RE = re.compile(r"\s*Disclaimer\s*:.*$", re.IGNORECASE | re.DOTALL)
+
 
 #: Bare rarity tag some names carry, e.g. "Enel (SPR)" -- not a descriptive
 #: variant word, and the rarity is shown separately, so strip it from the name.
@@ -548,6 +553,7 @@ def _clean_effect_text(text: str | None) -> str | None:
     if not text:
         return text
     t = _ERRATA_SENTENCE_RE.sub("", text)
+    t = _DISCLAIMER_RE.sub("", t)
     return re.sub(r"\s{2,}", " ", t).strip()
 
 
