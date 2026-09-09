@@ -50,7 +50,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
 PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market"}
-PUBLIC_API = {"/api/database", "/api/meta", "/api/news", "/api/market", "/api/price_history"}
+PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
 #: redo it for every browser poll.
@@ -661,6 +661,114 @@ def api_meta(payload: dict) -> dict:
     import portfolio
     decks = portfolio.get_meta_decks()
     return {"decks": decks}
+
+
+#: Leader tier by share of tournament decks in the window (tuned to the sample).
+_TIER_CUTS = (("S", 10.0), ("A", 5.0), ("B", 2.0), ("C", 0.0))
+
+
+def _placement_rank(p) -> int:
+    """Numeric finish from a placement label; 1 = win, 99 = unknown."""
+    s = (p or "").strip().lower()
+    if not s:
+        return 99
+    if "winner" in s or "champion" in s or s.startswith("1st"):
+        return 1
+    if "runner" in s or s.startswith("2nd"):
+        return 2
+    if s.replace(" ", "") == "top8":
+        return 8
+    m = re.match(r"(\d+)", s)
+    return int(m.group(1)) if m else 99
+
+
+def api_meta_ranking(payload: dict) -> dict:
+    """Data-driven leader tier ranking from tournament decks (West + Japan).
+
+    Ranks leaders by their share of decks in the selected region + time window,
+    with win / top-cut counts and a trend arrow (their share in the recent half
+    of the window vs the prior half). Computed from real results, not opinion.
+    """
+    p = payload if isinstance(payload, dict) else {}
+    region = str(p.get("region", "all")).lower()          # all | jp | west
+    try:
+        window = int(p.get("window", 60))                 # days; <= 0 = all time
+    except (TypeError, ValueError):
+        window = 60
+    db = get_db()
+    rows = db.execute(
+        "SELECT leader_id, event_date, country, players FROM meta_decks "
+        "WHERE leader_id<>''").fetchall()
+    today = _dt.date.today()
+    half = (window / 2.0) if window > 0 else 30.0
+
+    agg: dict[str, dict] = {}
+    total = recent_total = prior_total = 0
+    for r in rows:
+        if region == "jp" and (r["country"] or "") != "JP":
+            continue
+        if region == "west" and (r["country"] or "") != "West":
+            continue
+        d = _event_date_key(r["event_date"])
+        if d == _dt.date.min:
+            continue
+        da = (today - d).days
+        if da < 0 or (window > 0 and da > window):
+            continue
+        a = agg.setdefault(r["leader_id"], {"decks": 0, "wins": 0, "topcut": 0,
+                                            "recent": 0, "prior": 0})
+        a["decks"] += 1
+        total += 1
+        rank = _placement_rank(r["players"])
+        if rank == 1:
+            a["wins"] += 1
+        if rank <= 8:
+            a["topcut"] += 1
+        if da <= half:
+            a["recent"] += 1
+            recent_total += 1
+        elif da <= half * 2:
+            a["prior"] += 1
+            prior_total += 1
+
+    def tier(share: float) -> str:
+        for name, cut in _TIER_CUTS:
+            if share >= cut:
+                return name
+        return "C"
+
+    def trend(a: dict) -> str:
+        if recent_total < 10 or prior_total < 10:
+            return "flat"   # not enough to compare halves reliably
+        rs = a["recent"] / recent_total * 100
+        ps = a["prior"] / prior_total * 100
+        if rs - ps >= 1.5:
+            return "up"
+        if ps - rs >= 1.5:
+            return "down"
+        return "flat"
+
+    ranking = []
+    for lid, a in agg.items():
+        if a["decks"] < 3:                # drop tiny samples (noise)
+            continue
+        c = db.execute("SELECT name, image_url, card_color FROM cards WHERE card_id=?",
+                       (lid,)).fetchone()
+        share = round(a["decks"] / total * 100, 1) if total else 0.0
+        ranking.append({
+            "leader_id": lid,
+            "name": _clean_card_name(c["name"]) if c and c["name"] else lid,
+            "color": (c["card_color"] if c and c["card_color"] else ""),
+            "image_url": (c["image_url"] if c and c["image_url"] else ""),
+            "decks": a["decks"], "wins": a["wins"], "topcut": a["topcut"],
+            "share": share, "tier": tier(share), "trend": trend(a),
+        })
+    ranking.sort(key=lambda x: (-x["decks"], -x["share"]))
+
+    return {
+        "ranking": ranking, "total": total, "window": window,
+        "region": region, "leaders": len(ranking),
+    }
 
 
 #: Cards below this baseline price are excluded from the movers list: a $0.03 ->
@@ -1477,6 +1585,7 @@ ROUTES = {
     "/api/deck_cost": api_deck_cost,
     "/api/database": api_database,
     "/api/meta": api_meta,
+    "/api/meta_ranking": api_meta_ranking,
     "/api/market": api_market,
     "/api/price_history": api_price_history,
     "/api/news": api_news,
