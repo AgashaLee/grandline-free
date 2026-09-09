@@ -49,7 +49,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
-PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market"}
+PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy"}
 PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
@@ -1287,6 +1287,14 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)}
 .pill{display:inline-block;background:rgba(245,158,11,.14);color:var(--gold);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
 .foot{border-top:1px solid var(--line);margin-top:48px;padding:30px 20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
 .foot a{color:var(--gold)}
+.legal{max-width:820px}
+.legal h1{margin-bottom:6px}
+.legal .updated{color:var(--muted);font-size:13px;margin-bottom:20px}
+.legal h2{font-size:17px;color:#fff;margin:26px 0 8px}
+.legal p{line-height:1.75;font-size:14px;color:var(--ink);margin:8px 0}
+.legal ul{margin:8px 0 8px 22px;line-height:1.75;font-size:14px}
+.legal li{margin:5px 0}
+.legal a{color:var(--sea)}
 """
 
 
@@ -1298,7 +1306,8 @@ def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes
         f'<a class="cta" href="{_h(WHOP_STORE_URL)}" target="_blank" rel="noopener">★ Get the Tracker</a></header>')
     foot = (
         '<footer class="foot">Questions or partnerships? '
-        '<a href="mailto:contact@grandline.id">contact@grandline.id</a><br>'
+        '<a href="mailto:contact@grandline.id">contact@grandline.id</a> · '
+        '<a href="/privacy">Privacy Policy</a><br>'
         'Grand Line is a fan-made project, not endorsed by or affiliated with Bandai Namco or Toei '
         'Animation. Card images and names are the property of their respective owners.<br>'
         'Some links are affiliate links — buying through them supports the site at no extra cost.</footer>')
@@ -1310,6 +1319,91 @@ def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes
         '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
         f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
     return doc.encode("utf-8")
+
+
+def render_privacy() -> bytes:
+    body = (
+        '<div class="legal">'
+        '<h1>Privacy Policy</h1>'
+        '<div class="updated">Last updated: 9 September 2026</div>'
+
+        '<p>Grand Line ("we", "us", "the site") operates the website at grandline.id, a '
+        'free public database of One Piece Card Game cards, prices, meta decks and news. '
+        'This policy explains what information the site collects and how it is used. We aim '
+        'to collect as little personal data as possible.</p>'
+
+        '<h2>Information we collect</h2>'
+        '<p>The public site does <b>not</b> require an account and does not ask you for '
+        'personal information such as your name, email or address. We collect only:</p>'
+        '<ul>'
+        '<li><b>Anonymous usage statistics</b> — we use Cloudflare Web Analytics to understand '
+        'general traffic (such as page views and the country a visit came from). It is a '
+        'privacy-first tool that does <b>not</b> use cookies and does not track you across other '
+        'websites or build a profile of you.</li>'
+        '<li><b>Basic technical logs</b> — like most websites, our hosting provider automatically '
+        'records standard request information (such as IP address and browser type) for security '
+        'and reliability. These logs are not used to identify individual visitors.</li>'
+        '</ul>'
+
+        '<h2>Cookies</h2>'
+        '<p>The site itself uses only minimal local storage needed to remember display '
+        'preferences (for example, a chosen tab or region). We do not use our own tracking '
+        'cookies. Third-party services we use (see below) may set their own cookies as described '
+        'in their policies.</p>'
+
+        '<h2>Advertising</h2>'
+        '<p>We may in future display ads from third-party networks such as Google AdSense. When '
+        'ads are enabled, Google and its partners may use cookies or similar technologies to show '
+        'ads based on your visits to this and other sites. You can learn about and control '
+        'personalised advertising through Google Ads Settings '
+        '(<a href="https://adssettings.google.com" target="_blank" rel="noopener nofollow">adssettings.google.com</a>) '
+        'and <a href="https://www.aboutads.info" target="_blank" rel="noopener nofollow">aboutads.info</a>. '
+        'Ads are shown only on the free public pages, never inside the paid tracker.</p>'
+
+        '<h2>Affiliate links</h2>'
+        '<p>Some links on the site (for example the "Buy" buttons that open marketplaces such as '
+        'Shopee, Tokopedia, TCGplayer or eBay) are affiliate links. If you buy through them we may '
+        'earn a small commission at <b>no extra cost to you</b>. This helps keep the site free. '
+        'The marketplace you visit handles your purchase and data under its own privacy policy.</p>'
+
+        '<h2>Third-party services</h2>'
+        '<p>We rely on trusted third parties to run the site, each with its own privacy policy:</p>'
+        '<ul>'
+        '<li><b>Cloudflare</b> — content delivery, security and privacy-first analytics.</li>'
+        '<li><b>Railway</b> — application hosting.</li>'
+        '<li><b>Google</b> — search indexing (Search Console) and, in future, advertising (AdSense).</li>'
+        '<li><b>Marketplaces</b> (Shopee, Tokopedia, TCGplayer, eBay) — reached via outbound links.</li>'
+        '</ul>'
+
+        '<h2>The paid tracker</h2>'
+        '<p>The optional paid collection tracker is a separate product provided through Whop. When '
+        'you subscribe, account and payment handling is managed by Whop under its own terms and '
+        'privacy policy; we do not receive or store your payment details.</p>'
+
+        "<h2>Children's privacy</h2>"
+        '<p>The site is intended for a general audience and is not directed at children under 13. '
+        'We do not knowingly collect personal information from children.</p>'
+
+        '<h2>External links</h2>'
+        '<p>Our pages link to other websites (marketplaces, news sources, video channels). We are '
+        'not responsible for the content or privacy practices of those sites; please review their '
+        'policies.</p>'
+
+        '<h2>Changes to this policy</h2>'
+        '<p>We may update this policy from time to time. Changes take effect when posted on this '
+        'page, and we will update the "Last updated" date above.</p>'
+
+        '<h2>Contact</h2>'
+        '<p>Questions about this policy? Email us at '
+        '<a href="mailto:contact@grandline.id">contact@grandline.id</a>.</p>'
+
+        '<p style="margin-top:22px"><a href="/" style="color:var(--gold)">← Back to Grand Line</a></p>'
+        '</div>')
+    return _seo_shell(
+        "Privacy Policy | Grand Line",
+        "How Grand Line (grandline.id) handles data: privacy-first analytics, affiliate "
+        "links, cookies and third-party services.",
+        f"{_SITE_URL}/privacy", body)
 
 
 def _printings(db, code: str, c: dict) -> list[dict]:
@@ -1568,7 +1662,7 @@ def render_sitemap() -> bytes:
     """XML sitemap listing the main pages + every card and leader page, so
     Google can discover and index them all (they aren't in the nav)."""
     db = get_db()
-    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news")]
+    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news", "/privacy")]
     try:
         urls += [f"{_SITE_URL}/card/{r[0]}" for r in
                  db.execute("SELECT card_id FROM cards ORDER BY card_id")]
@@ -1772,6 +1866,9 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/api/data"):
             payload = cached_payload(force="refresh=1" in query)
             self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
+            return
+        elif path == "/privacy":
+            self._send(200, render_privacy(), "text/html; charset=utf-8")
             return
         elif path == "/sitemap.xml":
             self._send(200, render_sitemap(), "application/xml; charset=utf-8")
