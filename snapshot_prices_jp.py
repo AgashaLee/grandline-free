@@ -77,9 +77,12 @@ def _set_codes(db) -> list[str]:
 def _base_price_for_page(html: str) -> dict[str, float]:
     """Return {card_id: base yen price} for a set-search page.
 
-    'Base' = the printing whose name has no （variant） suffix; among those (or,
-    if none, among all printings) we take the lowest price -- the accessible
-    'from' price for that card. Yen ints; commas stripped.
+    'Base' = the printing whose name has no （variant） suffix; among those we take
+    the lowest price -- the accessible 'from' price for that card. Yen ints;
+    commas stripped. If a card has ONLY variant (（パラレル） etc.) listings -- common
+    for brand-new sets where the cheap regular isn't stocked yet -- we record NO
+    price for it, rather than passing off a pricey parallel as the 'regular' price
+    (which made e.g. a ¥35 regular show as its ¥2,480 parallel).
     """
     per_card: dict[str, list[tuple[bool, float]]] = {}
     for m in _CARD_BLOCK.finditer(html):
@@ -96,7 +99,8 @@ def _base_price_for_page(html: str) -> dict[str, float]:
     out: dict[str, float] = {}
     for code, entries in per_card.items():
         bases = [p for v, p in entries if not v]
-        out[code] = min(bases) if bases else min(p for _, p in entries)
+        if bases:                       # regular printing only; skip parallel-only
+            out[code] = min(bases)
     return out
 
 

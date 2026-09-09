@@ -1409,7 +1409,18 @@ def render_card_page(code: str) -> bytes | None:
                   f'<small id="usLabel">US market · {_h(featured["label"])}</small></div>')
         # Japan is a separate market (one Yuyu-tei price per card), NOT a
         # conversion of the US price — so label it plainly, no "≈".
-        jp_line = f'<div class="jpline">Japan market · regular <b>¥{int(jp):,}</b></div>' if jp else ""
+        jp_line = ""
+        if jp:
+            base_us = featured["price"] if featured["price"] is not None else price
+            # A JP "regular" price wildly above the US base is almost always a
+            # premium printing (parallel/alt) the feed mislabeled as regular
+            # (e.g. a ¥35 card showing its ¥2,480 parallel). The yen/USD ratio for
+            # a matching printing sits near the ~150 FX rate; >1200 (~8x) means
+            # they're different printings, not a market gap — so hide it.
+            if base_us and base_us > 0 and jp / base_us > 1200:
+                jp_line = ""
+            else:
+                jp_line = f'<div class="jpline">Japan market · regular <b>¥{int(jp):,}</b></div>'
         price_html = f'{us}{jp_line}'
 
     decks_html = ""
