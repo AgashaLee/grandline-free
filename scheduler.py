@@ -150,6 +150,10 @@ def _loop():
                 _run_snapshot()
                 if _dt.date.today().weekday() == 0:  # Monday
                     _run_new_cards()      # add any newly-released set
+                # Meta refreshes every other day (tournaments trickle in through
+                # the week, and both sources are cheap API sweeps) -- fresher meta
+                # than a weekly pull without hammering them.
+                if _dt.date.today().toordinal() % 2 == 0:
                     _run_meta_refresh()
         except Exception:
             print("[scheduler] loop error:\n" + traceback.format_exc())
