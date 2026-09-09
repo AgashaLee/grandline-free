@@ -1238,7 +1238,8 @@ _SEO_CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#09090b;--surface:#18181b;--line:#27272a;--ink:#f4f4f5;--muted:#a1a1aa;--gold:#f59e0b;--sea:#0ea5e9;--up:#10b981;--down:#ef4444}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;padding-bottom:48px}
+html{overflow-x:hidden}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;padding-bottom:48px;overflow-x:hidden;max-width:100%}
 h1,h2,h3{font-family:'Fredoka',sans-serif;letter-spacing:-.01em}
 a{color:inherit;text-decoration:none}
 .nav{background:rgba(9,9,11,.85);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:50}
@@ -1617,7 +1618,7 @@ def render_leader_page(code: str) -> bytes | None:
         f'<td>{_h(r["country"] or "-")}</td><td><span class="pill">{_h(r["players"] or "-")}</span></td>'
         f'<td>{_h(r["winner"] or "-")}</td></tr>' for r in recent)
     recent_html = (f'<div class="box"><h2>Recent tournament decks</h2>'
-                   f'<div style="overflow-x:auto"><table><thead><tr><th>Event</th><th>Date</th>'
+                   f'<div style="overflow-x:auto"><table><thead><tr><th>Deck</th><th>Date</th>'
                    f'<th>Region</th><th>Place</th><th>Player</th></tr></thead><tbody>{rows}</tbody></table></div></div>'
                    ) if recent else ""
 
