@@ -1,0 +1,9 @@
+{
+  "_comment": "Targeted corrections for cards the OPTCGAPI source scrambled (power<->traits<->counter<->attribute swapped, or a wrong image). Values read off the actual card faces. seed_card_fixes.py overwrites ONLY these fields on ONLY these card_ids.",
+  "OP10-103": {"card_power": "0", "sub_types": "Firetank Pirates/Supernovas", "counter": "2000", "attribute": "Ranged"},
+  "OP10-109": {"card_power": "5000", "sub_types": "Hawkins Pirates/Supernovas", "counter": "1000", "attribute": "Slash", "image_url": "https://optcgapi.com/media/static/Card_Images/OP10-109.jpg"},
+  "OP17-099": {"card_power": "5000", "sub_types": "The Four Emperors/Big Mom Pirates", "counter": "", "attribute": "Special", "life": "5"},
+  "EB03-050": {"card_power": "0", "sub_types": "Sky Island", "counter": "1000", "attribute": "Wisdom"},
+  "EB03-009": {"card_power": "0", "sub_types": "Windmill Village", "counter": "2000", "attribute": "Wisdom"},
+  "OP12-028": {"card_power": "0", "sub_types": "Land of Wano/Kouzuki Clan", "counter": "1000", "attribute": "Wisdom"}
+}

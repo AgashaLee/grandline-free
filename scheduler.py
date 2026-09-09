@@ -125,11 +125,24 @@ def _run_promo_details_backfill():
         print("[scheduler] promo details backfill failed:\n" + traceback.format_exc())
 
 
+def _run_card_fixes():
+    """Apply targeted corrections for source-scrambled cards (fast, no network,
+    idempotent). Runs once at startup so the live volume gets them."""
+    try:
+        import seed_card_fixes
+        n = seed_card_fixes.seed()
+        if n:
+            print(f"[scheduler] card fixes applied to {n} cards")
+    except Exception:
+        print("[scheduler] card fixes failed:\n" + traceback.format_exc())
+
+
 def _loop():
     # Small startup delay so the web server is serving before we do network I/O.
     time.sleep(20)
     _run_jp_leader_backfill()
     _run_promo_details_backfill()
+    _run_card_fixes()
     while True:
         try:
             if not _snapshot_done_today():
