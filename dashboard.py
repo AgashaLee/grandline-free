@@ -541,11 +541,20 @@ _DISCLAIMER_RE = re.compile(r"\s*Disclaimer\s*:.*$", re.IGNORECASE | re.DOTALL)
 #: variant word, and the rarity is shown separately, so strip it from the name.
 _NAME_RARITY_RE = re.compile(r"\s*\(\s*SPR\s*\)", re.IGNORECASE)
 
+#: Printing/variant descriptor a card name carries, e.g. "Belo Betty (Alternate
+#: Art)" or "Crocodile (Parallel)". The printing is shown by its own tag/badge,
+#: so strip the parenthetical from the display name to leave the base name.
+_NAME_VARIANT_RE = re.compile(
+    r"\s*\(\s*(?:Alternate Art|Super Alternate Art|Super Leader Alternate Art"
+    r"|Full Art|Manga|Parallel|Sp|Box Topper|Wanted Poster|Jolly Roger Foil"
+    r"|Textured Foil)\s*\)", re.IGNORECASE)
+
 
 def _clean_card_name(name: str | None) -> str:
     if not name:
         return name or ""
-    name = _NAME_RARITY_RE.sub("", _NAME_SUFFIX_RE.sub("", name))
+    name = _NAME_VARIANT_RE.sub(
+        "", _NAME_RARITY_RE.sub("", _NAME_SUFFIX_RE.sub("", name)))
     return re.sub(r"\s{2,}", " ", name).strip()
 
 
@@ -714,7 +723,8 @@ def _market_jp(db, window: int) -> dict:
         if new <= 0 or max(old, new) / min(old, new) > _MOVER_MAX_RATIO:
             continue
         movers.append({
-            "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
+            "card_id": r["card_id"], "name": _clean_card_name(r["name"]),
+            "set_name": r["set_name"],
             "rarity": r["rarity"], "image_url": r["image_url"],
             "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
         })
@@ -830,7 +840,8 @@ def api_market(payload: dict) -> dict:
         if new <= 0 or max(old, new) / min(old, new) > _MOVER_MAX_RATIO:
             continue
         movers.append({
-            "card_id": r["card_id"], "name": r["name"], "set_name": r["set_name"],
+            "card_id": r["card_id"], "name": _clean_card_name(r["name"]),
+            "set_name": r["set_name"],
             "rarity": r["rarity"], "image_url": r["image_url"],
             "variant_label": r["variant_label"] or "", "is_base": r["is_base"],
             "pct": pct, "price": round(new, 2), "diff": round(new - old, 2),
