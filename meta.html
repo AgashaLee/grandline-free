@@ -391,8 +391,6 @@
             }).join('');
             html += '</div></div>';
           }
-          const scope = (MRANK_WINDOW ? `last ${MRANK_WINDOW} days` : 'all time') + (MRANK_REGION !== 'all' ? ` &middot; ${MRANK_REGION === 'jp' ? 'Japan' : 'West'}` : '');
-          html += `<div class="mrank-foot">Based on ${d.total} tournament decks (${scope}). Tiers by share of decks; updated every 2 days.</div>`;
           body.innerHTML = html;
         }).catch(() => { body.innerHTML = '<div class="mrank-empty">Couldn\'t load the ranking.</div>'; });
     }
