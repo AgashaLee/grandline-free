@@ -1299,7 +1299,15 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)}
 """
 
 
-def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes:
+def _jsonld(obj: dict) -> str:
+    """Wrap a dict as a JSON-LD <script> block for structured data."""
+    return ('<script type="application/ld+json">'
+            + json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+            + '</script>')
+
+
+def _seo_shell(title: str, description: str, canonical: str, body: str,
+               schema: str = "") -> bytes:
     nav = (
         '<header class="nav"><a class="brand" href="/">🏴‍☠️ Grand Line</a>'
         '<a href="/database">Card Database</a><a href="/market">Market Watch</a>'
@@ -1318,6 +1326,7 @@ def _seo_shell(title: str, description: str, canonical: str, body: str) -> bytes
         f'<title>{_h(title)}</title><meta name="description" content="{_h(description)}">'
         f'<link rel="canonical" href="{_h(canonical)}">'
         '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
+        f'{schema}'
         f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
     return doc.encode("utf-8")
 
@@ -1567,7 +1576,35 @@ def render_card_page(code: str) -> bytes | None:
     desc = (f"{name} ({code}) One Piece Card Game price, stats and the meta decks that use it. "
             + (f"Market price ${float(price):.2f}. " if price else "")
             + "Compare prices and buy on Shopee, Tokopedia, TCGplayer & eBay.")
-    return _seo_shell(title, desc, canonical, body)
+    # Structured data: a Product (so Google understands the page + can show the
+    # price in results) and a breadcrumb trail.
+    product = {
+        "@context": "https://schema.org", "@type": "Product",
+        "name": f"{name} ({code})", "sku": code,
+        "category": "One Piece Card Game",
+        "brand": {"@type": "Brand", "name": "One Piece Card Game"},
+        "description": desc,
+    }
+    if main_src:
+        product["image"] = main_src
+    if featured["price"] is not None:
+        product["offers"] = {
+            "@type": "Offer",
+            "price": f'{float(featured["price"]):.2f}',
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "url": canonical,
+        }
+    crumbs = {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{_SITE_URL}/"},
+            {"@type": "ListItem", "position": 2, "name": "Card Database", "item": f"{_SITE_URL}/database"},
+            {"@type": "ListItem", "position": 3, "name": f"{name} ({code})", "item": canonical},
+        ],
+    }
+    schema = _jsonld(product) + _jsonld(crumbs)
+    return _seo_shell(title, desc, canonical, body, schema)
 
 
 _ORD_RE = re.compile(r"(\d{1,2})(st|nd|rd|th)", re.IGNORECASE)
@@ -1656,7 +1693,24 @@ def render_leader_page(code: str) -> bytes | None:
     title = f"{name} Deck — One Piece TCG Meta, Decklists & Cards | Grand Line"
     desc = (f"{name} ({code}) One Piece Card Game deck: {n} tournament decks, {wins} wins, "
             f"{share}% meta share. Winning decklists, most-used cards and prices.")
-    return _seo_shell(title, desc, canonical, body)
+    product = {
+        "@context": "https://schema.org", "@type": "Product",
+        "name": f"{name} (Leader)", "sku": code,
+        "category": "One Piece Card Game",
+        "brand": {"@type": "Brand", "name": "One Piece Card Game"},
+        "description": desc,
+    }
+    if img:
+        product["image"] = img
+    crumbs = {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{_SITE_URL}/"},
+            {"@type": "ListItem", "position": 2, "name": "Meta Decks", "item": f"{_SITE_URL}/meta"},
+            {"@type": "ListItem", "position": 3, "name": f"{name} Deck", "item": canonical},
+        ],
+    }
+    return _seo_shell(title, desc, canonical, body, _jsonld(product) + _jsonld(crumbs))
 
 
 def render_sitemap() -> bytes:
