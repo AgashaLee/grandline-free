@@ -49,7 +49,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
-PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy"}
+PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy", "/terms"}
 PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
@@ -1286,8 +1286,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
 td{padding:9px 10px;border-bottom:1px solid var(--line)}
 .pill{display:inline-block;background:rgba(245,158,11,.14);color:var(--gold);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
-.foot{border-top:1px solid var(--line);margin-top:48px;padding:30px 20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
-.foot a{color:var(--gold)}
+.foot{border-top:1px solid var(--line);margin-top:48px;padding:26px 20px;color:var(--muted);font-size:12px;line-height:1.6}
+.foot-row{max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
+.foot-disc{flex:1;min-width:240px}
+.foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
+.foot-links a{color:var(--gold);font-size:13px;font-weight:600;white-space:nowrap}
+@media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center}.foot-links{justify-content:center}}
 .legal{max-width:820px}
 .legal h1{margin-bottom:6px}
 .legal .updated{color:var(--muted);font-size:13px;margin-bottom:20px}
@@ -1314,12 +1318,15 @@ def _seo_shell(title: str, description: str, canonical: str, body: str,
         '<a href="/meta">Meta Decks</a><a href="/news">News</a>'
         f'<a class="cta" href="{_h(WHOP_STORE_URL)}" target="_blank" rel="noopener">★ Get the Tracker</a></header>')
     foot = (
-        '<footer class="foot">Questions or partnerships? '
-        '<a href="mailto:contact@grandline.id">contact@grandline.id</a> · '
-        '<a href="/privacy">Privacy Policy</a><br>'
-        'Grand Line is a fan-made project, not endorsed by or affiliated with Bandai Namco or Toei '
-        'Animation. Card images and names are the property of their respective owners.<br>'
-        'Some links are affiliate links — buying through them supports the site at no extra cost.</footer>')
+        '<footer class="foot"><div class="foot-row">'
+        '<div class="foot-disc">Grand Line is a fan-made project, not endorsed by or affiliated with '
+        'Bandai Namco or Toei Animation. Card images and names are the property of their respective '
+        'owners. Some links are affiliate links — buying through them supports the site at no extra cost.</div>'
+        '<nav class="foot-links">'
+        '<a href="mailto:contact@grandline.id">Contact</a>'
+        '<a href="/privacy">Privacy Policy</a>'
+        '<a href="/terms">Terms of Service</a></nav>'
+        '</div></footer>')
     doc = (
         '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
@@ -1414,6 +1421,75 @@ def render_privacy() -> bytes:
         "How Grand Line (grandline.id) handles data: privacy-first analytics, affiliate "
         "links, cookies and third-party services.",
         f"{_SITE_URL}/privacy", body)
+
+
+def render_terms() -> bytes:
+    body = (
+        '<div class="legal">'
+        '<h1>Terms of Service</h1>'
+        '<div class="updated">Last updated: 10 September 2026</div>'
+
+        '<p>Welcome to Grand Line (grandline.id). By using this website you agree to these '
+        'Terms of Service. If you do not agree, please do not use the site.</p>'
+
+        '<h2>What Grand Line is</h2>'
+        '<p>Grand Line is a free, fan-made information site about the One Piece Card Game — a card '
+        'database, price reference, meta decklists and news. It is provided for general '
+        'informational and entertainment purposes only.</p>'
+
+        '<h2>Not affiliated with Bandai</h2>'
+        '<p>Grand Line is an independent fan project. It is not endorsed by, affiliated with, or '
+        'sponsored by Bandai Namco, Toei Animation, or the creators of One Piece. "One Piece", the '
+        'One Piece Card Game, and all related card images, names and logos are the property of their '
+        'respective owners and are used here for identification and informational purposes only.</p>'
+
+        '<h2>Prices and data are informational only</h2>'
+        '<p>Card prices, market values, meta statistics and other data are gathered from third-party '
+        'sources and provided <b>"as is"</b>, without any warranty of accuracy, completeness or '
+        'timeliness. Prices change constantly and vary by seller, condition and region. <b>Always '
+        'confirm the actual price and details with the seller before buying.</b> We are not '
+        'responsible for any decision you make based on information on this site.</p>'
+
+        '<h2>Buying through our links</h2>'
+        '<p>The "Buy" buttons open a search on third-party marketplaces (such as Shopee, Tokopedia, '
+        'TCGplayer or eBay). Grand Line does not sell cards and is not a party to any purchase you '
+        'make. Each marketplace has its own terms, pricing and policies. Some links are affiliate '
+        'links, meaning we may earn a small commission at no extra cost to you.</p>'
+
+        '<h2>The paid tracker</h2>'
+        '<p>The optional collection tracker is a separate paid product provided through Whop and is '
+        'governed by Whop\'s terms in addition to these. Subscription, billing and cancellation are '
+        'handled by Whop.</p>'
+
+        '<h2>Acceptable use</h2>'
+        '<p>You agree not to misuse the site — including attempting to disrupt or overload it, '
+        'scraping or copying its content at scale, or using it for any unlawful purpose.</p>'
+
+        '<h2>Intellectual property</h2>'
+        '<p>Card artwork and names belong to their respective owners. The original parts of this '
+        'site (its design, text, and compiled data presentation) belong to Grand Line; please don\'t '
+        'republish them wholesale without permission.</p>'
+
+        '<h2>No warranty &amp; limitation of liability</h2>'
+        '<p>The site is provided "as is" and "as available", without warranties of any kind. To the '
+        'fullest extent permitted by law, Grand Line is not liable for any loss or damage arising '
+        'from your use of the site or reliance on its information.</p>'
+
+        '<h2>Changes</h2>'
+        '<p>We may update these terms from time to time. Changes take effect when posted on this '
+        'page, and we will update the "Last updated" date above. Continued use of the site means you '
+        'accept the updated terms.</p>'
+
+        '<h2>Contact</h2>'
+        '<p>Questions about these terms? Email <a href="mailto:contact@grandline.id">contact@grandline.id</a>.</p>'
+
+        '<p style="margin-top:22px"><a href="/" style="color:var(--gold)">← Back to Grand Line</a></p>'
+        '</div>')
+    return _seo_shell(
+        "Terms of Service | Grand Line",
+        "The terms for using Grand Line (grandline.id): a free fan-made One Piece Card Game "
+        "database and price reference. Data is informational; not affiliated with Bandai.",
+        f"{_SITE_URL}/terms", body)
 
 
 def _printings(db, code: str, c: dict) -> list[dict]:
@@ -1717,7 +1793,7 @@ def render_sitemap() -> bytes:
     """XML sitemap listing the main pages + every card and leader page, so
     Google can discover and index them all (they aren't in the nav)."""
     db = get_db()
-    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news", "/privacy")]
+    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news", "/privacy", "/terms")]
     try:
         urls += [f"{_SITE_URL}/card/{r[0]}" for r in
                  db.execute("SELECT card_id FROM cards ORDER BY card_id")]
@@ -1924,6 +2000,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         elif path == "/privacy":
             self._send(200, render_privacy(), "text/html; charset=utf-8")
+            return
+        elif path == "/terms":
+            self._send(200, render_terms(), "text/html; charset=utf-8")
             return
         elif path == "/sitemap.xml":
             self._send(200, render_sitemap(), "application/xml; charset=utf-8")

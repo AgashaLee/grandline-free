@@ -168,6 +168,12 @@
       text-align: center; color: var(--muted); font-size: 12px; line-height: 1.6;
     }
     footer a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+  
+    .foot-row{max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
+    .foot-disc{flex:1;min-width:240px;color:var(--muted);font-size:12px;line-height:1.6}
+    .foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
+    .foot-links a{color:#f59e0b;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+    @media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center}.foot-links{justify-content:center}}
   </style>
 </head>
 <body>
@@ -279,13 +285,7 @@
     </div>
   </div>
 
-  <footer>
-    Questions or partnerships? <a href="mailto:contact@grandline.id" style="color:#f59e0b;text-decoration:underline;text-underline-offset:2px">contact@grandline.id</a> &middot; <a href="/privacy" style="color:#f59e0b;text-decoration:underline;text-underline-offset:2px">Privacy Policy</a><br>
-    Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
-    Bandai Namco or Toei Animation. One Piece and all related card images and names are the
-    property of their respective owners.<br>
-    Some links are affiliate links - buying through them supports the site at no extra cost to you.
-  </footer>
+  <footer><div class="foot-row"><div class="foot-disc">Grand Line is a fan-made project, not endorsed by, affiliated with, or sponsored by Bandai Namco or Toei Animation. One Piece and all related card images and names are the property of their respective owners. Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.</div><nav class="foot-links"><a href="mailto:contact@grandline.id">Contact</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div></footer>
 
   <script src="/carddetail.js"></script>
   <script>

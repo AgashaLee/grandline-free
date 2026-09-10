@@ -102,7 +102,13 @@
           padding:14px 28px;border-radius:var(--radius-md);text-decoration:none;transition:all 0.2s;}
   .gl-cta:hover{background:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
   .gl-legal{color:var(--muted);font-size:12px;line-height:1.6;margin-top:24px;max-width:800px;margin-left:auto;margin-right:auto;}
-</style>
+
+    .foot-row{max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
+    .foot-disc{flex:1;min-width:240px;color:var(--muted);font-size:12px;line-height:1.6}
+    .foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
+    .foot-links a{color:#f59e0b;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+    @media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center}.foot-links{justify-content:center}}
+  </style>
 </head>
 <body>
   <div class="header">
@@ -335,13 +341,7 @@
     <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
       ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
     </a>
-    <div class="gl-legal">
-      Questions or partnerships? <a href="mailto:contact@grandline.id" style="color:#f59e0b;text-decoration:underline;text-underline-offset:2px">contact@grandline.id</a> &middot; <a href="/privacy" style="color:#f59e0b;text-decoration:underline;text-underline-offset:2px">Privacy Policy</a><br>
-      Grand Line is a fan-made project. It is not endorsed by, affiliated with, or sponsored by
-      Bandai Namco or Toei Animation. One Piece and all related card images and names are the
-      property of their respective owners.<br>
-      Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.
-    </div>
+    <div class="foot-row"><div class="foot-disc">Grand Line is a fan-made project, not endorsed by, affiliated with, or sponsored by Bandai Namco or Toei Animation. One Piece and all related card images and names are the property of their respective owners. Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.</div><nav class="foot-links"><a href="mailto:contact@grandline.id">Contact</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div>
   </footer>
 </body>
 </html>
