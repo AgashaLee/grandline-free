@@ -1287,11 +1287,11 @@ th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;pa
 td{padding:9px 10px;border-bottom:1px solid var(--line)}
 .pill{display:inline-block;background:rgba(245,158,11,.14);color:var(--gold);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
 .foot{border-top:1px solid var(--line);margin-top:48px;padding:26px 20px;color:var(--muted);font-size:12px;line-height:1.6}
-.foot-row{max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
+.foot-row{max-width:1000px;margin:24px auto 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
 .foot-disc{flex:1;min-width:240px}
 .foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
 .foot-links a{color:var(--gold);font-size:13px;font-weight:600;white-space:nowrap}
-@media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center}.foot-links{justify-content:center}}
+@media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center;gap:28px}.foot-disc{line-height:1.8}.foot-links{justify-content:center;gap:14px 22px}}
 .legal{max-width:820px}
 .legal h1{margin-bottom:6px}
 .legal .updated{color:var(--muted);font-size:13px;margin-bottom:20px}
