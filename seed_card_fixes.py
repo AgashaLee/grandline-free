@@ -59,6 +59,17 @@ def seed() -> int:
             except Exception:
                 pass
         fixed += 1
+
+    # Remove duplicate variant rows that leaked into the catalog with an
+    # underscore id (e.g. P-041_R1 = a reprint of P-041, P-059_P1 = a parallel).
+    # Their base card exists and works; these only create duplicate grid tiles
+    # and dead /card/<id> pages ("Card not found"). No real OPTCG code has "_".
+    try:
+        db.execute("DELETE FROM cards WHERE instr(card_id,'_')>0")
+        db.execute("DELETE FROM card_variants WHERE instr(card_id,'_')>0")
+    except Exception:
+        pass
+
     db.commit()
     return fixed
 
