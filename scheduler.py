@@ -125,6 +125,16 @@ def _run_promo_details_backfill():
         print("[scheduler] promo details backfill failed:\n" + traceback.format_exc())
 
 
+def _run_indexnow_ping():
+    """Tell Bing/Yandex the daily-refreshed hub pages changed. Best-effort;
+    the module itself swallows errors and no-ops off the hosted deploy."""
+    try:
+        import indexnow
+        indexnow.ping_hub_pages()
+    except Exception:
+        print("[scheduler] indexnow ping failed:\n" + traceback.format_exc())
+
+
 def _run_card_fixes():
     """Apply targeted corrections for source-scrambled cards (fast, no network,
     idempotent). Runs once at startup so the live volume gets them."""
@@ -155,6 +165,8 @@ def _loop():
                 # than a weekly pull without hammering them.
                 if _dt.date.today().toordinal() % 2 == 0:
                     _run_meta_refresh()
+                # Prices/meta just refreshed -> nudge Bing/Yandex to re-crawl.
+                _run_indexnow_ping()
         except Exception:
             print("[scheduler] loop error:\n" + traceback.format_exc())
         # Japan (Yuyu-tei ¥) snapshot has its OWN gate: if today's scrape failed

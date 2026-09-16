@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import config
 import fx
 import auth
+import indexnow
 from cache import JsonCache
 from cli import _parse_idr, _looks_like_card_code
 from portfolio import (
@@ -1191,6 +1192,11 @@ def api_news(payload: dict | None = None) -> dict:
 # ===========================================================================
 _SITE_URL = os.environ.get("SITE_URL", "https://grandline.id").rstrip("/")
 
+#: Default share image for pages without their own artwork (home, market, meta,
+#: news, database, privacy, terms). Card/leader pages pass the card art instead.
+_OG_BANNER = f"{_SITE_URL}/assets/og-banner.jpg"
+_SITE_NAME = "Grand Line"
+
 
 def _h(s) -> str:
     return (str("" if s is None else s).replace("&", "&amp;").replace("<", "&lt;")
@@ -1310,8 +1316,26 @@ def _jsonld(obj: dict) -> str:
             + '</script>')
 
 
+def _og_tags(title: str, description: str, url: str, image: str,
+             og_type: str = "website") -> str:
+    """Open Graph + Twitter Card meta so links unfurl with a title, blurb and
+    image on Facebook, X/Twitter, Discord, WhatsApp, etc."""
+    img = image or _OG_BANNER
+    return (
+        f'<meta property="og:site_name" content="{_h(_SITE_NAME)}">'
+        f'<meta property="og:type" content="{_h(og_type)}">'
+        f'<meta property="og:title" content="{_h(title)}">'
+        f'<meta property="og:description" content="{_h(description)}">'
+        f'<meta property="og:url" content="{_h(url)}">'
+        f'<meta property="og:image" content="{_h(img)}">'
+        '<meta name="twitter:card" content="summary_large_image">'
+        f'<meta name="twitter:title" content="{_h(title)}">'
+        f'<meta name="twitter:description" content="{_h(description)}">'
+        f'<meta name="twitter:image" content="{_h(img)}">')
+
+
 def _seo_shell(title: str, description: str, canonical: str, body: str,
-               schema: str = "") -> bytes:
+               schema: str = "", image: str = "", og_type: str = "website") -> bytes:
     nav = (
         '<header class="nav"><a class="brand" href="/">🏴‍☠️ Grand Line</a>'
         '<a href="/database">Card Database</a><a href="/market">Market Watch</a>'
@@ -1332,6 +1356,7 @@ def _seo_shell(title: str, description: str, canonical: str, body: str,
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
         f'<title>{_h(title)}</title><meta name="description" content="{_h(description)}">'
         f'<link rel="canonical" href="{_h(canonical)}">'
+        f'{_og_tags(title, description, canonical, image, og_type)}'
         '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
         f'{schema}'
         f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
@@ -1680,7 +1705,8 @@ def render_card_page(code: str) -> bytes | None:
         ],
     }
     schema = _jsonld(product) + _jsonld(crumbs)
-    return _seo_shell(title, desc, canonical, body, schema)
+    return _seo_shell(title, desc, canonical, body, schema,
+                      image=main_src, og_type="product")
 
 
 _ORD_RE = re.compile(r"(\d{1,2})(st|nd|rd|th)", re.IGNORECASE)
@@ -1786,24 +1812,46 @@ def render_leader_page(code: str) -> bytes | None:
             {"@type": "ListItem", "position": 3, "name": f"{name} Deck", "item": canonical},
         ],
     }
-    return _seo_shell(title, desc, canonical, body, _jsonld(product) + _jsonld(crumbs))
+    return _seo_shell(title, desc, canonical, body, _jsonld(product) + _jsonld(crumbs),
+                      image=img, og_type="product")
 
 
 def render_sitemap() -> bytes:
     """XML sitemap listing the main pages + every card and leader page, so
-    Google can discover and index them all (they aren't in the nav)."""
+    Google can discover and index them all (they aren't in the nav).
+
+    Each URL carries a <lastmod> so crawlers can prioritise what changed: the
+    site's daily-refreshed hub pages and leaders get today's build date; each
+    card gets the date of its most recent price snapshot (falling back to the
+    build date if it has never been priced)."""
     db = get_db()
-    urls = [_SITE_URL + p for p in ("/", "/database", "/market", "/meta", "/news", "/privacy", "/terms")]
+    today = _dt.date.today().isoformat()
+    # One query for every card's latest price date -> avoids a per-card lookup.
+    last_priced: dict[str, str] = {}
     try:
-        urls += [f"{_SITE_URL}/card/{r[0]}" for r in
-                 db.execute("SELECT card_id FROM cards ORDER BY card_id")]
-        urls += [f"{_SITE_URL}/leader/{r[0]}" for r in
-                 db.execute("SELECT DISTINCT leader_id FROM meta_decks WHERE leader_id<>''")]
+        for cid, d in db.execute(
+                "SELECT card_id, MAX(date) FROM price_history GROUP BY card_id"):
+            if d:
+                last_priced[cid] = str(d)[:10]
+    except Exception:
+        pass
+
+    # (loc, lastmod) pairs.
+    entries: list[tuple[str, str]] = [
+        (_SITE_URL + p, today)
+        for p in ("/", "/database", "/market", "/meta", "/news", "/privacy", "/terms")]
+    try:
+        entries += [(f"{_SITE_URL}/card/{r[0]}", last_priced.get(r[0], today))
+                    for r in db.execute("SELECT card_id FROM cards ORDER BY card_id")]
+        entries += [(f"{_SITE_URL}/leader/{r[0]}", today)
+                    for r in db.execute(
+                        "SELECT DISTINCT leader_id FROM meta_decks WHERE leader_id<>''")]
     except Exception:
         pass
     body = ('<?xml version="1.0" encoding="UTF-8"?>'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            + "".join(f"<url><loc>{_h(u)}</loc></url>" for u in urls)
+            + "".join(f"<url><loc>{_h(u)}</loc><lastmod>{_h(lm)}</lastmod></url>"
+                      for u, lm in entries)
             + "</urlset>")
     return body.encode("utf-8")
 
@@ -1961,7 +2009,7 @@ class Handler(BaseHTTPRequestHandler):
 
         session = self._bind_context()
         is_public = (path in PUBLIC_PAGES or path == "/carddetail.js"
-                     or path.startswith("/assets/"))
+                     or path.startswith("/assets/") or path == indexnow.KEY_PATH)
         if auth.WHOP_ENABLED and not session and not is_public:
             return self._gate()
 
@@ -2009,6 +2057,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         elif path == "/robots.txt":
             self._send(200, _ROBOTS, "text/plain; charset=utf-8")
+            return
+        elif path == indexnow.KEY_PATH:
+            # IndexNow ownership-verification key file (Bing/Yandex fetch this).
+            self._send(200, indexnow.key_file_body(), "text/plain; charset=utf-8")
             return
         elif path.startswith("/card/"):
             code = path[len("/card/"):].strip("/").upper()
