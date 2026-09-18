@@ -74,6 +74,12 @@
       margin: 48px 0 24px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
     }
     .section-bar small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 1px; color: var(--muted); margin-top: 4px; }
+    .leader-back {
+      display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 0;
+      color: var(--gold); font-weight: 600; font-size: 13px; text-decoration: none;
+    }
+    .leader-back:hover { text-decoration: underline; }
+    .leader-back + .section-bar { margin-top: 16px; }
 
     /* Format pills */
     .fmt-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
@@ -261,6 +267,18 @@
     let globalDecks = [];
     let cardsById = {};
     let SELECTED_FORMAT = '';
+    // When set (via "See all X decks" from a leader page), the page shows only
+    // that leader's decks and hides the global overview (stats/tier list/chart).
+    let SELECTED_LEADER = '';
+
+    // Leader's clean display name from the catalog (strip any code suffix); falls
+    // back to the raw code if the catalog hasn't got it.
+    function leaderName(code) {
+      const c = cardsById[code];
+      let n = (c && c.name) || '';
+      n = n.replace(/\s*[\(\[].*$/, '').replace(/\s*-\s*[A-Z0-9]{2,4}-\d{2,3}.*$/, '').trim();
+      return n || code;
+    }
 
     function activeDecks() {
       return SELECTED_FORMAT ? globalDecks.filter(d => d.set_format === SELECTED_FORMAT) : globalDecks;
@@ -424,7 +442,20 @@
         .concat(allFormats().map(f =>
           `<button data-f="${f}" class="${f === SELECTED_FORMAT ? 'on' : ''}">${f}</button>`)).join('');
 
-      let html = `
+      // Focused single-leader view (arrived via "See all X decks"): skip the
+      // global overview the visitor just came from and lead straight with that
+      // leader's decklists.
+      let overview;
+      if (SELECTED_LEADER) {
+        const escL = (window.CardDetail && CardDetail.esc) || (s => String(s == null ? '' : s));
+        const nm = leaderName(SELECTED_LEADER);
+        const n = decks.filter(d => d.leader_id === SELECTED_LEADER).length;
+        overview = `
+        <a class="leader-back" href="/meta" onclick="backToFullMeta(event)">← Back to full meta</a>
+        <div class="section-bar">ALL ${escL(nm.toUpperCase())} DECKS<small>${n} DECKLIST${n === 1 ? '' : 'S'} · ALL FORMATS</small></div>
+      `;
+      } else {
+        overview = `
         <div class="fmt-bar">
           <span class="fmt-label">Format</span>
           <div class="fmt-pills" id="fmt-pills">${pills}</div>
@@ -447,6 +478,11 @@
         ${metaShareChart()}
 
         <div class="section-bar">STATE OF THE GAME<small>JAPAN &amp; WORLDWIDE · META DECKS</small></div>
+      `;
+      }
+
+      let html = `
+        ${overview}
 
         <div class="filters">
           <label>Color <select id="filter-color" onchange="applyFilters()">
@@ -506,6 +542,7 @@
       const search = document.getElementById('filter-search').value.toLowerCase();
 
       let filtered = activeDecks();
+      if (SELECTED_LEADER) filtered = filtered.filter(d => d.leader_id === SELECTED_LEADER);
       if (color) {
         filtered = filtered.filter(d => {
           const n = (d.event_name || '').toLowerCase();
@@ -526,7 +563,7 @@
 
       filtered.forEach((d, idx) => {
         const tr = document.createElement('tr');
-        tr.onclick = () => { setHash({ format: SELECTED_FORMAT, deck: d.id }); };
+        tr.onclick = () => { setHash({ format: SELECTED_FORMAT, deck: d.id, leader: SELECTED_LEADER }); };
         tr.innerHTML = `
           <td><div class="leader-thumb" id="leader-thumb-${idx}"></div></td>
           <td>
@@ -669,7 +706,7 @@
       const s = p.toString();
       if (('#' + s) !== location.hash && !(s === '' && location.hash === '')) location.hash = s;
     }
-    function backToList() { setHash({ format: SELECTED_FORMAT }); }
+    function backToList() { setHash({ format: SELECTED_FORMAT, leader: SELECTED_LEADER }); }
     function bindFormatPills() {
       const bar = document.getElementById('fmt-pills');
       if (bar) bar.onclick = e => {
@@ -680,14 +717,20 @@
     function route() {
       const { format, deck, leader } = parseHash();
       SELECTED_FORMAT = allFormats().includes(format) ? format : '';
+      // Coming from a leader page: show that leader's decks across all formats,
+      // in a focused view (renderDecks + applyFilters read SELECTED_LEADER). Set
+      // this before the deck-details early return so "back" restores the focus.
+      SELECTED_LEADER = leader || '';
       if (deck && globalDecks.some(d => d.id === deck)) { renderDeckDetails(deck); return; }
-      // Coming from a leader page: show that leader's decks across all formats.
       if (leader) { SELECTED_FORMAT = ''; }
       renderDecks();
-      if (leader) {
-        const s = document.getElementById('filter-search');
-        if (s) { s.value = leader; applyFilters(); }
-      }
+    }
+    function backToFullMeta(e) {
+      if (e) e.preventDefault();
+      SELECTED_LEADER = '';
+      setHash({ format: SELECTED_FORMAT });
+      // setHash is a no-op when the hash is already empty, so re-render directly.
+      if (!location.hash) renderDecks();
     }
     window.addEventListener('hashchange', route);
 
