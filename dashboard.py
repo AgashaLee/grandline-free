@@ -1704,7 +1704,9 @@ def render_card_page(code: str) -> bytes | None:
             {"@type": "ListItem", "position": 3, "name": f"{name} ({code})", "item": canonical},
         ],
     }
-    schema = _jsonld(product) + _jsonld(crumbs)
+    # Google requires a Product to carry offers/review/aggregateRating; without a
+    # price it would be flagged invalid, so only emit Product when it has an offer.
+    schema = (_jsonld(product) if "offers" in product else "") + _jsonld(crumbs)
     return _seo_shell(title, desc, canonical, body, schema,
                       image=main_src, og_type="product")
 
@@ -1731,7 +1733,7 @@ def _event_date_key(s) -> _dt.date:
 
 def render_leader_page(code: str) -> bytes | None:
     db = get_db()
-    c = db.execute("SELECT card_id,name,set_name,card_color,image_url,card_text FROM cards WHERE card_id=?",
+    c = db.execute("SELECT card_id,name,set_name,card_color,image_url,card_text,market_price FROM cards WHERE card_id=?",
                    (code,)).fetchone()
     total = db.execute("SELECT COUNT(*) FROM meta_decks").fetchone()[0] or 1
     n = db.execute("SELECT COUNT(*) FROM meta_decks WHERE leader_id=?", (code,)).fetchone()[0]
@@ -1795,6 +1797,15 @@ def render_leader_page(code: str) -> bytes | None:
     title = f"{name} Deck — One Piece TCG Meta, Decklists & Cards | Grand Line"
     desc = (f"{name} ({code}) One Piece Card Game deck: {n} tournament decks, {wins} wins, "
             f"{share}% meta share. Winning decklists, most-used cards and prices.")
+    # Leader card's own price for the Offer (prefer the plain-base variant, else
+    # the catalog value), so the Product schema is valid for rich results.
+    lead_price = None
+    try:
+        r = db.execute("SELECT market_price FROM card_variants WHERE card_id=? AND is_base=1 "
+                       "AND market_price IS NOT NULL LIMIT 1", (code,)).fetchone()
+        lead_price = r[0] if r else (c["market_price"] if c else None)
+    except Exception:
+        lead_price = c["market_price"] if c else None
     product = {
         "@context": "https://schema.org", "@type": "Product",
         "name": f"{name} (Leader)", "sku": code,
@@ -1804,6 +1815,14 @@ def render_leader_page(code: str) -> bytes | None:
     }
     if img:
         product["image"] = img
+    if lead_price is not None:
+        product["offers"] = {
+            "@type": "Offer",
+            "price": f"{float(lead_price):.2f}",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "url": canonical,
+        }
     crumbs = {
         "@context": "https://schema.org", "@type": "BreadcrumbList",
         "itemListElement": [
@@ -1812,7 +1831,10 @@ def render_leader_page(code: str) -> bytes | None:
             {"@type": "ListItem", "position": 3, "name": f"{name} Deck", "item": canonical},
         ],
     }
-    return _seo_shell(title, desc, canonical, body, _jsonld(product) + _jsonld(crumbs),
+    # Only emit Product when it has an offer (Google requires offers/review/
+    # aggregateRating); otherwise the breadcrumb alone keeps the page valid.
+    schema = (_jsonld(product) if "offers" in product else "") + _jsonld(crumbs)
+    return _seo_shell(title, desc, canonical, body, schema,
                       image=img, og_type="product")
 
 
