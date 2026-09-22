@@ -194,10 +194,18 @@
       for (const setPrefix of keys) {
         const cards = globalCardsBySet[setPrefix];
         const boxUrl = `/assets/${setPrefix}.jpg`;
+        // No box-cover image yet (e.g. a brand-new set)? Fall back to a real card
+        // from the set — its Leader if it has one, else the first card with art —
+        // so the tile always shows something instead of a bare placeholder.
+        const rep = cards.find(c => c.card_type === 'Leader' && c.image_url)
+                 || cards.find(c => c.image_url);
+        const cardImg = rep ? esc(rep.image_url) : '';
         const ph = `this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'\\u{1F3B4}',style:'width:100px;height:140px;display:flex;align-items:center;justify-content:center;font-size:40px;border-radius:8px;background:var(--page-bg);border:1px solid var(--line);box-shadow:var(--shadow-sm)'}))`;
+        // onerror chain: box cover -> representative card -> emoji placeholder.
+        const onErr = `if(this.dataset.fb){this.onerror=function(){${ph}};this.src=this.dataset.fb}else{${ph}}`;
         html += `<div class="card" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; height:260px;" onclick="renderCards('${setPrefix}')">
           <div style="height:150px; margin-bottom:16px; display:flex; align-items:center;">
-             <img src="${boxUrl}" onerror="${ph}"
+             <img src="${boxUrl}" data-fb="${cardImg}" onerror="${onErr}"
                   style="max-height:100%; border-radius:8px; box-shadow:var(--shadow-sm)">
           </div>
           <h3 style="font-size:18px;">${setPrefix}</h3>
