@@ -1067,6 +1067,7 @@ def _movers_post() -> dict | None:
                         + ". See the full list on Market Watch.",
                 "date": m.get("latest") or "",
                 "link": "/market",
+                "image": top[0].get("image_url") or "",
             }
     except Exception:
         post = None
@@ -1169,10 +1170,15 @@ def api_news(payload: dict | None = None) -> dict:
     """Return the site's own featured posts (incl. a data-driven movers recap)
     plus recent OP TCG news — Google News headlines + our YouTube channels —
     merged newest-first."""
-    featured = _own_posts()
+    # Order: news announcements → auto price-movers card → pinned CTA last
+    # (a post with "pin":"last", e.g. the Welcome/tracker card).
+    posts = _own_posts()
+    cta = [p for p in posts if p.get("pin") == "last"]
+    featured = [p for p in posts if p.get("pin") != "last"]
     mv = _movers_post()
     if mv:
         featured = featured + [mv]
+    featured = featured + cta
 
     merged = list(_google_news_items()) + list(_youtube_items())
     merged.sort(key=lambda x: x.get("_ts", 0.0), reverse=True)
