@@ -1,5 +1,22 @@
 [
   {
+    "title": "📈 OP-17 meta shakeup — Nico Robin package prices spike",
+    "date": "2026-09-23",
+    "body": "The new OP-17 format is repricing the market: Nico Robin 062 Parallel nearly doubled to ~$137, Gum-Gum Giant (Alt Art) to ~$923, with affordable movers like Miss Doublefinger still around $31. First OP-17 regional (Ottawa) is 26 Sep.",
+    "image": "/assets/OP17.jpg",
+    "announcement": {
+      "news": "TCGplayer's 22 September price-trend report shows sharp climbs tied to the new OP-17 format. Highlights: Nico Robin (062 Parallel) +$70.84 → $136.76 after back-to-back Coliseum wins; Gum-Gum Giant (Alt Art) → ~$923; Sabo (3rd Anniversary) → ~$1,747 on the black Elbaph package. In the affordable tier: Miss Doublefinger (Full Art) → ~$31, Charlotte Pudding (Alt Art) → ~$33, Marshall D. Teach (119) → ~$31. Mary Geoise (Alt Art) → ~$25 on OP-18 'Holy Knights' speculation.",
+      "analysis": "The English market has already repriced on Coliseum results, but the first big OP-17 regional (Ottawa) isn't until 26 September — so the broader tournament data hasn't landed yet. Limitless still reflects the older OP-16 meta from the July regionals, so expect more movement once OP-17 results circulate.",
+      "value": "The cards moving are the tournament-linked ones in the Nico Robin package. The affordable tier — Miss Doublefinger, Charlotte Pudding, Marshall D. Teach, all around $30 — is where smaller budgets can still take part. Just remember these are already post-spike prices, not entry points.",
+      "deadline": "First OP-17 regional: Ottawa, 26 September 2026. Results circulating afterward could drive a second move — or a reversal.",
+      "risk": "These are post-spike prices, so you'd be buying strength. Tournament-driven spikes reverse fast if the deck doesn't repeat at the regional, and Mary Geoise's rise is pure speculation on an unannounced OP-18 archetype.",
+      "sources": [
+        { "label": "TCGplayer — Price Trends 09/22/2026", "url": "https://seller.tcgplayer.com/blog/price-trends-one-piece-cards-climbing-in-price-09-22-2026" },
+        { "label": "Limitless — One Piece meta", "url": "https://onepiece.limitlesstcg.com/" }
+      ]
+    }
+  },
+  {
     "title": "🆕 EB-05 'Heroines Edition Vol.2' confirmed for late October 2026",
     "date": "2026-09-22",
     "body": "EB-05 lands ~30–31 Oct 2026 — Nico Robin Leader, SP Nami & Robin, and five leader parallels. The first Heroines set is still sold out.",
