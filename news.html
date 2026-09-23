@@ -119,6 +119,36 @@
     .fcardp h3 { font-family:'Fredoka', sans-serif; font-size: 22px; color:#fff; line-height:1.3; font-weight: 600; }
     .fcardp p { color:var(--muted); font-size:13px; line-height:1.6; margin-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .fcardp .date { color:var(--muted); font-size:12px; margin-top:16px; font-weight:500; }
+    .fcardp .read-more { color:var(--gold); font-weight:600; }
+
+    /* Announcement popup */
+    .amodal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px); z-index:200; display:none; align-items:flex-start; justify-content:center;
+      padding:40px 16px; overflow-y:auto; }
+    .amodal-overlay.open { display:flex; }
+    .amodal { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
+      max-width:640px; width:100%; box-shadow:var(--shadow-md); overflow:hidden; }
+    .amodal-hero { position:relative; min-height:190px; background-size:cover; background-position:center;
+      display:flex; align-items:flex-end; padding:20px; background-color:var(--page-bg); }
+    .amodal-hero::before { content:''; position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(9,9,11,0.15) 0%, rgba(9,9,11,0.92) 100%); }
+    .amodal-hero > * { position:relative; z-index:1; }
+    .amodal-hero h2 { font-family:'Fredoka',sans-serif; color:#fff; font-size:22px; line-height:1.25; font-weight:600; }
+    .amodal-close { position:absolute; top:12px; right:12px; z-index:2; width:34px; height:34px; border-radius:50%;
+      border:none; background:rgba(9,9,11,0.6); color:#fff; font-size:16px; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; }
+    .amodal-close:hover { background:rgba(9,9,11,0.95); }
+    .amodal-body { padding:20px 24px 24px; }
+    .amodal-date { color:var(--muted); font-size:12px; font-weight:500; margin-bottom:18px; }
+    .asec { margin-bottom:18px; }
+    .asec h4 { font-size:12px; letter-spacing:0.5px; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:6px; }
+    .asec p { color:var(--ink); font-size:14px; line-height:1.65; }
+    .asec.risk h4 { color:var(--down); }
+    .asrc { display:flex; flex-wrap:wrap; gap:10px; }
+    .asrc a { color:var(--sea); font-size:12px; font-weight:600; text-decoration:none; border:1px solid var(--line);
+      border-radius:8px; padding:6px 10px; }
+    .asrc a:hover { border-color:var(--sea); }
+    .adisc { color:var(--muted); font-size:11px; line-height:1.5; margin-top:8px; border-top:1px solid var(--line); padding-top:14px; }
 
     .loading, .empty { color: var(--muted); text-align: center; padding: 80px 20px; font-size: 15px; }
 
@@ -156,6 +186,16 @@
     <div id="content"><div class="loading">Loading the latest news…</div></div>
   </div>
 
+  <div class="amodal-overlay" id="amodal" onclick="if(event.target===this)closeAnnouncement()">
+    <div class="amodal" role="dialog" aria-modal="true" aria-labelledby="amTitle">
+      <div class="amodal-hero" id="amHero">
+        <button class="amodal-close" onclick="closeAnnouncement()" aria-label="Close">✕</button>
+        <h2 id="amTitle"></h2>
+      </div>
+      <div class="amodal-body" id="amBody"></div>
+    </div>
+  </div>
+
   <footer class="gl-footer">
     <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
       ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
@@ -174,6 +214,38 @@
     }
 
     function bgStyle(url){ return url ? `style="background-image:url('${esc(url)}')"` : ''; }
+
+    // ---- Announcement popup (structured "From Grand Line" posts) ----
+    let FEATURED = [];
+    function aSec(label, text, cls){
+      return text ? `<div class="asec ${cls||''}"><h4>${label}</h4><p>${esc(text)}</p></div>` : '';
+    }
+    function openAnnouncement(i){
+      const f = FEATURED[i]; if (!f || !f.announcement) return;
+      const a = f.announcement;
+      document.getElementById('amTitle').textContent = f.title || '';
+      document.getElementById('amHero').style.backgroundImage = f.image ? `url('${f.image}')` : 'none';
+      let html = f.date ? `<div class="amodal-date">${esc(fmtDate(f.date))}</div>` : '';
+      html += aSec('📰 News', a.news);
+      html += aSec('🔍 Analysis', a.analysis);
+      html += aSec('💎 Why it could be valuable', a.value);
+      html += aSec('⏳ Deadline', a.deadline);
+      html += aSec('⚠️ Risk', a.risk, 'risk');
+      if (Array.isArray(a.sources) && a.sources.length){
+        html += `<div class="asec"><h4>🔗 Sources</h4><div class="asrc">` +
+          a.sources.map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener nofollow">${esc(s.label || s.url)}</a>`).join('') +
+          `</div></div>`;
+      }
+      html += `<div class="adisc">Informational only — not financial advice. Prices and details vary by seller and region; always confirm before buying.</div>`;
+      document.getElementById('amBody').innerHTML = html;
+      document.getElementById('amodal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeAnnouncement(){
+      document.getElementById('amodal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAnnouncement(); });
 
     function categorize(title){
       const t = (title || '').toLowerCase();
@@ -199,15 +271,28 @@
         let html = '';
 
         if (featured.length){
+          FEATURED = featured;
           html += '<div class="subhead">📌 From Grand Line</div><div class="feat-grid">';
-          for (const f of featured){
-            const tag = `<a class="fcardp ${f.image?'':'nobg'}" ${bgStyle(f.image)} href="${esc(f.link||'#')}" target="_blank" rel="noopener">
-              <span class="tag">Grand Line</span>
-              <h3>${esc(f.title)}</h3>
-              ${f.body ? `<p>${esc(f.body)}</p>` : ''}
-              ${f.date ? `<div class="date">${esc(fmtDate(f.date))}</div>` : ''}
-            </a>`;
-            html += f.link ? tag : tag.replace('<a ','<div ').replace('</a>','</div>');
+          for (let i = 0; i < featured.length; i++){
+            const f = featured[i];
+            if (f.announcement){
+              // Opens an on-site popup with the full announcement (no external nav).
+              const bg = f.image ? `background-image:url('${esc(f.image)}');` : '';
+              html += `<div class="fcardp ${f.image?'':'nobg'}" style="${bg}cursor:pointer" onclick="openAnnouncement(${i})">
+                <span class="tag">Grand Line</span>
+                <h3>${esc(f.title)}</h3>
+                ${f.body ? `<p>${esc(f.body)}</p>` : ''}
+                <div class="date">${f.date ? esc(fmtDate(f.date)) : ''}<span class="read-more"> · Read announcement →</span></div>
+              </div>`;
+            } else {
+              const tag = `<a class="fcardp ${f.image?'':'nobg'}" ${bgStyle(f.image)} href="${esc(f.link||'#')}" target="_blank" rel="noopener">
+                <span class="tag">Grand Line</span>
+                <h3>${esc(f.title)}</h3>
+                ${f.body ? `<p>${esc(f.body)}</p>` : ''}
+                ${f.date ? `<div class="date">${esc(fmtDate(f.date))}</div>` : ''}
+              </a>`;
+              html += f.link ? tag : tag.replace('<a ','<div ').replace('</a>','</div>');
+            }
           }
           html += '</div>';
         }
