@@ -1917,8 +1917,8 @@ class Handler(BaseHTTPRequestHandler):
             return  # HEAD request: headers only, no body
         self.wfile.write(body)
 
-    def _redirect(self, url: str, extra_headers=None) -> None:
-        self.send_response(302)
+    def _redirect(self, url: str, extra_headers=None, status: int = 302) -> None:
+        self.send_response(status)
         self.send_header("Location", url)
         self.send_header("Content-Length", "0")
         for k, v in (extra_headers or []):
@@ -2092,6 +2092,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         elif path.startswith("/card/"):
             code = path[len("/card/"):].strip("/").upper()
+            # Variant printing URLs (e.g. /card/P-029_R1, a reprint/parallel)
+            # have no page of their own -- 301 them to the base card so Google
+            # consolidates instead of seeing a 404.
+            if "_" in code:
+                base = code.split("_", 1)[0]
+                if _looks_like_card_code(base):
+                    return self._redirect(f"/card/{base}", status=301)
             body = render_card_page(code) if _looks_like_card_code(code) else None
             self._send(200, body, "text/html; charset=utf-8") if body else \
                 self._send(404, b"Card not found", "text/plain")
