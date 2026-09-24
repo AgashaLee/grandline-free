@@ -224,7 +224,7 @@
       const f = FEATURED[i]; if (!f || !f.announcement) return;
       const a = f.announcement;
       document.getElementById('amTitle').textContent = f.title || '';
-      document.getElementById('amHero').style.backgroundImage = f.image ? `url('${f.image}')` : 'none';
+      document.getElementById('amHero').style.backgroundImage = `url('${f.image || '/assets/news-card.jpg'}')`;
       let html = f.date ? `<div class="amodal-date">${esc(fmtDate(f.date))}</div>` : '';
       html += aSec('📰 News', a.news);
       html += aSec('🔍 Analysis', a.analysis);
@@ -277,8 +277,11 @@
             const f = featured[i];
             if (f.announcement){
               // Opens an on-site popup with the full announcement (no external nav).
-              const bg = f.image ? `background-image:url('${esc(f.image)}');` : '';
-              html += `<div class="fcardp ${f.image?'':'nobg'}" style="${bg}cursor:pointer" onclick="openAnnouncement(${i})">
+              // Real product art (set/pack) when the post has one, else the
+              // branded generic News graphic.
+              const imgUrl = f.image || '/assets/news-card.jpg';
+              const bg = `background-image:url('${esc(imgUrl)}');`;
+              html += `<div class="fcardp" style="${bg}cursor:pointer" onclick="openAnnouncement(${i})">
                 <span class="tag">Grand Line</span>
                 <h3>${esc(f.title)}</h3>
                 ${f.body ? `<p>${esc(f.body)}</p>` : ''}

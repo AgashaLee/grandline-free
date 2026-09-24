@@ -1067,7 +1067,7 @@ def _movers_post() -> dict | None:
                         + ". See the full list on Market Watch.",
                 "date": m.get("latest") or "",
                 "link": "/market",
-                "image": top[0].get("image_url") or "",
+                "image": "/assets/market-card.jpg",
             }
     except Exception:
         post = None
