@@ -108,7 +108,7 @@
     .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
     .fcardp { position: relative; border-radius: var(--radius-lg); overflow: hidden; min-height: 260px;
       display: flex; flex-direction: column; justify-content: flex-end; padding: 24px;
-      background-size: cover; background-position: center; border: 1px solid var(--line); box-shadow: var(--shadow-sm); transition: all 0.2s ease; }
+      background-size: cover; background-position: center top; border: 1px solid var(--line); box-shadow: var(--shadow-sm); transition: all 0.2s ease; }
     .fcardp:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--gold); }
     .fcardp::before { content:''; position:absolute; inset:0;
       background: linear-gradient(180deg, rgba(9,9,11,0.2) 0%, rgba(9,9,11,0.95) 100%); }
@@ -128,7 +128,7 @@
     .amodal-overlay.open { display:flex; }
     .amodal { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
       max-width:640px; width:100%; box-shadow:var(--shadow-md); overflow:hidden; }
-    .amodal-hero { position:relative; min-height:190px; background-size:cover; background-position:center;
+    .amodal-hero { position:relative; min-height:190px; background-size:cover; background-position:center top;
       display:flex; align-items:flex-end; padding:20px; background-color:var(--page-bg); }
     .amodal-hero::before { content:''; position:absolute; inset:0;
       background:linear-gradient(180deg, rgba(9,9,11,0.15) 0%, rgba(9,9,11,0.92) 100%); }
