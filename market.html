@@ -141,6 +141,9 @@
     .foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
     .foot-links a{color:#f59e0b;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
     @media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center;gap:28px}.foot-disc{line-height:1.8}.foot-links{justify-content:center;gap:14px 22px}}
+    /* Reserve height while the grid loads so the footer doesn't jump when JS
+       injects content (fixes Cumulative Layout Shift). */
+    #content{min-height:100vh}
   </style>
 </head>
 <body>
