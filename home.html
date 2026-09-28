@@ -382,20 +382,24 @@
         document.getElementById('scMovers').hidden = false;
       }).catch(() => {});
 
-    // 3) Top meta leaders (rendered once BOTH the catalog and meta are loaded,
-    //    so leader card art can be looked up from cardsById)
+    // 3) Top meta leaders — use the SAME recent ranking as the /meta tier list
+    //    (/api/meta_ranking, default region=all + 60-day window) so the homepage
+    //    reflects the CURRENT meta, not all-time deck totals. Rendered once both
+    //    the catalog and meta are loaded, so card art has a cardsById fallback.
     function renderLeaders() {
       if (!catalogReady || !metaDecks) return;
-      const counts = {};
-      metaDecks.forEach(dk => { const id = dk.leader_id; if (id) counts[id] = (counts[id] || 0) + 1; });
-      const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-      if (!top.length) { document.getElementById('scLeaders').hidden = true; return; }  // no data -> collapse
-      document.getElementById('leadersStrip').innerHTML = top.map(([id, n], i) => {
-        const c = cardsById[id];
-        return scard(id, c ? c.image_url : '', `<b>${esc((c ? c.name : id)).slice(0,16)}</b><br>${n} decks`,
-          `<span class="rank">${i+1}</span>`);
-      }).join('');
-      document.getElementById('scLeaders').hidden = false;
+      post('/api/meta_ranking').then(d => {
+        const rk = (d && d.ranking) || [];
+        if (!rk.length) { document.getElementById('scLeaders').hidden = true; return; }
+        document.getElementById('leadersStrip').innerHTML = rk.slice(0, 12).map((x, i) => {
+          const c = cardsById[x.leader_id];
+          const img = x.image_url || (c ? c.image_url : '');
+          const nm = x.name || (c ? c.name : x.leader_id);
+          return scard(x.leader_id, img, `<b>${esc(nm).slice(0,16)}</b><br>${x.decks} decks`,
+            `<span class="rank">${i+1}</span>`);
+        }).join('');
+        document.getElementById('scLeaders').hidden = false;
+      }).catch(() => { document.getElementById('scLeaders').hidden = true; });
     }
     post('/api/meta').then(d => {
       metaDecks = (d && d.decks) || [];
