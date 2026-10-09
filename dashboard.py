@@ -1884,7 +1884,16 @@ def render_sitemap() -> bytes:
     return body.encode("utf-8")
 
 
-_ROBOTS = (f"User-agent: *\nAllow: /\n\nSitemap: {_SITE_URL}/sitemap.xml\n").encode("utf-8")
+_ROBOTS = (
+    "User-agent: *\n"
+    "Allow: /\n"
+    # Internal POST-only JSON endpoints + auth/gated routes: not real pages, and
+    # a crawler GET to them 404s (they only accept POST). Keep crawlers off them.
+    "Disallow: /api/\n"
+    "Disallow: /whop/\n"
+    "Disallow: /tracker\n"
+    f"\nSitemap: {_SITE_URL}/sitemap.xml\n"
+).encode("utf-8")
 
 
 ROUTES = {
