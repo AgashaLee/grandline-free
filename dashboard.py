@@ -1231,11 +1231,29 @@ def _buy_query(code: str, name: str | None) -> str:
     return f"one piece card {code} {name}".strip()
 
 
+#: AccessTrade (Shopee ID NON KOL) affiliate wrapper. The redirect id and
+#: affiliate_id are constants for our publisher account; only the destination
+#: Shopee URL changes per card. sub_id = card code, so AccessTrade reports show
+#: which card drove each sale. (Shopee direct/deep linking is permitted on this
+#: campaign, unlike Involve Asia.)
+_AT_SHOPEE_REDIR = "https://atid.me/002bc7002s67?url="
+_AT_SHOPEE_AFF_ID = "11146330000"
+
+
+def _shopee_affiliate(query: str, code: str) -> str:
+    import urllib.parse
+    dest = (f"https://shopee.co.id/search?keyword={urllib.parse.quote(query)}"
+            f"&affiliate_id={_AT_SHOPEE_AFF_ID}"
+            f"&sub_id={urllib.parse.quote(code)}")
+    return _AT_SHOPEE_REDIR + urllib.parse.quote(dest, safe="")
+
+
 def _buy_buttons_html(code: str, name: str | None) -> str:
     import urllib.parse
-    q = urllib.parse.quote(_buy_query(code, name))
+    query = _buy_query(code, name)
+    q = urllib.parse.quote(query)
     shops = [
-        ("Shopee", "#ee4d2d", f"https://shopee.co.id/search?keyword={q}"),
+        ("Shopee", "#ee4d2d", _shopee_affiliate(query, code)),
         ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={q}"),
         ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={q}"),
         ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={q}"),

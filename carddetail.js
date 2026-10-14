@@ -18,8 +18,10 @@
    ==================================================================== */
 window.CardDetail = (function () {
   const AFFILIATE = {
-    // Indonesia (via Involve Asia deep-link)
-    shopee:    { id: 'YOUR_SHOPEE_AFFILIATE_ID',    on: false },
+    // Shopee via AccessTrade (Shopee ID NON KOL) — deep/direct linking permitted.
+    // redir + affId are constants for our publisher; only the Shopee dest + sub_id change.
+    shopee:    { on: true, redir: 'https://atid.me/002bc7002s67?url=', affId: '11146330000' },
+    // Pending AccessTrade approval — flip on + set redir/affId the same way once approved.
     tokopedia: { id: 'YOUR_TOKOPEDIA_AFFILIATE_ID', on: false },
     // International (each program has its own link format — see affiliate())
     tcgplayer: { id: 'YOUR_TCGPLAYER_AFFILIATE_ID', on: false },
@@ -58,20 +60,25 @@ window.CardDetail = (function () {
     const name = (c.name || '').replace(/\s*\(\d+\)\s*$/, '').trim();
     return `one piece card ${c.card_id} ${name}`.trim();
   }
-  function affiliate(key, dest) {
+  function affiliate(key, dest, c) {
     const a = AFFILIATE[key];
+    // Shopee via AccessTrade: append affiliate_id + sub_id(card code) to the Shopee
+    // destination, then wrap the whole thing in the atid.me redirect.
+    if (key === 'shopee' && a && a.on && a.redir) {
+      const subid = (c && c.card_id) ? c.card_id : '';
+      const target = dest + (dest.includes('?') ? '&' : '?')
+        + 'affiliate_id=' + a.affId + '&sub_id=' + encodeURIComponent(subid);
+      return a.redir + encodeURIComponent(target);
+    }
     if (!a || !a.on || !a.id || a.id.startsWith('YOUR_')) return dest;  // not set up -> direct
-    // TODO after signup: each program wraps links differently —
-    //   Shopee/Tokopedia (Involve Asia): https://invol.co/aff_m?aff_id=<id>&url=<dest>
+    // Other networks, once set up (Tokopedia via AccessTrade will mirror the Shopee block):
     //   TCGplayer (Impact): append your tracking params, e.g. dest + '&partner=<id>'
     //   eBay (Partner Network): wrap dest in your rover/campid link
-    if (key === 'shopee' || key === 'tokopedia')
-      return `https://invol.co/aff_m?aff_id=${encodeURIComponent(a.id)}&source=deeplink&url=${encodeURIComponent(dest)}`;
     if (key === 'tcgplayer')
       return dest + (dest.includes('?') ? '&' : '?') + `partner=${encodeURIComponent(a.id)}`;
     return dest;  // eBay: fill in your Partner Network link format
   }
-  function buyUrl(key, c) { return affiliate(key, MARKET[key].url(buyQuery(c))); }
+  function buyUrl(key, c) { return affiliate(key, MARKET[key].url(buyQuery(c)), c); }
 
   function esc(s) {
     return String(s == null ? '' : s)
