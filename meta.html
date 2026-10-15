@@ -320,6 +320,12 @@
       'ベロ':'Belo Betty','ガープ':'Garp','クイーン':'Queen','ボア':'Hancock','ゲッコー':'Moria'
     };
     function hasJP(s) { return /[぀-ヿ一-龯]/.test(s || ''); }
+    // Build the leader-page URL via concatenation instead of hardcoding the path with a
+    // placeholder inside a template string. Googlebot scrapes such template-literal URLs
+    // straight out of the inline <script> text and then reports the un-interpolated,
+    // placeholder-laden path as a 404 in Search Console. Concatenating here keeps those
+    // phantom URLs out of the crawlable source. (Real users always got correct URLs.)
+    function leaderHref(id) { return '/leader/' + encodeURIComponent(id); }
     function translateArchetype(name) {
       if (!name || !hasJP(name)) return name;
       let s = name.trim();
@@ -422,7 +428,7 @@
               const img = x.image_url
                 ? `<img src="${esc(x.image_url)}" loading="lazy" alt="${esc(x.name)}" onerror="this.style.display='none'">`
                 : '';
-              return `<a class="mr-card" href="/leader/${esc(x.leader_id)}" title="${esc(x.name)} — ${x.share}% share, ${x.wins} wins, ${x.decks} decks">
+              return `<a class="mr-card" href="${leaderHref(x.leader_id)}" title="${esc(x.name)} — ${x.share}% share, ${x.wins} wins, ${x.decks} decks">
                 <div class="mr-thumb">${img}</div>
                 <div class="mr-meta">
                   <div class="mr-name"><span class="cdot" style="background:${dot}"></span><span class="nm">${esc(x.name)}</span>${arrow}</div>
@@ -617,7 +623,7 @@
               <span>📋 <strong>${totalCards} cards</strong></span>
             </div>
             <div class="meta" style="margin-top:8px">
-              <span>🎴 Leader: <strong>${(hasJP(deck.event_name) ? translateArchetype(deck.event_name) : (deck.leader_id || deck.event_name)) || '—'}</strong>${deck.leader_id ? ` &middot; <a href="/leader/${deck.leader_id}" style="color:#0ea5e9;font-weight:600">meta page →</a>` : ''}</span>
+              <span>🎴 Leader: <strong>${(hasJP(deck.event_name) ? translateArchetype(deck.event_name) : (deck.leader_id || deck.event_name)) || '—'}</strong>${deck.leader_id ? ` &middot; <a href="${leaderHref(deck.leader_id)}" style="color:#0ea5e9;font-weight:600">meta page →</a>` : ''}</span>
               <span>📊 <strong>${translateTournament(deck.event_type) || '-'}</strong></span>
             </div>
           </div>
