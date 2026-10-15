@@ -129,6 +129,25 @@
       text-overflow: ellipsis; border: 1px solid rgba(245,158,11,.28); }
     .strip-empty { color: var(--muted); font-size: 13px; padding: 20px 0; }
 
+    /* Shop-packs promo band (curated affiliate pick — TikTok Shop) */
+    .shop-promo { display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, #1b1b22, #121214);
+      border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden; }
+    .shop-promo::before { content: ""; position: absolute; top: -60px; right: -40px; width: 260px; height: 200px;
+      background: radial-gradient(circle, rgba(254,44,85,0.14), transparent 70%); pointer-events: none; }
+    .shop-promo-art { flex: 0 0 auto; width: 104px; height: 209px; border-radius: 10px; border: 1px solid var(--line);
+      box-shadow: 0 4px 12px rgba(0,0,0,.4); object-fit: cover; display: block; }
+    .shop-promo-body { position: relative; z-index: 1; }
+    .shop-pill { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 99px; background: rgba(254,44,85,0.14); color: #ff5a7a; border: 1px solid rgba(254,44,85,0.3); margin-bottom: 12px; }
+    .shop-promo-body h3 { font-size: 22px; color: #fff; line-height: 1.2; }
+    .shop-promo-body p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 18px; max-width: 560px; }
+    .shop-promo-body p b { color: var(--ink); }
+    .btn.tiktok { background: #fe2c55; border-color: #fe2c55; color: #fff; }
+    .btn.tiktok:hover { background: #ff4568; border-color: #ff4568; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(254,44,85,0.25); }
+    .shop-note { display: block; color: #71717a; font-size: 11px; margin-top: 12px; }
+    @media(max-width:640px){ .shop-promo{ flex-direction: column; text-align: center; padding: 24px 18px; }
+      .shop-promo-body p{ margin-left: auto; margin-right: auto; } }
+
     /* Free feature cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
     .fcard {
@@ -246,6 +265,23 @@
         <a class="more" href="/meta">See the meta →</a>
       </div>
       <div class="strip" id="leadersStrip"></div>
+    </div>
+
+    <div class="showcase" id="scShop">
+      <div class="shop-promo">
+        <img class="shop-promo-art" src="/assets/OP17.jpg" width="104" height="209" loading="lazy"
+             alt="OP-17 The World's Strongest Warriors booster pack">
+        <div class="shop-promo-body">
+          <span class="shop-pill">🛒 Shop packs</span>
+          <h3>Buy sealed One Piece packs on TikTok Shop</h3>
+          <p>Our pick right now: the <b>OP-17 &ldquo;The World&rsquo;s Strongest Warriors&rdquo;</b>
+             booster pack, from a seller on TikTok Shop Indonesia.</p>
+          <a href="https://atid.me/go/VH95URzB" target="_blank" rel="nofollow sponsored noopener">
+            <button class="btn tiktok">Buy on TikTok Shop →</button>
+          </a>
+          <small class="shop-note">Affiliate link — buying through it supports Grand Line at no extra cost to you.</small>
+        </div>
+      </div>
     </div>
 
     <div class="section-bar">Free tools</div>
