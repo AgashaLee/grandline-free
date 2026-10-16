@@ -1252,15 +1252,19 @@ def _buy_buttons_html(code: str, name: str | None) -> str:
     import urllib.parse
     query = _buy_query(code, name)
     q = urllib.parse.quote(query)
+    # Last field = is this an affiliate (commission-earning) link? Only Shopee is wired;
+    # the rest are plain marketplace searches, so they get "nofollow noopener" without
+    # "sponsored" (which is reserved for links that actually pay us).
     shops = [
-        ("Shopee", "#ee4d2d", _shopee_affiliate(query, code)),
-        ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={q}"),
-        ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={q}"),
-        ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={q}"),
+        ("Shopee", "#ee4d2d", _shopee_affiliate(query, code), True),
+        ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={q}", False),
+        ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={q}", False),
+        ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={q}", False),
     ]
     btns = "".join(
         f'<a class="buybtn" style="background:{c}" href="{_h(u)}" target="_blank" '
-        f'rel="nofollow sponsored noopener">🛒 Buy on {_h(n)}</a>' for n, c, u in shops)
+        f'rel="{"nofollow sponsored noopener" if aff else "nofollow noopener"}">🛒 Buy on {_h(n)}</a>'
+        for n, c, u, aff in shops)
     return f'<div class="buyrow">{btns}</div>'
 
 

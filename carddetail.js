@@ -443,7 +443,11 @@ window.CardDetail = (function () {
 
     const buys = Object.keys(MARKET).filter(key => MARKET[key].region === REGION).map(key => {
       const m = MARKET[key];
-      return `<a href="${esc(buyUrl(key, c))}" target="_blank" rel="nofollow sponsored noopener">
+      // "sponsored" only on links that actually earn commission (affiliate on);
+      // plain search links (TCGplayer/eBay until wired) get just nofollow+noopener.
+      const isAff = !!(AFFILIATE[key] && AFFILIATE[key].on);
+      const rel = isAff ? 'nofollow sponsored noopener' : 'nofollow noopener';
+      return `<a href="${esc(buyUrl(key, c))}" target="_blank" rel="${rel}">
         <button class="cd-buybtn" style="background:${m.color}">🛒 Buy on ${m.label}</button></a>`;
     }).join('');
     const here = REGION === 'id' ? '🇮🇩 Indonesia' : '🌍 International';
