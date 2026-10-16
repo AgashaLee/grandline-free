@@ -50,7 +50,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
-PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy", "/terms"}
+PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy", "/terms", "/about"}
 PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
@@ -1375,6 +1375,7 @@ def _seo_shell(title: str, description: str, canonical: str, body: str,
         'Bandai Namco or Toei Animation. Card images and names are the property of their respective '
         'owners. Some links are affiliate links — buying through them supports the site at no extra cost.</div>'
         '<nav class="foot-links">'
+        '<a href="/about">About</a>'
         '<a href="mailto:contact@grandline.id">Contact</a>'
         '<a href="/privacy">Privacy Policy</a>'
         '<a href="/terms">Terms of Service</a></nav>'
@@ -1543,6 +1544,78 @@ def render_terms() -> bytes:
         "The terms for using Grand Line (grandline.id): a free fan-made One Piece Card Game "
         "database and price reference. Data is informational; not affiliated with Bandai.",
         f"{_SITE_URL}/terms", body)
+
+
+def render_about() -> bytes:
+    body = (
+        '<div class="legal">'
+        '<h1>About Grand Line</h1>'
+
+        '<p>Grand Line (grandline.id) is a free, independent resource for the '
+        '<b>One Piece Card Game</b>. We bring together everything a player or collector needs to '
+        'follow the game in one place: a searchable card database, up-to-date market prices, the '
+        'decks winning tournaments right now, and the latest product news — all free to browse, '
+        'with no account required.</p>'
+
+        '<p>The site was built by a fellow One Piece Card Game fan who was tired of hopping between '
+        'a dozen tabs — one for card details, another for prices, another for tournament results — '
+        'just to answer simple questions like "what is this card worth?" or "what should I build '
+        'next?". Grand Line is our attempt to put all of that in one clean, fast place, for players '
+        'in Indonesia and around the world.</p>'
+
+        '<h2>What you&rsquo;ll find here</h2>'
+        '<ul>'
+        '<li><b>Card Database</b> — every set from OP-01 onward: Leaders, characters, events and '
+        'promos, with artwork, traits, stats and market prices. Search and filter by colour, type, '
+        'cost, rarity and more.</li>'
+        '<li><b>Market Watch</b> — real market prices with daily movement: the week&rsquo;s biggest '
+        'gainers and losers, value tiers, and a price-history chart on each card so you can see '
+        'where a price has been, not just where it is today.</li>'
+        '<li><b>Meta Decks</b> — tournament-winning decklists with the full card breakdown and '
+        'format filters, so you can study exactly what top players are running before your next '
+        'locals.</li>'
+        '<li><b>News</b> — set announcements, product drops and lottery openings, each written up '
+        'in our own words with a plain-English take on why it matters to players and collectors.</li>'
+        '</ul>'
+
+        '<h2>How our data works</h2>'
+        '<p>Our prices are tracked over time and snapshotted daily, so the figures you see are '
+        'built from our own ongoing record rather than a one-off lookup. The meta section is '
+        'aggregated from published tournament results across Western and Japanese events and '
+        'organised by set-format so you can see how archetypes rise and fall. We clean, de-duplicate '
+        'and label this data ourselves — the goal is information you can actually trust at a glance.</p>'
+
+        '<h2>Free site &amp; the optional tracker</h2>'
+        '<p>Everything described above is free. For collectors who want to go further, we also offer '
+        'an optional <b>Collection Tracker</b> — add your cards and sealed product once and watch '
+        'your portfolio&rsquo;s value, profit and loss update in your own currency, with a deck-cost '
+        'calculator and no ads. The tracker is a separate paid product; the public site stays free '
+        'and open to everyone.</p>'
+
+        '<h2>Fan-made, and not affiliated with Bandai</h2>'
+        '<p>Grand Line is an independent fan project. It is <b>not</b> endorsed by, affiliated with, '
+        'or sponsored by Bandai Namco, Toei Animation, or the creators of One Piece. "One Piece", the '
+        'One Piece Card Game, and all related card images and names are the property of their '
+        'respective owners, shown here for informational and reference purposes. If you own rights '
+        'to material on the site and have a concern, please get in touch.</p>'
+
+        '<h2>Supporting the site</h2>'
+        '<p>Some "Buy" links on the site are affiliate links — if you buy through them we may earn a '
+        'small commission at <b>no extra cost to you</b>. That, along with the optional tracker, is '
+        'what keeps the public site free to run.</p>'
+
+        '<h2>Get in touch</h2>'
+        '<p>Spotted an error, have a suggestion, or want to say hello? Email us at '
+        '<a href="mailto:contact@grandline.id">contact@grandline.id</a> — feedback from players is '
+        'how the site gets better.</p>'
+
+        '<p style="margin-top:22px"><a href="/" style="color:var(--gold)">← Back to Grand Line</a></p>'
+        '</div>')
+    return _seo_shell(
+        "About | Grand Line",
+        "About Grand Line (grandline.id) — a free, fan-made One Piece Card Game database, "
+        "price tracker, meta decks and news for players and collectors.",
+        f"{_SITE_URL}/about", body)
 
 
 def _printings(db, code: str, c: dict) -> list[dict]:
@@ -1889,7 +1962,7 @@ def render_sitemap() -> bytes:
     # (loc, lastmod) pairs.
     entries: list[tuple[str, str]] = [
         (_SITE_URL + p, today)
-        for p in ("/", "/database", "/market", "/meta", "/news", "/privacy", "/terms")]
+        for p in ("/", "/database", "/market", "/meta", "/news", "/about", "/privacy", "/terms")]
     try:
         entries += [(f"{_SITE_URL}/card/{r[0]}", last_priced.get(r[0], today))
                     for r in db.execute("SELECT card_id FROM cards ORDER BY card_id")]
@@ -2110,6 +2183,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         elif path == "/terms":
             self._send(200, render_terms(), "text/html; charset=utf-8")
+            return
+        elif path == "/about":
+            self._send(200, render_about(), "text/html; charset=utf-8")
             return
         elif path == "/sitemap.xml":
             self._send(200, render_sitemap(), "application/xml; charset=utf-8")
