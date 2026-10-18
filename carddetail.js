@@ -56,8 +56,13 @@ window.CardDetail = (function () {
   let _lastCard = null;
   let _lastOpts = {};
 
-  function buyQuery(c) {
+  function buyQuery(c, key) {
     const name = (c.name || '').replace(/\s*\(\d+\)\s*$/, '').trim();
+    // Tokopedia's search matches ALL keywords and sellers rarely put the card
+    // code (e.g. OP11-054) in titles, so including it returns zero results there
+    // — search Tokopedia by name only. Shopee and the international TCG sites
+    // (TCGplayer/eBay) handle the code fine, so they keep it for a precise match.
+    if (key === 'tokopedia') return `one piece card ${name}`.trim();
     return `one piece card ${c.card_id} ${name}`.trim();
   }
   function affiliate(key, dest, c) {
@@ -78,7 +83,7 @@ window.CardDetail = (function () {
       return dest + (dest.includes('?') ? '&' : '?') + `partner=${encodeURIComponent(a.id)}`;
     return dest;  // eBay: fill in your Partner Network link format
   }
-  function buyUrl(key, c) { return affiliate(key, MARKET[key].url(buyQuery(c)), c); }
+  function buyUrl(key, c) { return affiliate(key, MARKET[key].url(buyQuery(c, key)), c); }
 
   function esc(s) {
     return String(s == null ? '' : s)

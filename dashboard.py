@@ -1226,9 +1226,15 @@ def _fmt_effect_html(text: str | None) -> str:
     return _h(t).replace("\n", "<br>")
 
 
-def _buy_query(code: str, name: str | None) -> str:
+def _buy_query(code: str, name: str | None, with_code: bool = True) -> str:
     name = re.sub(r"\s*\(\d+\)\s*$", "", str(name or "")).strip()
-    return f"one piece card {code} {name}".strip()
+    # Tokopedia's search matches ALL keywords and sellers rarely list the card
+    # code in titles, so including it returns zero results — Tokopedia searches by
+    # name only (with_code=False). Shopee and the international sites handle the
+    # code fine, so they keep it for a precise, this-printing match.
+    if with_code:
+        return f"one piece card {code} {name}".strip()
+    return f"one piece card {name}".strip()
 
 
 #: AccessTrade (Shopee ID NON KOL) affiliate wrapper. The redirect id and
@@ -1250,16 +1256,18 @@ def _shopee_affiliate(query: str, code: str) -> str:
 
 def _buy_buttons_html(code: str, name: str | None) -> str:
     import urllib.parse
-    query = _buy_query(code, name)
-    q = urllib.parse.quote(query)
+    code_query = _buy_query(code, name, with_code=True)    # Shopee/TCGplayer/eBay
+    toped_query = _buy_query(code, name, with_code=False)  # Tokopedia: name only
+    code_q = urllib.parse.quote(code_query)
+    toped_q = urllib.parse.quote(toped_query)
     # Last field = is this an affiliate (commission-earning) link? Only Shopee is wired;
     # the rest are plain marketplace searches, so they get "nofollow noopener" without
     # "sponsored" (which is reserved for links that actually pay us).
     shops = [
-        ("Shopee", "#ee4d2d", _shopee_affiliate(query, code), True),
-        ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={q}", False),
-        ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={q}", False),
-        ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={q}", False),
+        ("Shopee", "#ee4d2d", _shopee_affiliate(code_query, code), True),
+        ("Tokopedia", "#03ac0e", f"https://www.tokopedia.com/search?q={toped_q}", False),
+        ("TCGplayer", "#f8991d", f"https://www.tcgplayer.com/search/all/product?q={code_q}", False),
+        ("eBay", "#0064d2", f"https://www.ebay.com/sch/i.html?_nkw={code_q}", False),
     ]
     btns = "".join(
         f'<a class="buybtn" style="background:{c}" href="{_h(u)}" target="_blank" '
