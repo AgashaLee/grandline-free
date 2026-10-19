@@ -52,6 +52,10 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 #: tracker itself and the collection APIs) stays behind the gate.
 PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy", "/terms", "/about"}
 PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
+#: Collection-mutating endpoints. They only make sense for a logged-in user, so
+#: on the public (Whop-disabled) free deploy they are refused outright — the
+#: free site must expose no unauthenticated write surface.
+WRITE_API = {"/api/add", "/api/update", "/api/remove", "/api/settings"}
 
 #: Rebuilding hits the price cache, not the network, but there is no reason to
 #: redo it for every browser poll.
@@ -2175,9 +2179,17 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, _page("market.html"), "text/html; charset=utf-8")
             return
         elif path.startswith("/assets/"):
-            filename = path.replace("/assets/", "")
+            filename = path[len("/assets/"):]
+            assets_dir = (config.BASE_DIR / "assets").resolve()
+            target = (assets_dir / filename).resolve()
+            # Refuse anything that escapes the assets directory: a request like
+            # /assets/../config.py or /assets/../../proc/self/environ would
+            # otherwise read arbitrary files (incl. env secrets) off the host.
+            if target != assets_dir and assets_dir not in target.parents:
+                self._send(404, b"404 Not Found", "text/plain")
+                return
             try:
-                body = _static(f"assets/{filename}")
+                body = target.read_bytes()
                 self._send(200, body, "image/jpeg")
             except OSError:
                 self._send(404, b"404 Not Found", "text/plain")
@@ -2254,6 +2266,10 @@ class Handler(BaseHTTPRequestHandler):
 
         # A write only makes sense for a logged-in user (in multi-user mode).
         session = self._bind_context()
+        # Collection writes are never available without a real user — this also
+        # closes them on the public free deploy (where there is no session).
+        if path in WRITE_API and not session:
+            return self._json(401, {"ok": False, "error": "Please log in.", "login": True})
         if auth.WHOP_ENABLED and not session and path not in PUBLIC_API:
             return self._json(401, {"ok": False, "error": "Please log in.", "login": True})
 
@@ -2277,8 +2293,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(409, {"ok": False, "error": str(exc), "stale": True})
         except ValueError as exc:
             return self._json(400, {"ok": False, "error": str(exc)})
-        except Exception as exc:  # never take the server down over one bad request
-            return self._json(500, {"ok": False, "error": f"Unexpected error: {exc}"})
+        except Exception:  # never take the server down over one bad request
+            import traceback
+            traceback.print_exc()  # full detail to server logs, not the client
+            return self._json(500, {"ok": False, "error": "Unexpected server error."})
 
         self._json(200, {"ok": True, **result})
 
