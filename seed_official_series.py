@@ -29,7 +29,6 @@ import re
 import sys
 
 import requests
-from PIL import Image
 
 from database import get_db
 
@@ -143,6 +142,7 @@ def download_image(code):
     Bandai hotlink-protects the card images (they fail to load cross-origin in a
     browser), so the art must be self-hosted. Returns the site-relative URL, or
     None on failure (the card still shows via the page's placeholder)."""
+    from PIL import Image  # only needed for the fetch/download path, not --json
     os.makedirs(IMG_DIR, exist_ok=True)
     out_path = f"{IMG_DIR}/{code}.jpg"
     try:
