@@ -32,7 +32,7 @@ def _price(v):
 _VARIANT_MARK = ("(parallel)", "(sp)", "(alternate", "(super", "(manga",
                  "(special", "(box", "(pre-release", "(championship", "(winner",
                  "(judge", "(serial", "(reprint", "(textured", "(full art",
-                 "(promo", "(gift", "(anime")
+                 "(promo", "(gift", "(anime", "foil")  # "foil" catches Pirate/Jolly Roger Foil
 
 
 def _is_variant(name: str) -> bool:
