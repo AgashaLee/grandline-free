@@ -109,7 +109,9 @@ def parse_cards(html_text, set_name):
             "set_id": code.split("-")[0],                 # e.g. "EB05" (prefix the DB groups on)
             "set_name": set_name,
             "rarity": _txt(spans[1]) if len(spans) > 1 else None,
-            "card_type": _txt(spans[2]) if len(spans) > 2 else None,
+            # Bandai lists types UPPERCASE; optcgapi (the rest of the catalog) uses
+            # Title case. Match it so filters don't show CHARACTER + Character twice.
+            "card_type": ((_txt(spans[2]) or "").title() or None) if len(spans) > 2 else None,
             "card_color": _field(block, "color"),
             "card_cost": card_cost,
             "card_power": _field(block, "power"),
