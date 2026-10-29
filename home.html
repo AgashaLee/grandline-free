@@ -148,7 +148,11 @@
     .btn.tokopedia { background: #03ac0e; border-color: #03ac0e; color: #fff; }
     .btn.tokopedia:hover { background: #04c611; border-color: #04c611; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(3,172,14,0.25); }
     @media(max-width:640px){ .shop-promo{ flex-direction: column; text-align: center; padding: 24px 18px; }
-      .shop-promo-body p{ margin-left: auto; margin-right: auto; } .shop-promo-btns{ justify-content: center; } }
+      .shop-promo-body{ width: 100%; }
+      .shop-promo-body p{ margin-left: auto; margin-right: auto; }
+      .shop-promo-btns{ flex-direction: column; align-items: stretch; width: 100%; }
+      .shop-promo-btns a{ display: block; }
+      .shop-promo-btns .btn{ width: 100%; } }
 
     /* Free feature cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
