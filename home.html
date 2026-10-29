@@ -142,10 +142,13 @@
     .shop-promo-body h3 { font-size: 22px; color: #fff; line-height: 1.2; }
     .shop-promo-body p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 18px; max-width: 560px; }
     .shop-promo-body p b { color: var(--ink); }
+    .shop-promo-btns { display: flex; gap: 12px; flex-wrap: wrap; }
     .btn.tiktok { background: #fe2c55; border-color: #fe2c55; color: #fff; }
     .btn.tiktok:hover { background: #ff4568; border-color: #ff4568; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(254,44,85,0.25); }
+    .btn.tokopedia { background: #03ac0e; border-color: #03ac0e; color: #fff; }
+    .btn.tokopedia:hover { background: #04c611; border-color: #04c611; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(3,172,14,0.25); }
     @media(max-width:640px){ .shop-promo{ flex-direction: column; text-align: center; padding: 24px 18px; }
-      .shop-promo-body p{ margin-left: auto; margin-right: auto; } }
+      .shop-promo-body p{ margin-left: auto; margin-right: auto; } .shop-promo-btns{ justify-content: center; } }
 
     /* Free feature cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
@@ -272,12 +275,17 @@
              alt="OP-17 The World's Strongest Warriors booster pack">
         <div class="shop-promo-body">
           <span class="shop-pill">🛒 Shop packs</span>
-          <h3>Buy sealed One Piece packs on TikTok Shop</h3>
+          <h3>Buy sealed One Piece packs</h3>
           <p>Our pick right now: the <b>OP-17 &ldquo;The World&rsquo;s Strongest Warriors&rdquo;</b>
-             booster pack, from a seller on TikTok Shop Indonesia.</p>
-          <a href="https://atid.me/go/VH95URzB" target="_blank" rel="nofollow sponsored noopener">
-            <button class="btn tiktok">Buy on TikTok Shop →</button>
-          </a>
+             booster pack &mdash; grab it on TikTok Shop or Tokopedia (Indonesia).</p>
+          <div class="shop-promo-btns">
+            <a href="https://atid.me/go/VH95URzB" target="_blank" rel="nofollow sponsored noopener">
+              <button class="btn tiktok">Buy on TikTok Shop →</button>
+            </a>
+            <a href="https://atid.me/go/r7R43Hoc" target="_blank" rel="nofollow sponsored noopener">
+              <button class="btn tokopedia">Buy on Tokopedia →</button>
+            </a>
+          </div>
         </div>
       </div>
     </div>
