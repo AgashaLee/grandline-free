@@ -1,17 +1,35 @@
 [
   {
-    "title": "🎴 LUFFY DON!! collectible — Premium Bandai preorders reopen (2nd allocation)",
-    "date": "2026-10-27",
-    "body": "Bandai reopened preorders on Premium Bandai Japan for the LUFFY One Piece Card Game DON!! collectible — a LUFFY figure bundled with a special holographic DON!! promo card (¥1,650). Second allocation opened 27 Oct after the first sold out; ships June 2027.",
+    "title": "🆕 EB-05 'Heroines Edition Vol.2' is out — and it's reviving older cards",
+    "date": "2026-10-30",
+    "body": "EB-05 Heroines Edition Vol.2 releases today (EN 30 Oct / JP 31 Oct). Beyond the new Nico Robin Leader and SP heroines, it's lifting demand — and prices — for older cards in other sets whose archetypes it makes playable again.",
+    "image": "/assets/EB05.jpg",
     "announcement": {
-      "news": "Bandai has reopened preorders on Premium Bandai Japan for the LUFFY ONE PIECE Card Game DON!! collectible — a LUFFY figure bundled with a special holographic DON!! promo card (¥1,650). This is a second allocation, opened 27 October 2026 (16:00 JST) after the first run sold out on strong demand. Shipping is planned for June 2027, and Bandai notes regional versions may be sold outside Japan.",
-      "analysis": "A second allocation cuts both ways: it confirms the piece is in demand, but it also adds supply, so a big resale premium isn't a given. This is a display/collector item (figure + holo DON!!), not a gameplay staple — and it's a long wait to June 2027.",
-      "value": "For collectors who want the holographic DON!! card and the LUFFY figure, ordering inside the window is the safest way to get it at retail (¥1,650). It's a Premium Bandai Japan order, so fans outside Japan will likely need a proxy or forwarding service — and it won't arrive until mid-2027. Bandai hints at regional versions, so overseas collectors may prefer to wait and see if a local release appears.",
-      "deadline": "Second preorder allocation reopened 27 October 2026, 16:00 JST. No fixed closing date — Bandai warns it may close early once the allocation runs out.",
-      "risk": "Japan-only via Premium Bandai (overseas buyers need a proxy), a long wait to June 2027, possible regional releases, and uncertain resale value (the second allocation adds supply).",
+      "news": "EB-05 'Heroines Edition Vol.2' launches 30 October (English) and 31 October (Japan) — ¥240 per pack in Japan, $4.99 per pack in English, 24 packs per box. It's the follow-up to the sold-out first Heroines set (EB-03), headlined by a Nico Robin Leader, SP versions of Nami and Robin, and several leader parallels.",
+      "analysis": "The less obvious effect of a new set is that it reprices OLDER singles — by making dormant archetypes playable again. TCGplayer's late-October price trends tie several climbers directly to EB-05: new cards like Jewelry Bonney (EB05-001), Alvida (EB05-021) and Sugar (EB05-034) are reviving the Leaders and support pieces those decks already relied on. A separate catalyst, the 24 September Green Mihawk ban, is still pushing players toward Blue decks.",
+      "value": "For players and collectors, the interesting part isn't just the new cards — it's which OLDER cards EB-05 makes relevant again. Per TCGplayer's price-trends (22 Sep–22 Oct window), notable climbers include Sugar (Royal Blood) parallel, Buggy (Emperors in the New World) parallel, Mr.3/Galdino (Premium Booster Vol.2), both Lucky.Roux printings, and Smoker (Royal Blood) parallel. If you already own these, they're gaining demand; if you're building those decks, EB-05 is what's enabling them.",
+      "deadline": "EB-05 is out now (EN 30 Oct / JP 31 Oct). Related English 'Heroines Battle Vol.2' events run 6 Nov – 6 Dec.",
+      "risk": "Launch-week prices are volatile — early premiums often compress as packs open and supply arrives. The moves cited are a specific late-October snapshot and some may have already retraced, and hype-driven reasons can reverse if the EB-05 cards underperform in play. Always check current prices before acting.",
       "sources": [
-        { "label": "Official — ONE PIECE news", "url": "https://one-piece.com/news/82784/index.html" },
-        { "label": "Tamashii Web — product page", "url": "https://tamashiiweb.com/item/16245/" }
+        { "label": "TCGplayer — One Piece price trends (27 Oct 2026)", "url": "https://seller.tcgplayer.com/blog/price-trends-one-piece-cards-climbing-in-price-10-27-2026" },
+        { "label": "Official EB-05 page", "url": "https://en.onepiece-cardgame.com/products/eb05.html" }
+      ]
+    }
+  },
+  {
+    "title": "🆕 OP-18 'The Dominance of God' — release dates confirmed (Nov 20 / 21)",
+    "date": "2026-10-30",
+    "body": "Bandai set OP-18 'The Dominance of God' for 20 Nov (English) / 21 Nov (Japan) — $4.99 / ¥240 per pack, 127+1 card types. A Heroines Gift Collection (GC-2026) lands the same day.",
+    "image": "/assets/OP18.jpg",
+    "announcement": {
+      "news": "Bandai has confirmed release dates for OP-18 'The Dominance of God' (Japanese: 神の支配) — 20 November 2026 (English) and 21 November 2026 (Japan), $4.99 per pack / ¥240, with 127+1 card types. Arriving the same day (20 Nov) is the Gift Collection -ONE PIECE Heroines- [GC-2026] ($44.99), which bundles 2 EB-05 packs, 70 sleeves and 10 new-art promo cards.",
+      "analysis": "OP-18 is the next main booster set, and with dates now official (they weren't back in September), preorders should follow soon. There's no official card list yet — the card codes and 'leader reveals' circulating online aren't from a Bandai checklist, so treat them as rumour until confirmed.",
+      "value": "For players, OP-18 is the next big set to plan decks around; for collectors, the Gift Collection (GC-2026) is the scarcer piece — it's allocation-limited (some stores report only a couple of displays each), so if you want it, watch for preorders early. As always, launch-day copies are usually the cheapest before the chase cards are known.",
+      "deadline": "Release: 20 November (English) / 21 November (Japan). GC-2026 also 20 November. Preorders for allocated product often close before release — secure the Gift Collection early if you want it.",
+      "risk": "No official card list yet, so contents and chase cards are unconfirmed (circulating codes are unofficial). Box pricing isn't official, and 'packs per display' figures come from single stores, not Bandai.",
+      "sources": [
+        { "label": "Official — OP-18 page", "url": "https://www.onepiece-cardgame.com/products/op18.html" },
+        { "label": "Shonen TCG — Oct/Nov release schedule", "url": "https://www.shonentcg.com/blog/one-piece-tcg-release-schedule-october-november-2026" }
       ]
     }
   },
@@ -29,24 +47,6 @@
       "sources": [
         { "label": "Official — ST-37", "url": "https://www.onepiece-cardgame.com/products/st37.html" },
         { "label": "Official — ST-38", "url": "https://www.onepiece-cardgame.com/products/st38.html" }
-      ]
-    }
-  },
-  {
-    "title": "🆕 EB-05 'Heroines Edition Vol.2' confirmed for late October 2026",
-    "date": "2026-09-22",
-    "body": "EB-05 lands ~30–31 Oct 2026 — Nico Robin Leader, SP Nami & Robin, and five leader parallels. The first Heroines set is still sold out.",
-    "image": "/assets/EB05.jpg",
-    "announcement": {
-      "news": "Bandai has confirmed EB-05 'Heroines Edition Vol.2' for around 30–31 October 2026 (Japan: ¥240 per 6-card pack; English: $4.99 per 12-card pack). Cards revealed so far include a Nico Robin Leader (Green/Yellow), SP versions of Nami and Robin, and leader parallels for Vivi, Shirahoshi, Hancock, Rebecca and Bonney. OP-18 'The Dominance of God' has also been announced, with an estimated ~November window.",
-      "analysis": "The first Heroines set (EB-03) is still sold out, which points to strong, lasting demand for heroine cards. Japanese preorders and store lotteries usually open 3–5 weeks before release, so they could open any day now — allocation tends to matter more than the sticker price.",
-      "value": "For collectors, the SP Nami and Robin and the leader parallels are the likely chase cards, and early copies at launch are usually the cheapest before hype builds. With EB-03 still sold out, sealed EB-05 could hold its value better than a typical Extra Booster.",
-      "deadline": "Release around 30–31 October 2026. The preorder / lottery window has not been announced yet.",
-      "risk": "The full card list isn't out yet, so the chase cards could disappoint. Extra Boosters are often reprinted, and a single-card-heavy set can mean softer demand for sealed product.",
-      "sources": [
-        { "label": "Official EB-05 page", "url": "https://en.onepiece-cardgame.com/products/eb05.html" },
-        { "label": "Samurai Sword Tokyo — EB-05 guide", "url": "https://samuraiswordtokyo.com/blogs/news/eb05-heroines-edition-vol2-prb-comparison-guide" },
-        { "label": "Boxed.gg — OP-18 & EB-05", "url": "https://blog.boxed.gg/everything-we-learned-about-op-18-and-eb05-heroines-edition-vol-2/" }
       ]
     }
   },
