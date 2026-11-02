@@ -209,6 +209,7 @@
         html += `<div class="card" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; height:260px;" onclick="renderCards('${setPrefix}')">
           <div style="height:150px; margin-bottom:16px; display:flex; align-items:center;">
              <img src="${boxUrl}" data-fb="${cardImg}" onerror="${onErr}"
+                  loading="lazy" decoding="async"
                   style="max-height:100%; border-radius:8px; box-shadow:var(--shadow-sm)">
           </div>
           <h3 style="font-size:18px;">${setPrefix}</h3>

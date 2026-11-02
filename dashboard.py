@@ -2021,11 +2021,15 @@ ROUTES = {
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send(self, status: int, body: bytes, content_type: str, extra_headers=None) -> None:
+    def _send(self, status: int, body: bytes, content_type: str, extra_headers=None,
+              cache_control: str = "no-store") -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        # Dynamic pages stay no-store (fresh prices/meta); static assets opt into
+        # a real cache via cache_control= so browsers stop re-downloading them on
+        # every visit/scroll (big latency + Railway-egress win).
+        self.send_header("Cache-Control", cache_control)
         for k, v in (extra_headers or []):
             self.send_header(k, v)
         self.end_headers()
@@ -2190,7 +2194,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             try:
                 body = target.read_bytes()
-                self._send(200, body, "image/jpeg")
+                # Box covers / brand art / early-set card images rarely change;
+                # cache them for a week so repeat views are instant and we stop
+                # re-serving the same bytes from Railway on every request.
+                self._send(200, body, "image/jpeg",
+                           cache_control="public, max-age=604800")
             except OSError:
                 self._send(404, b"404 Not Found", "text/plain")
             return
