@@ -375,9 +375,18 @@
       document.getElementById('statCards').textContent = cards.length.toLocaleString();
       document.getElementById('statSets').textContent = setIds.size;
 
-      // newest main booster = highest "OP-NN"
+      // Featured newest set. Default = highest "OP-NN" booster; set
+      // NEWEST_OVERRIDE to a set_id to feature an EB/special set that released
+      // more recently than the latest OP set, then clear it back to '' once a
+      // newer OP-NN set lands (auto-selection is correct again from then on).
+      const NEWEST_OVERRIDE = 'EB05';   // EB-05 Heroines Vol.2 — clear when OP-18 drops
       let newest = null, best = -1, newestName = '';
-      cards.forEach(c => { const m = /^OP-(\d+)$/.exec(c.set_id || ''); if (m && +m[1] > best) { best = +m[1]; newest = c.set_id; newestName = c.set_name; } });
+      if (NEWEST_OVERRIDE && setIds.has(NEWEST_OVERRIDE)) {
+        newest = NEWEST_OVERRIDE;
+        newestName = (cards.find(c => c.set_id === NEWEST_OVERRIDE) || {}).set_name || NEWEST_OVERRIDE;
+      } else {
+        cards.forEach(c => { const m = /^OP-(\d+)$/.exec(c.set_id || ''); if (m && +m[1] > best) { best = +m[1]; newest = c.set_id; newestName = c.set_name; } });
+      }
       if (newest) {
         const setCards = cards.filter(c => c.set_id === newest)
           .sort((a, b) => (RANK[a.rarity] ?? 9) - (RANK[b.rarity] ?? 9)).slice(0, 16);
