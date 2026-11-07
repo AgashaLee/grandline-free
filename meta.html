@@ -553,10 +553,10 @@
       let filtered = activeDecks();
       if (SELECTED_LEADER) filtered = filtered.filter(d => d.leader_id === SELECTED_LEADER);
       if (color) {
-        filtered = filtered.filter(d => {
-          const n = (d.event_name || '').toLowerCase();
-          return n.includes(color.toLowerCase());
-        });
+        // A deck's colour is its leader's colour (e.g. "Red" or dual "Green
+        // Red"); substring match so a dual-colour leader matches either colour.
+        const want = color.toLowerCase();
+        filtered = filtered.filter(d => (d.color || '').toLowerCase().includes(want));
       }
       if (country) filtered = filtered.filter(d => d.country === country);
       if (tournament) filtered = filtered.filter(d => d.event_type === tournament);

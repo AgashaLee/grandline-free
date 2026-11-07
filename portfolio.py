@@ -225,10 +225,17 @@ def get_meta_decks() -> list:
     """Fetch all meta decks with their card lists."""
     db = get_db()
     deck_rows = db.execute("SELECT * FROM meta_decks").fetchall()
+
+    # A deck's colour is its leader card's colour (meta_decks has no colour
+    # column). Map leader card_id -> card_color once so the /meta Color filter
+    # has something to match ("Red", or dual like "Green Red" / "Green/Yellow").
+    leader_color = {cid: (col or "") for cid, col in
+                    db.execute("SELECT card_id, card_color FROM cards")}
     
     decks = []
     for r in deck_rows:
         deck = dict(r)
+        deck["color"] = leader_color.get(deck.get("leader_id"), "")
         card_rows = db.execute("SELECT card_id, quantity FROM meta_deck_cards WHERE deck_id = ?", (deck["id"],)).fetchall()
         deck["cards"] = [dict(cr) for cr in card_rows]
         decks.append(deck)
