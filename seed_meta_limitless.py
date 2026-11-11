@@ -54,9 +54,12 @@ def seed(max_tournaments: int = 40, per_tournament: int = 8, total_cap: int = 32
         print("No decks fetched — leaving the existing Meta data untouched.")
         return 0
 
-    # 3) rebuild the meta tables from the fresh pull
-    db.execute("DELETE FROM meta_deck_cards")
-    db.execute("DELETE FROM meta_decks")
+    # 3) rebuild ONLY the West decks from the fresh pull. JP decks (country='JP',
+    # seeded separately by seed_meta_tcgportal_jp) must survive this refresh --
+    # a blanket DELETE here would wipe them until the JP seed next runs.
+    db.execute("DELETE FROM meta_deck_cards WHERE deck_id IN "
+               "(SELECT id FROM meta_decks WHERE country = 'West')")
+    db.execute("DELETE FROM meta_decks WHERE country = 'West'")
     for d in decks:
         db.execute(
             """INSERT OR REPLACE INTO meta_decks
