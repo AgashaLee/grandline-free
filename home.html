@@ -128,6 +128,16 @@
       padding: 3px 6px; border-radius: 6px; text-align: center; white-space: nowrap; overflow: hidden;
       text-overflow: ellipsis; border: 1px solid rgba(245,158,11,.28); }
     .strip-empty { color: var(--muted); font-size: 13px; padding: 20px 0; }
+    /* Card of the day (single featured card + info) */
+    .daily { display: flex; gap: 20px; align-items: center; background: linear-gradient(135deg, #1b1b22, #121214);
+      border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px; }
+    .daily-img { flex: 0 0 auto; width: 132px; border-radius: 10px; overflow: hidden; cursor: pointer; box-shadow: var(--shadow-sm); }
+    .daily-img img { width: 100%; display: block; }
+    .daily-info h4 { font-size: 22px; color: #fff; line-height: 1.2; }
+    .daily-info .meta { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6; }
+    .daily-info a.more { display: inline-block; margin-top: 12px; color: var(--gold); font-weight: 600; font-size: 13px; cursor: pointer; }
+    .daily-info a.more:hover { color: #fbbf24; }
+    @media(max-width:560px){ .daily{ flex-direction: column; text-align: center; } }
 
     /* Shop-packs promo band (curated affiliate pick — TikTok Shop) */
     .shop-promo { display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, #1b1b22, #121214);
@@ -255,6 +265,13 @@
         <a class="more" href="/database">Browse the database →</a>
       </div>
       <div class="strip" id="newestStrip"></div>
+    </div>
+
+    <div class="showcase" id="scDaily" hidden>
+      <div class="showcase-head">
+        <div class="t"><span class="newpill">Card of the day</span><h3>Today&rsquo;s pick</h3></div>
+      </div>
+      <div class="daily" id="dailyBox"></div>
     </div>
 
     <div class="showcase" id="scMovers">
@@ -396,6 +413,26 @@
       } else {
         document.getElementById('scNewest').hidden = true;   // no data -> collapse
       }
+
+      // Card of the day — deterministic daily pick (same for everyone each day),
+      // from cards that have art, preferring Leaders / high rarity for a nicer
+      // feature. A multiplicative hash scatters the pick so consecutive days
+      // don't show neighbouring cards from the same set.
+      const dPool = cards.filter(c => c.image_url && (c.card_type === 'Leader' || ['SEC','SP','SR','L'].includes(c.rarity)));
+      const dUse = dPool.length ? dPool : cards.filter(c => c.image_url);
+      if (dUse.length) {
+        const day = Math.floor(Date.now() / 86400000);
+        const dc = dUse[((day * 2654435761) >>> 0) % dUse.length];
+        document.getElementById('dailyBox').innerHTML =
+          `<div class="daily-img" onclick="openCard('${esc(dc.card_id)}')">`
+          + (dc.image_url ? `<img src="${esc(dc.image_url)}" loading="lazy" alt="${esc(dc.name)}">` : '')
+          + `</div><div class="daily-info"><h4>${esc(dc.name)}</h4>`
+          + `<div class="meta">${esc(dc.card_id)} &middot; ${esc(dc.set_name || '')}`
+          + `${dc.rarity ? ' &middot; ' + esc(dc.rarity) : ''}${dc.card_type ? ' &middot; ' + esc(dc.card_type) : ''}</div>`
+          + `<a class="more" onclick="openCard('${esc(dc.card_id)}')">View card &rarr;</a></div>`;
+        document.getElementById('scDaily').hidden = false;
+      }
+
       catalogReady = true;
       renderLeaders();
     }).catch(() => {});
