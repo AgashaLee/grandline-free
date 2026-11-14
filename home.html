@@ -129,12 +129,13 @@
       text-overflow: ellipsis; border: 1px solid rgba(245,158,11,.28); }
     .strip-empty { color: var(--muted); font-size: 13px; padding: 20px 0; }
     /* Card of the day (single featured card + info) */
-    .daily { display: flex; gap: 20px; align-items: center; background: linear-gradient(135deg, #1b1b22, #121214);
-      border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px; }
-    .daily-img { flex: 0 0 auto; width: 132px; border-radius: 10px; overflow: hidden; cursor: pointer; box-shadow: var(--shadow-sm); }
+    .daily { display: flex; gap: 22px; align-items: flex-start; max-width: 820px; background: linear-gradient(135deg, #1b1b22, #121214);
+      border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 22px; }
+    .daily-img { flex: 0 0 auto; width: 150px; border-radius: 10px; overflow: hidden; cursor: pointer; box-shadow: var(--shadow-sm); }
     .daily-img img { width: 100%; display: block; }
     .daily-info h4 { font-size: 22px; color: #fff; line-height: 1.2; }
     .daily-info .meta { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6; }
+    .daily-info .effect { color: var(--ink); font-size: 13.5px; line-height: 1.65; margin-top: 12px; }
     .daily-info a.more { display: inline-block; margin-top: 12px; color: var(--gold); font-weight: 600; font-size: 13px; cursor: pointer; }
     .daily-info a.more:hover { color: #fbbf24; }
     @media(max-width:560px){ .daily{ flex-direction: column; text-align: center; } }
@@ -429,6 +430,7 @@
           + `</div><div class="daily-info"><h4>${esc(dc.name)}</h4>`
           + `<div class="meta">${esc(dc.card_id)} &middot; ${esc(dc.set_name || '')}`
           + `${dc.rarity ? ' &middot; ' + esc(dc.rarity) : ''}${dc.card_type ? ' &middot; ' + esc(dc.card_type) : ''}</div>`
+          + (dc.card_text ? `<div class="effect">${esc(dc.card_text)}</div>` : '')
           + `<a class="more" onclick="openCard('${esc(dc.card_id)}')">View card &rarr;</a></div>`;
         document.getElementById('scDaily').hidden = false;
       }
