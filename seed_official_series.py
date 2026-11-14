@@ -28,8 +28,6 @@ import os
 import re
 import sys
 
-import requests
-
 from database import get_db
 
 IMG_DIR = "assets/cards"   # self-hosted card art (Bandai hotlink-protects theirs)
@@ -130,6 +128,7 @@ def parse_cards(html_text, set_name):
 
 
 def fetch_series(series_id, set_name):
+    import requests  # only the fetch path needs it, not --json (which the server runs)
     url = f"{BASE}/cardlist/?series={series_id}"
     html_text = requests.get(url, headers=HEADERS, timeout=30).text
     if not set_name:
@@ -145,6 +144,7 @@ def download_image(code):
     browser), so the art must be self-hosted. Returns the site-relative URL, or
     None on failure (the card still shows via the page's placeholder)."""
     from PIL import Image  # only needed for the fetch/download path, not --json
+    import requests
     os.makedirs(IMG_DIR, exist_ok=True)
     out_path = f"{IMG_DIR}/{code}.jpg"
     try:
