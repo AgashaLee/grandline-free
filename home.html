@@ -138,7 +138,11 @@
     .daily-info .effect { color: var(--ink); font-size: 13.5px; line-height: 1.65; margin-top: 12px; }
     .daily-info a.more { display: inline-block; margin-top: 12px; color: var(--gold); font-weight: 600; font-size: 13px; cursor: pointer; }
     .daily-info a.more:hover { color: #fbbf24; }
-    @media(max-width:560px){ .daily{ flex-direction: column; } }
+    @media(max-width:560px){
+      .daily{ flex-direction: column; align-items: center; text-align: center; }
+      .daily-img{ width: 180px; }
+      .daily-info .effect{ text-align: left; }
+    }
 
     /* Shop-packs promo band (curated affiliate pick — TikTok Shop) */
     .shop-promo { display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, #1b1b22, #121214);
