@@ -196,7 +196,10 @@
       let html = '<div class="grid">';
       for (const setPrefix of keys) {
         const cards = globalCardsBySet[setPrefix];
-        const boxUrl = `/assets/${setPrefix}.jpg`;
+        // Box covers are cached 7d (Cache-Control max-age). Bump this ?v when a
+        // cover is replaced in place so browsers re-fetch it instead of showing
+        // the stale cached copy (v2: OP18 cover re-cropped to a tall pack).
+        const boxUrl = `/assets/${setPrefix}.jpg?v=2`;
         // No box-cover image yet (e.g. a brand-new set)? Fall back to a real card
         // from the set — its Leader if it has one, else the first card with art —
         // so the tile always shows something instead of a bare placeholder.
