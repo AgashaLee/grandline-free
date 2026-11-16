@@ -1767,7 +1767,8 @@ def render_card_page(code: str) -> bytes | None:
     canonical = f"{_SITE_URL}/card/{code}"
     setline = f' · {_h(c["set_name"])}' if c.get("set_name") else ""
     body = (
-        f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / {_h(code)}</div>'
+        f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / '
+        f'<a href="/set/{_h(code.split("-")[0])}">{_h(c.get("set_name") or code.split("-")[0])}</a> / {_h(code)}</div>'
         f'<div class="top"><div>{img}</div><div>'
         f'<h1>{_h(name)}</h1><div class="sub">{_h(code)}{setline}</div>'
         f'{price_html}<div class="chips">{"".join(chips)}</div>{traits_html}'
@@ -1951,6 +1952,53 @@ def render_leader_page(code: str) -> bytes | None:
                       image=img, og_type="product")
 
 
+def render_set_page(prefix: str) -> bytes | None:
+    """Server-rendered, crawlable page listing every card in one set (e.g.
+    /set/OP18), so Google can rank it for '<set> card list' searches. Reuses the
+    card-page design; each card links to its own /card/<code> page."""
+    db = get_db()
+    rows = db.execute(
+        "SELECT card_id, name, image_url, set_name FROM cards WHERE card_id LIKE ? "
+        "ORDER BY CASE card_type WHEN 'Leader' THEN 0 ELSE 1 END, card_id",
+        (prefix + "-%",)).fetchall()
+    if not rows:
+        return None
+    rows = [dict(r) for r in rows]
+    set_name = next((r["set_name"] for r in rows if r.get("set_name")), prefix)
+    n = len(rows)
+    minis = "".join(
+        f'<a class="mini" href="/card/{_h(r["card_id"])}">'
+        + (f'<img src="{_h(r["image_url"])}" alt="{_h(_clean_card_name(r["name"]) or r["card_id"])} '
+           f'{_h(r["card_id"])} One Piece card" loading="lazy" onerror="this.style.display=\'none\'">'
+           if r["image_url"] else "")
+        + f'<div class="nm">{_h(_clean_card_name(r["name"]) or r["card_id"])}</div>'
+        + f'<div class="u">{_h(r["card_id"])}</div></a>'
+        for r in rows)
+    cover = f"{_SITE_URL}/assets/{prefix}.jpg"
+    canonical = f"{_SITE_URL}/set/{prefix}"
+    body = (
+        f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / {_h(set_name)}</div>'
+        f'<h1>{_h(set_name)} — Card List</h1>'
+        f'<div class="sub">{_h(prefix)} · {n} cards · One Piece Card Game</div>'
+        '<p style="color:var(--muted);font-size:14px;margin:12px 0 24px;max-width:720px">'
+        f'Every card in {_h(set_name)} ({_h(prefix)}) — browse all {n} cards with images, '
+        'then click any card for its full details, printings and price.</p>'
+        f'<div class="grid">{minis}</div>')
+    title = f"{set_name} ({prefix}) Card List — All Cards & Prices | Grand Line"
+    desc = (f"{set_name} ({prefix}) full card list: all {n} One Piece Card Game cards with "
+            "images. Browse every card in the set with details, printings and prices.")
+    crumbs = {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{_SITE_URL}/"},
+            {"@type": "ListItem", "position": 2, "name": "Card Database", "item": f"{_SITE_URL}/database"},
+            {"@type": "ListItem", "position": 3, "name": set_name, "item": canonical},
+        ],
+    }
+    return _seo_shell(title, desc, canonical, body, _jsonld(crumbs),
+                      image=cover, og_type="website")
+
+
 def render_sitemap() -> bytes:
     """XML sitemap listing the main pages + every card and leader page, so
     Google can discover and index them all (they aren't in the nav).
@@ -1981,6 +2029,10 @@ def render_sitemap() -> bytes:
         entries += [(f"{_SITE_URL}/leader/{r[0]}", today)
                     for r in db.execute(
                         "SELECT DISTINCT leader_id FROM meta_decks WHERE leader_id<>''")]
+        entries += [(f"{_SITE_URL}/set/{r[0]}", today)
+                    for r in db.execute(
+                        "SELECT DISTINCT substr(card_id,1,instr(card_id,'-')-1) AS s "
+                        "FROM cards WHERE instr(card_id,'-')>0 AND s<>'' ORDER BY s")]
     except Exception:
         pass
     body = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -2243,6 +2295,12 @@ class Handler(BaseHTTPRequestHandler):
             body = render_leader_page(code) if _looks_like_card_code(code) else None
             self._send(200, body, "text/html; charset=utf-8") if body else \
                 self._send(404, b"Leader not found", "text/plain")
+            return
+        elif path.startswith("/set/"):
+            prefix = path[len("/set/"):].strip("/").upper()
+            body = render_set_page(prefix) if re.fullmatch(r"[A-Z0-9]{1,6}", prefix) else None
+            self._send(200, body, "text/html; charset=utf-8") if body else \
+                self._send(404, b"Set not found", "text/plain")
             return
 
         self._send(404, b"404 Not Found", "text/plain")

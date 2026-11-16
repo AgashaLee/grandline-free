@@ -209,7 +209,10 @@
         const ph = `this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'\\u{1F3B4}',style:'width:100px;height:140px;display:flex;align-items:center;justify-content:center;font-size:40px;border-radius:8px;background:var(--page-bg);border:1px solid var(--line);box-shadow:var(--shadow-sm)'}))`;
         // onerror chain: box cover -> representative card -> emoji placeholder.
         const onErr = `if(this.dataset.fb){this.onerror=function(){${ph}};this.src=this.dataset.fb}else{${ph}}`;
-        html += `<div class="card" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; height:260px;" onclick="renderCards('${setPrefix}')">
+        // Real <a> link to the set's own crawlable page (/set/<code>) — lets
+        // Google follow it and gives visitors a shareable set URL, instead of
+        // an in-place JS filter that kept one /database URL.
+        html += `<a class="card" href="/set/${setPrefix}" style="cursor:pointer; text-decoration:none; color:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; height:260px;">
           <div style="height:150px; margin-bottom:16px; display:flex; align-items:center;">
              <img src="${boxUrl}" data-fb="${cardImg}" onerror="${onErr}"
                   loading="lazy" decoding="async"
@@ -217,7 +220,7 @@
           </div>
           <h3 style="font-size:18px;">${setPrefix}</h3>
           <div style="color:var(--muted); margin-top:4px; font-size:12px; font-weight:500;">${cards.length} Cards</div>
-        </div>`;
+        </a>`;
       }
       html += '</div>';
       document.getElementById('content').innerHTML = html;
