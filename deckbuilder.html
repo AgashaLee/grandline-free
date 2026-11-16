@@ -92,6 +92,21 @@
   .searchbtn{background:var(--sea);color:#fff;border:1px solid var(--sea-deep);border-radius:var(--radius-sm);
              padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
   .searchbtn:hover{background:var(--sea-deep);}
+  /* Phones: tidy filter bar — search full-width, then Colour/Type/Cost as an
+     even 3-up row, then the checkbox + Clear on their own row (instead of a
+     ragged wrap). */
+  @media(max-width:600px){
+    .filterbar{padding:14px;gap:12px 8px}
+    .filterbar .fld.grow{flex:1 1 100%;min-width:0}
+    .filterbar .fld:nth-child(2),
+    .filterbar .fld:nth-child(3),
+    .filterbar .fld:nth-child(4){flex:1 1 calc(33.333% - 6px);min-width:0}
+    .filterbar .fld:nth-child(2) select,
+    .filterbar .fld:nth-child(3) select,
+    .filterbar .fld:nth-child(4) select{width:100%;min-width:0}
+    .filterbar .fld:nth-child(5){flex:1 1 auto}
+    .filterbar .fld:nth-child(6){flex:0 0 auto;margin-left:auto}
+  }
 
   /* Catalog grid */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
