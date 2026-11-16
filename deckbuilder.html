@@ -156,15 +156,23 @@
   .picker{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);max-width:960px;width:100%;padding:20px;box-shadow:var(--shadow-md)}
   .picker .phead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
   .picker .phead h2{font-size:20px}
-  .picker input[type=text]{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
-      font-size:14px;color:var(--ink);background:var(--page-bg);margin-bottom:14px;font-family:'Inter',sans-serif}
+  .lsearch-wrap{position:relative;margin-bottom:14px}
+  .picker input[type=text]{width:100%;padding:11px 40px 11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      font-size:14px;color:var(--ink);background:var(--page-bg);font-family:'Inter',sans-serif}
   .picker input[type=text]:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 1px var(--sea)}
+  .lsearch-clear{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:none;
+      width:26px;height:26px;padding:0;border-radius:6px;background:var(--btn-bg);border:1px solid var(--line);
+      color:var(--muted);font-size:13px;line-height:1;cursor:pointer;align-items:center;justify-content:center}
+  .lsearch-clear:hover{background:var(--btn-hover);color:var(--ink);border-color:#3f3f46}
   .picker .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;max-height:60vh;overflow-y:auto}
   .lpick{cursor:pointer;text-align:center}
   .lpick img, .lpick .noimg{width:100%;aspect-ratio:5/7;object-fit:contain;border-radius:8px;border:1px solid var(--line);background:var(--page-bg);transition:all .2s}
   .lpick .noimg{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
   .lpick:hover img{border-color:var(--sea);transform:translateY(-3px);box-shadow:var(--shadow-md)}
-  .lpick .nm{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lpick .lp-nm{font-size:11px;font-weight:700;color:var(--ink);margin-top:6px;line-height:1.25;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .lpick .lp-sub{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:3px}
+  .lpick .lp-sub .lp-code{font-size:10px;color:var(--muted);font-weight:600}
 
   /* Zoom modal (lightweight; carddetail.js provides the rich one) */
   .zoommodal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
@@ -265,7 +273,10 @@
         <h2>👑 Choose your Leader</h2>
         <button onclick="closePicker()">✕ Close</button>
       </div>
-      <input type="text" id="lSearch" placeholder="🔍 Search leaders by name, code or colour" oninput="renderLeaders()">
+      <div class="lsearch-wrap">
+        <input type="text" id="lSearch" placeholder="🔍 Search leaders by name, code or colour" oninput="renderLeaders()">
+        <button type="button" class="lsearch-clear" id="lClear" onclick="clearLeaderSearch()" title="Clear search" aria-label="Clear search">✕</button>
+      </div>
       <div class="lgrid" id="lgrid"></div>
     </div>
   </div>
@@ -488,7 +499,9 @@
     function openPicker(){ document.getElementById('overlay').classList.add('show'); renderLeaders(); setTimeout(()=>document.getElementById('lSearch').focus(),50); }
     function closePicker(){ document.getElementById('overlay').classList.remove('show'); }
     function renderLeaders(){
-      const q = document.getElementById('lSearch').value.trim().toLowerCase();
+      const raw = document.getElementById('lSearch').value;
+      const q = raw.trim().toLowerCase();
+      const clr = document.getElementById('lClear'); if(clr) clr.style.display = raw ? 'flex' : 'none';
       const list = leaders.filter(c => !q || (c.card_id+' '+(c.name||'')+' '+(c.card_color||'')+' '+(c.sub_types||'')).toLowerCase().includes(q));
       const grid = document.getElementById('lgrid');
       grid.innerHTML = list.map(c => {
@@ -496,9 +509,13 @@
           ? `<img src="${esc(c.image_url)}" loading="lazy" decoding="async" alt="${esc(c.name)}" onerror="this.outerHTML='<div class=&quot;noimg&quot;>No image</div>'">`
           : '<div class="noimg">No image</div>';
         return `<div class="lpick" onclick="pickLeader('${esc(c.card_id)}')" title="${esc(c.name)} — ${esc(c.card_color)}">
-          ${img}<div class="nm">${esc(c.card_id)}</div></div>`;
+          ${img}
+          <div class="lp-nm">${esc(c.name)}</div>
+          <div class="lp-sub">${dotHTML(c)}<span class="lp-code">${esc(c.card_id)}</span></div>
+        </div>`;
       }).join('') || '<div class="emptydeck">No leaders match.</div>';
     }
+    function clearLeaderSearch(){ const i=document.getElementById('lSearch'); i.value=''; renderLeaders(); i.focus(); }
     function pickLeader(id){
       const c = cardsById[id]; if(!c) return;
       // Changing to a leader that makes current cards off-colour: drop the illegal ones.
