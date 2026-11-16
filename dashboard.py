@@ -51,7 +51,7 @@ WHOP_STORE_URL = os.environ.get("WHOP_STORE_URL", "https://whop.com/grand-line-s
 
 #: Pages anyone may read without a Whop membership. Everything else (the
 #: tracker itself and the collection APIs) stays behind the gate.
-PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/privacy", "/terms", "/about"}
+PUBLIC_PAGES = {"/", "/database", "/meta", "/news", "/market", "/deck-builder", "/privacy", "/terms", "/about"}
 PUBLIC_API = {"/api/database", "/api/meta", "/api/meta_ranking", "/api/news", "/api/market", "/api/price_history"}
 #: Collection-mutating endpoints. They only make sense for a logged-in user, so
 #: on the public (Whop-disabled) free deploy they are refused outright — the
@@ -129,6 +129,45 @@ def _meta() -> dict:
 def _static(name: str) -> bytes:
     """Read a file from disk."""
     return (config.BASE_DIR / name).read_bytes()
+
+
+# --- Same-origin card-image proxy -------------------------------------------
+#: Card art lives on optcgapi.com, which sends no CORS header. The Deck Builder's
+#: "Share as image" (html2canvas) can only draw card art onto an exportable
+#: canvas when the images are same-origin, so it loads them through /img. To
+#: avoid any SSRF, this proxy ONLY ever fetches https://optcgapi.com/... and
+#: refuses everything else. Read-only, cached in memory.
+_IMG_HOST = "optcgapi.com"
+_IMG_CACHE: dict[str, tuple[bytes, str]] = {}
+_IMG_CACHE_MAX = 4000
+
+
+def _proxy_card_image(url: str) -> tuple[bytes, str] | None:
+    """Fetch a card image from the one allowed host; None if not allowed/failed."""
+    import urllib.request
+    try:
+        parts = urllib.parse.urlparse(url)
+    except ValueError:
+        return None
+    if parts.scheme != "https" or parts.netloc != _IMG_HOST:
+        return None  # host-locked: never fetch anything but optcgapi.com over https
+    if url in _IMG_CACHE:
+        return _IMG_CACHE[url]
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "GrandLine/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if resp.status != 200:
+                return None
+            body = resp.read()
+            ctype = resp.headers.get("Content-Type", "image/jpeg")
+    except Exception:
+        return None
+    if not ctype.startswith("image/"):
+        return None
+    if len(_IMG_CACHE) >= _IMG_CACHE_MAX:
+        _IMG_CACHE.clear()  # crude cap; card art is small and re-fetchable
+    _IMG_CACHE[url] = (body, ctype)
+    return _IMG_CACHE[url]
 
 
 # Cloudflare Web Analytics beacon — injected into every page so pageviews are
@@ -2077,7 +2116,7 @@ def render_sitemap() -> bytes:
     # (loc, lastmod) pairs.
     entries: list[tuple[str, str]] = [
         (_SITE_URL + p, today)
-        for p in ("/", "/database", "/market", "/meta", "/news", "/about", "/privacy", "/terms")]
+        for p in ("/", "/database", "/market", "/meta", "/deck-builder", "/news", "/about", "/privacy", "/terms")]
     try:
         entries += [(f"{_SITE_URL}/card/{r[0]}", last_priced.get(r[0], today))
                     for r in db.execute("SELECT card_id FROM cards ORDER BY card_id")]
@@ -2264,7 +2303,8 @@ class Handler(BaseHTTPRequestHandler):
 
         session = self._bind_context()
         is_public = (path in PUBLIC_PAGES or path == "/carddetail.js"
-                     or path.startswith("/assets/") or path == indexnow.KEY_PATH)
+                     or path.startswith("/assets/") or path == "/img"
+                     or path == indexnow.KEY_PATH)
         if auth.WHOP_ENABLED and not session and not is_public:
             return self._gate()
 
@@ -2288,6 +2328,21 @@ class Handler(BaseHTTPRequestHandler):
             return
         elif path == "/market":
             self._send(200, _page("market.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/deck-builder":
+            self._send(200, _page("deckbuilder.html"), "text/html; charset=utf-8")
+            return
+        elif path == "/img":
+            # Same-origin card-image proxy for the Deck Builder's image export.
+            # Host-locked to optcgapi.com (see _proxy_card_image).
+            from urllib.parse import parse_qs
+            target = (parse_qs(query).get("u") or [""])[0]
+            got = _proxy_card_image(target)
+            if got is None:
+                self._send(404, b"404 Not Found", "text/plain")
+            else:
+                body, ctype = got
+                self._send(200, body, ctype, cache_control="public, max-age=604800")
             return
         elif path.startswith("/assets/"):
             filename = path[len("/assets/"):]

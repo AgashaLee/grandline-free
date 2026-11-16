@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck Builder - Grand Line</title>
+<meta name="description" content="Build and share a 50-card One Piece Card Game deck for free. Pick a Leader, add cards with live colour and copy-limit validation, then share your decklist as an image or link.">
+<link rel="canonical" href="https://grandline.id/deck-builder">
+<meta property="og:site_name" content="Grand Line">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Deck Builder - Grand Line">
+<meta property="og:description" content="Build and share a 50-card One Piece Card Game deck for free — colour + copy-limit validation, image and link export.">
+<meta property="og:url" content="https://grandline.id/deck-builder">
+<meta property="og:image" content="https://grandline.id/assets/og-banner.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Deck Builder - Grand Line">
+<meta name="twitter:description" content="Build and share a 50-card One Piece Card Game deck for free — colour + copy-limit validation, image and link export.">
+<meta name="twitter:image" content="https://grandline.id/assets/og-banner.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --sea: #0ea5e9; --sea-deep: #0284c7;
+    --red: #ef4444; --red-deep: #dc2626;
+    --gold: #f59e0b; --gold-deep: #d97706;
+    --green: #22c55e;
+    --page-bg: #09090b;
+    --surface: #18181b; --surface-head: #121214;
+    --ink: #f4f4f5; --muted: #a1a1aa; --line: #27272a;
+    --btn-bg: #18181b; --btn-hover: #27272a;
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  }
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+       color:var(--ink);font-size:13px;padding:0 0 48px;min-height:100vh;overflow-x:hidden;
+       background:var(--page-bg)}
+  h1,h2,h3{font-family:'Fredoka',sans-serif;letter-spacing:-0.01em;}
+
+  .header{background:#0d0d10;border-bottom:1px solid var(--line);padding:16px 24px;
+          display:flex;align-items:center;justify-content:space-between;
+          flex-wrap:wrap;gap:16px;position:sticky;top:0;z-index:100;}
+  .header > div:first-child{display:flex;flex-direction:column;gap:2px;}
+  .header > div:last-child{display:flex;gap:8px;flex-wrap:wrap}
+  .header h1{font-size:22px;font-weight:600;color:#fff;line-height:1;}
+  .sub{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
+  /* When the window is too narrow to fit all nav buttons on one line, lay them
+     out in an even grid instead of a ragged wrap: 6 section buttons in tidy
+     rows, with the gold "Get the Tracker" CTA spanning full width underneath. */
+  @media(max-width:1040px){
+    .header{flex-direction:column;align-items:stretch;gap:14px}
+    .header > div:last-child{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .header > div:last-child a{display:block}
+    .header > div:last-child button{width:100%;padding:10px 8px}
+    .header > div:last-child a:last-child{grid-column:1 / -1}
+  }
+  @media(max-width:520px){
+    .header > div:last-child{grid-template-columns:repeat(2,1fr)}
+  }
+
+  button{background:var(--btn-bg);color:var(--ink);border:1px solid var(--line);
+         border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;cursor:pointer;
+         font-weight:600;font-family:'Inter',sans-serif;transition:all 0.2s ease;}
+  button:hover{background:var(--btn-hover);border-color:#3f3f46;}
+  button.primary{background:var(--ink);color:var(--page-bg);border-color:var(--ink);}
+  button.primary:hover{background:#d4d4d8;border-color:#d4d4d8;}
+  button.cta{background:var(--gold);color:#4a2f10;border-color:var(--gold);}
+  button.cta:hover{background:#fbbf24;border-color:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
+  button:disabled{opacity:0.4;cursor:not-allowed}
+
+  .wrap{max-width:1280px;margin:24px auto;padding:0 24px}
+
+  /* Two-pane layout: catalog + deck sidebar */
+  .layout{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+  @media(max-width:900px){ .layout{grid-template-columns:1fr} }
+
+  /* Filter bar */
+  .filterbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);
+             border:1px solid var(--line);border-radius:var(--radius-md);padding:14px;margin-bottom:20px;
+             box-shadow:var(--shadow-sm)}
+  .filterbar .fld{display:flex;flex-direction:column;gap:6px;}
+  .filterbar .fld.grow{flex:1;min-width:200px}
+  .filterbar .fld > span{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+  .filterbar input[type=text], .filterbar select{
+      padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      font-size:13px;color:var(--ink);background:var(--page-bg);font-family:'Inter',sans-serif;transition:border-color 0.2s;}
+  .filterbar input[type=text]:focus, .filterbar select:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 1px var(--sea);}
+  .filterbar select{cursor:pointer;font-weight:500;}
+  .filterbar .search-row{display:flex;gap:8px}
+  .filterbar .search-row input{flex:1}
+  .searchbtn{background:var(--sea);color:#fff;border:1px solid var(--sea-deep);border-radius:var(--radius-sm);
+             padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
+  .searchbtn:hover{background:var(--sea-deep);}
+
+  /* Catalog grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+  @media (max-width: 560px){ .grid{ grid-template-columns: repeat(3, 1fr); gap: 10px; } .grid > *{min-width:0} }
+  .cardtile{position:relative;transition:transform .2s ease;}
+  .cardtile img, .cardtile .noimg{width:100%;display:block;border-radius:10px;background:var(--surface);
+                aspect-ratio:5/7;object-fit:contain;border:1px solid var(--line);box-shadow:var(--shadow-sm);transition:all .2s ease;}
+  .cardtile .noimg{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;font-weight:500;text-align:center;padding:4px;}
+  .cardtile.addable{cursor:pointer}
+  .cardtile.addable:hover img{border-color:var(--sea);box-shadow:var(--shadow-md);transform:translateY(-3px)}
+  .cardtile.offcolor{opacity:0.4;filter:grayscale(0.7)}
+  .cardtile .code{color:var(--muted);font-size:10px;font-weight:600;text-align:center;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cardtile .qbadge{position:absolute;top:6px;right:6px;background:var(--sea);color:#fff;font-size:12px;font-weight:700;
+                    min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+                    box-shadow:0 2px 6px rgba(0,0,0,.4);padding:0 6px}
+  .cardtile .zoom{position:absolute;bottom:34px;right:6px;background:rgba(0,0,0,.65);color:#fff;border:none;
+                  width:24px;height:24px;border-radius:6px;font-size:13px;line-height:1;cursor:zoom-in;padding:0;display:none}
+  .cardtile:hover .zoom{display:block}
+  .cardtile .colbar{position:absolute;top:0;left:0;right:0;height:5px;border-radius:10px 10px 0 0;display:flex;overflow:hidden}
+  .cardtile .colbar i{flex:1}
+
+  /* Deck sidebar */
+  .deckpanel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
+             padding:16px;box-shadow:var(--shadow-sm);position:sticky;top:88px}
+  @media(max-width:900px){ .deckpanel{position:static} }
+  .leaderbox{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);
+             border-radius:var(--radius-md);background:var(--page-bg);margin-bottom:14px}
+  .leaderbox img{width:58px;aspect-ratio:5/7;object-fit:contain;border-radius:6px;border:1px solid var(--line)}
+  .leaderbox .nolead{width:58px;aspect-ratio:5/7;border-radius:6px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted)}
+  .leaderbox .meta{flex:1;min-width:0}
+  .leaderbox .meta .nm{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .leaderbox .meta .sub{margin-top:2px}
+
+  .countrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .countpill{font-family:'Fredoka',sans-serif;font-size:20px;font-weight:700}
+  .countpill.ok{color:var(--green)} .countpill.bad{color:var(--gold)}
+  .progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:14px}
+  .progress > i{display:block;height:100%;background:var(--sea);transition:width .2s}
+  .progress.full > i{background:var(--green)}
+
+  .decklist{max-height:48vh;overflow-y:auto;margin:0 -4px;padding:0 4px}
+  .decksec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px}
+  .dl-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .dl-row .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;display:flex;overflow:hidden}
+  .dl-row .dot i{flex:1}
+  .dl-row .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:zoom-in}
+  .dl-row .nm .cc{color:var(--muted);font-size:11px}
+  .dl-row .qty{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .dl-row .qty button{padding:2px 9px;font-size:14px;line-height:1;border-radius:6px}
+  .dl-row .qty .n{min-width:16px;text-align:center;font-weight:700}
+  .emptydeck{color:var(--muted);text-align:center;padding:24px 8px;font-size:13px;line-height:1.6}
+
+  .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .actions button{flex:1;min-width:120px}
+  .msg{margin-top:12px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:600;display:none}
+  .msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#fca5a5;display:block}
+  .msg.good{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#86efac;display:block}
+
+  /* Leader picker overlay */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+  .overlay.show{display:flex}
+  .picker{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);max-width:960px;width:100%;padding:20px;box-shadow:var(--shadow-md)}
+  .picker .phead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .picker .phead h2{font-size:20px}
+  .picker input[type=text]{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      font-size:14px;color:var(--ink);background:var(--page-bg);margin-bottom:14px;font-family:'Inter',sans-serif}
+  .picker input[type=text]:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 1px var(--sea)}
+  .picker .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;max-height:60vh;overflow-y:auto}
+  .lpick{cursor:pointer;text-align:center}
+  .lpick img, .lpick .noimg{width:100%;aspect-ratio:5/7;object-fit:contain;border-radius:8px;border:1px solid var(--line);background:var(--page-bg);transition:all .2s}
+  .lpick .noimg{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+  .lpick:hover img{border-color:var(--sea);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+  .lpick .nm{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Zoom modal (lightweight; carddetail.js provides the rich one) */
+  .zoommodal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+  .zoommodal.show{display:flex}
+  .zoommodal img{max-width:min(92vw,420px);max-height:90vh;border-radius:14px;box-shadow:var(--shadow-md)}
+
+  .gl-footer{border-top:1px solid var(--line);margin-top:56px;padding:40px 24px;text-align:center}
+  .gl-cta{display:inline-block;background:var(--gold);color:#4a2f10;font-weight:600;font-size:14px;
+          padding:14px 28px;border-radius:var(--radius-md);text-decoration:none;transition:all 0.2s;}
+  .gl-cta:hover{background:#fbbf24;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.15);}
+  .foot-row{max-width:1000px;margin:24px auto 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;text-align:left}
+  .foot-disc{flex:1;min-width:240px;color:var(--muted);font-size:12px;line-height:1.6}
+  .foot-links{display:flex;gap:18px;flex-wrap:wrap;flex-shrink:0}
+  .foot-links a{color:#f59e0b;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+  @media(max-width:640px){.foot-row{flex-direction:column;align-items:center;text-align:center;gap:28px}.foot-links{justify-content:center;gap:14px 22px}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>🛠️ Deck Builder</h1>
+      <div class="sub">Build &amp; share a 50-card deck — free</div>
+    </div>
+    <div>
+      <a href="/"><button>🏠 Home</button></a>
+      <a href="/database"><button>🗃️ Card Database</button></a>
+      <a href="/market"><button>📈 Market Watch</button></a>
+      <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/deck-builder"><button class="primary">🛠️ Deck Builder</button></a>
+      <a href="/news"><button>📰 News</button></a>
+      <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="layout">
+      <!-- Catalog -->
+      <div>
+        <div class="filterbar">
+          <div class="fld grow">
+            <span>Search cards</span>
+            <div class="search-row">
+              <input type="text" id="fSearch" placeholder="🔍 Card code, name or trait"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch();}">
+              <button class="searchbtn" onclick="doSearch()">Search</button>
+            </div>
+          </div>
+          <div class="fld"><span>Color</span><select id="fColor" onchange="applyFilters()"><option value="">All</option></select></div>
+          <div class="fld"><span>Type</span><select id="fType" onchange="applyFilters()"><option value="">All</option></select></div>
+          <div class="fld"><span>Cost</span><select id="fCost" onchange="applyFilters()"><option value="">All</option></select></div>
+          <div class="fld"><span>&nbsp;</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;cursor:pointer;padding-bottom:9px;white-space:nowrap">
+              <input type="checkbox" id="fLegal" onchange="applyFilters()" style="cursor:pointer"> Leader-legal only
+            </label>
+          </div>
+          <div class="fld"><span>&nbsp;</span><button onclick="clearFilters()">✕ Clear</button></div>
+        </div>
+        <div id="content" style="min-height:60vh">Loading cards…</div>
+      </div>
+
+      <!-- Deck sidebar -->
+      <div class="deckpanel" id="deckpanel">
+        <div class="leaderbox" id="leaderbox">
+          <div class="nolead">👑</div>
+          <div class="meta">
+            <div class="nm">No Leader chosen</div>
+            <div class="sub">Pick one to start</div>
+          </div>
+          <button class="cta" onclick="openPicker()">Choose</button>
+        </div>
+
+        <div class="countrow">
+          <div><span class="countpill bad" id="countPill">0</span><span style="color:var(--muted);font-weight:600"> / 50</span></div>
+          <div id="validTag" style="font-size:12px;font-weight:700;color:var(--muted)"></div>
+        </div>
+        <div class="progress" id="progress"><i style="width:0"></i></div>
+
+        <div class="decklist" id="decklist">
+          <div class="emptydeck">Your deck is empty.<br>Choose a Leader, then click cards on the left to add them.</div>
+        </div>
+
+        <div class="actions">
+          <button onclick="shareImage()" id="btnImg">🖼️ Share as image</button>
+          <button onclick="shareLink()" id="btnLink">🔗 Copy share link</button>
+        </div>
+        <div class="actions">
+          <button onclick="clearDeck()" style="flex:1">🗑️ Clear deck</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leader picker -->
+  <div class="overlay" id="overlay" onclick="if(event.target===this)closePicker()">
+    <div class="picker">
+      <div class="phead">
+        <h2>👑 Choose your Leader</h2>
+        <button onclick="closePicker()">✕ Close</button>
+      </div>
+      <input type="text" id="lSearch" placeholder="🔍 Search leaders by name, code or colour" oninput="renderLeaders()">
+      <div class="lgrid" id="lgrid"></div>
+    </div>
+  </div>
+
+  <div class="zoommodal" id="zoommodal" onclick="this.classList.remove('show')"><img id="zoomimg" alt=""></div>
+
+  <script src="/carddetail.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    const COLORS = ['Red','Green','Blue','Purple','Black','Yellow'];
+    const COLHEX = {Red:'#ef4444',Green:'#22c55e',Blue:'#0ea5e9',Purple:'#a855f7',Black:'#52525b',Yellow:'#eab308'};
+    const DECK_SIZE = 50, MAX_COPIES = 4;
+
+    let allCards = [];          // every card from /api/database
+    let cardsById = {};
+    let leaders = [];           // card_type === 'Leader'
+    let leader = null;          // chosen leader object
+    let deck = {};              // card_id -> qty (non-leader cards)
+    let searchTerm = '';
+    let suppressHash = false;
+
+    function esc(s){ return String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function colorsOf(c){ return String(c.card_color||'').split(/[\s\/]+/).filter(Boolean); }
+    function leaderColors(){ return leader ? colorsOf(leader) : []; }
+    function colorBarHTML(c){
+      const cs = colorsOf(c);
+      if(!cs.length) return '';
+      return '<div class="colbar">' + cs.map(x=>`<i style="background:${COLHEX[x]||'#555'}"></i>`).join('') + '</div>';
+    }
+    function dotHTML(c){
+      const cs = colorsOf(c);
+      return '<span class="dot">' + (cs.length?cs:['?']).map(x=>`<i style="background:${COLHEX[x]||'#555'}"></i>`).join('') + '</span>';
+    }
+    // A non-leader card is legal if ALL its colours are among the leader's colours.
+    function isLegal(c){
+      if(!leader) return false;
+      const lc = leaderColors();
+      return colorsOf(c).every(x => lc.includes(x));
+    }
+    function deckCount(){ return Object.values(deck).reduce((a,b)=>a+b,0); }
+
+    /* ---------- card zoom ---------- */
+    function zoom(id){
+      const c = cardsById[id]; if(!c) return;
+      if(window.CardDetail && c.image_url){ CardDetail.open(c); return; }
+      if(!c.image_url) return;
+      document.getElementById('zoomimg').src = c.image_url;
+      document.getElementById('zoommodal').classList.add('show');
+    }
+
+    /* ---------- catalog rendering ---------- */
+    function cardTileHTML(c){
+      const inDeck = deck[c.card_id] || 0;
+      const legal = isLegal(c);
+      const cls = 'cardtile' + (legal?' addable':' offcolor');
+      const img = c.image_url
+        ? `<img src="${esc(c.image_url)}" loading="lazy" decoding="async" alt="${esc(c.name)}"
+                onerror="this.outerHTML='<div class=&quot;noimg&quot;>No image</div>'">`
+        : '<div class="noimg">No image</div>';
+      const badge = inDeck ? `<div class="qbadge">${inDeck}</div>` : '';
+      const onclick = legal ? `onclick="addCard('${esc(c.card_id)}')"` : `onclick="tryOffColor('${esc(c.card_id)}')"`;
+      return `<div class="${cls}" ${onclick} title="${esc(c.name)}">
+        ${colorBarHTML(c)}${badge}
+        ${img}
+        <button class="zoom" onclick="event.stopPropagation();zoom('${esc(c.card_id)}')" title="Zoom">🔍</button>
+        <div class="code">${esc(c.card_id)}</div>
+      </div>`;
+    }
+    function renderResults(cards){
+      const legalOnly = document.getElementById('fLegal').checked;
+      let list = cards;
+      if(legalOnly && leader) list = cards.filter(isLegal);
+      let html = `<div style="margin-bottom:16px;color:var(--muted);font-weight:500;font-size:13px">
+        ${list.length} card${list.length===1?'':'s'}${(leader&&!legalOnly)?' · greyed-out cards are off-colour for your Leader':''}</div>`;
+      html += list.length
+        ? `<div class="grid">` + list.map(cardTileHTML).join('') + `</div>`
+        : `<div style="padding:48px;text-align:center;color:var(--muted);font-size:15px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)">No cards match. Try clearing a filter.</div>`;
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Catalog excludes Leaders (they go in the Leader slot, not the 50).
+    function catalog(){ return allCards.filter(c => c.card_type !== 'Leader'); }
+
+    function doSearch(){ searchTerm = document.getElementById('fSearch').value.trim().toLowerCase(); applyFilters(); }
+    function applyFilters(){
+      const q = searchTerm;
+      const color = document.getElementById('fColor').value;
+      const type = document.getElementById('fType').value;
+      const cost = document.getElementById('fCost').value;
+      const res = catalog().filter(c => {
+        if(q){ const hay = (c.card_id+' '+(c.name||'')+' '+(c.sub_types||'')).toLowerCase(); if(!hay.includes(q)) return false; }
+        if(color && !colorsOf(c).includes(color)) return false;
+        if(type && c.card_type !== type) return false;
+        if(cost && String(c.card_cost) !== cost) return false;
+        return true;
+      });
+      renderResults(res);
+    }
+    function clearFilters(){
+      ['fSearch','fColor','fType','fCost'].forEach(id => document.getElementById(id).value='');
+      document.getElementById('fLegal').checked = false;
+      searchTerm = ''; applyFilters();
+    }
+    function fillSelect(id, values){
+      const sel = document.getElementById(id); const keep = sel.options[0];
+      sel.innerHTML=''; sel.appendChild(keep);
+      for(const v of values){ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }
+    }
+    function buildFilterOptions(){
+      const colors=new Set(), types=new Set(), costs=new Set();
+      for(const c of catalog()){
+        colorsOf(c).forEach(x=>colors.add(x));
+        if(c.card_type) types.add(c.card_type);
+        const cost = String(c.card_cost ?? '').trim();
+        if(/^\d+$/.test(cost)) costs.add(cost);
+      }
+      fillSelect('fColor', COLORS.filter(c=>colors.has(c)));
+      fillSelect('fType', [...types].sort());
+      fillSelect('fCost', [...costs].sort((a,b)=>(+a)-(+b)));
+    }
+
+    /* ---------- add / remove ---------- */
+    function flash(text, kind){
+      const m = document.getElementById('msg');
+      m.textContent = text; m.className = 'msg ' + (kind||'err');
+      clearTimeout(flash._t);
+      if(kind==='good') flash._t = setTimeout(()=>{ m.className='msg'; }, 3500);
+    }
+    function tryOffColor(id){
+      const c = cardsById[id]; if(!c) return;
+      if(!leader){ flash('Choose a Leader first, then you can add cards.'); openPicker(); return; }
+      flash(`${c.name} is ${colorsOf(c).join('/')||'colourless'} — your Leader is ${leaderColors().join('/')}. Off-colour cards can’t go in this deck.`);
+    }
+    function addCard(id){
+      const c = cardsById[id]; if(!c) return;
+      if(!leader){ flash('Choose a Leader first, then you can add cards.'); openPicker(); return; }
+      if(!isLegal(c)){ tryOffColor(id); return; }
+      const have = deck[id] || 0;
+      if(have >= MAX_COPIES){ flash(`Max ${MAX_COPIES} copies of ${c.name} — can’t add a 5th.`); return; }
+      if(deckCount() >= DECK_SIZE){ flash(`Deck is already ${DECK_SIZE} cards. Remove one to add another.`); return; }
+      deck[id] = have + 1;
+      refresh();
+    }
+    function removeCard(id){
+      if(!deck[id]) return;
+      deck[id]--; if(deck[id] <= 0) delete deck[id];
+      refresh();
+    }
+
+    /* ---------- deck sidebar ---------- */
+    const TYPE_ORDER = ['Character','Event','Stage'];
+    function renderDeck(){
+      const box = document.getElementById('decklist');
+      const ids = Object.keys(deck);
+      if(!ids.length){
+        box.innerHTML = leader
+          ? '<div class="emptydeck">No cards yet.<br>Click cards on the left to add them.</div>'
+          : '<div class="emptydeck">Your deck is empty.<br>Choose a Leader, then click cards on the left to add them.</div>';
+        return;
+      }
+      const byType = {};
+      for(const id of ids){ const c = cardsById[id]; const t = c.card_type || 'Other'; (byType[t]=byType[t]||[]).push(c); }
+      let html = '';
+      for(const t of TYPE_ORDER.concat(Object.keys(byType).filter(x=>!TYPE_ORDER.includes(x)))){
+        const arr = byType[t]; if(!arr) continue;
+        arr.sort((a,b)=> (parseInt(a.card_cost)||0)-(parseInt(b.card_cost)||0) || a.name.localeCompare(b.name));
+        const n = arr.reduce((s,c)=>s+deck[c.card_id],0);
+        html += `<div class="decksec">${esc(t)} · ${n}</div>`;
+        for(const c of arr){
+          html += `<div class="dl-row">
+            ${dotHTML(c)}
+            <div class="nm" onclick="zoom('${esc(c.card_id)}')" title="${esc(c.name)} — zoom">
+              ${esc(c.name)} <span class="cc">${esc(c.card_id)}</span></div>
+            <div class="qty">
+              <button onclick="removeCard('${esc(c.card_id)}')">−</button>
+              <span class="n">${deck[c.card_id]}</span>
+              <button onclick="addCard('${esc(c.card_id)}')" ${deck[c.card_id]>=MAX_COPIES?'disabled':''}>+</button>
+            </div>
+          </div>`;
+        }
+      }
+      box.innerHTML = html;
+    }
+    function renderLeaderBox(){
+      const box = document.getElementById('leaderbox');
+      if(!leader){
+        box.innerHTML = `<div class="nolead">👑</div>
+          <div class="meta"><div class="nm">No Leader chosen</div><div class="sub">Pick one to start</div></div>
+          <button class="cta" onclick="openPicker()">Choose</button>`;
+        return;
+      }
+      const img = leader.image_url
+        ? `<img src="${esc(leader.image_url)}" loading="lazy" alt="${esc(leader.name)}" onclick="zoom('${esc(leader.card_id)}')" style="cursor:zoom-in">`
+        : '<div class="nolead">👑</div>';
+      box.innerHTML = `${img}
+        <div class="meta">
+          <div class="nm" title="${esc(leader.name)}">${esc(leader.name)}</div>
+          <div class="sub" style="color:${COLHEX[leaderColors()[0]]||'var(--muted)'}">${esc(leaderColors().join(' / '))} · ${esc(leader.card_id)}</div>
+        </div>
+        <button onclick="openPicker()">Change</button>`;
+    }
+    function updateValidity(){
+      const n = deckCount();
+      const pill = document.getElementById('countPill');
+      pill.textContent = n;
+      pill.className = 'countpill ' + (n===DECK_SIZE?'ok':'bad');
+      const bar = document.getElementById('progress');
+      bar.querySelector('i').style.width = Math.min(100, n/DECK_SIZE*100) + '%';
+      bar.classList.toggle('full', n===DECK_SIZE);
+      const tag = document.getElementById('validTag');
+      if(!leader){ tag.textContent='No Leader'; tag.style.color='var(--muted)'; }
+      else if(n===DECK_SIZE){ tag.textContent='✓ Legal 50'; tag.style.color='var(--green)'; }
+      else if(n<DECK_SIZE){ tag.textContent=`${DECK_SIZE-n} more needed`; tag.style.color='var(--gold)'; }
+      else { tag.textContent=`${n-DECK_SIZE} too many`; tag.style.color='var(--red)'; }
+    }
+    function refresh(){ renderLeaderBox(); renderDeck(); updateValidity(); applyFilters(); writeHash(); }
+
+    /* ---------- leader picker ---------- */
+    function openPicker(){ document.getElementById('overlay').classList.add('show'); renderLeaders(); setTimeout(()=>document.getElementById('lSearch').focus(),50); }
+    function closePicker(){ document.getElementById('overlay').classList.remove('show'); }
+    function renderLeaders(){
+      const q = document.getElementById('lSearch').value.trim().toLowerCase();
+      const list = leaders.filter(c => !q || (c.card_id+' '+(c.name||'')+' '+(c.card_color||'')+' '+(c.sub_types||'')).toLowerCase().includes(q));
+      const grid = document.getElementById('lgrid');
+      grid.innerHTML = list.map(c => {
+        const img = c.image_url
+          ? `<img src="${esc(c.image_url)}" loading="lazy" decoding="async" alt="${esc(c.name)}" onerror="this.outerHTML='<div class=&quot;noimg&quot;>No image</div>'">`
+          : '<div class="noimg">No image</div>';
+        return `<div class="lpick" onclick="pickLeader('${esc(c.card_id)}')" title="${esc(c.name)} — ${esc(c.card_color)}">
+          ${img}<div class="nm">${esc(c.card_id)}</div></div>`;
+      }).join('') || '<div class="emptydeck">No leaders match.</div>';
+    }
+    function pickLeader(id){
+      const c = cardsById[id]; if(!c) return;
+      // Changing to a leader that makes current cards off-colour: drop the illegal ones.
+      const prev = leader; leader = c;
+      let dropped = 0;
+      for(const cid of Object.keys(deck)){ if(!isLegal(cardsById[cid])){ dropped += deck[cid]; delete deck[cid]; } }
+      closePicker();
+      refresh();
+      if(dropped) flash(`Switched Leader — removed ${dropped} card${dropped===1?'':'s'} that don’t match ${leaderColors().join('/')}.`);
+      else flash(`Leader set: ${c.name} (${leaderColors().join('/')}).`, 'good');
+    }
+    function clearDeck(){
+      if(!Object.keys(deck).length){ return; }
+      if(!confirm('Clear all cards from the deck? (Your Leader stays.)')) return;
+      deck = {}; refresh();
+    }
+
+    /* ---------- share: URL ---------- */
+    // Hash format:  #d=<leaderId>|<cardId>:<qty>,<cardId>:<qty>,...
+    function encodeDeck(){
+      if(!leader) return '';
+      const parts = Object.keys(deck).map(id => `${id}:${deck[id]}`).join(',');
+      return `${leader.card_id}|${parts}`;
+    }
+    function writeHash(){
+      suppressHash = true;
+      const d = encodeDeck();
+      history.replaceState(null, '', location.pathname + (d ? ('#d=' + encodeURIComponent(d)) : ''));
+      setTimeout(()=>{ suppressHash = false; }, 0);
+    }
+    function loadFromHash(){
+      const raw = (location.hash||'').replace(/^#/, '');
+      if(!raw.startsWith('d=')) return false;
+      let val; try{ val = decodeURIComponent(raw.slice(2)); }catch(e){ return false; }
+      const [lid, rest] = val.split('|');
+      const lc = cardsById[lid];
+      if(!lc || lc.card_type !== 'Leader') return false;
+      leader = lc; deck = {};
+      if(rest){
+        for(const seg of rest.split(',')){
+          const [id, q] = seg.split(':');
+          const c = cardsById[id];
+          const qty = Math.min(MAX_COPIES, parseInt(q)||0);
+          if(c && c.card_type !== 'Leader' && qty>0 && isLegal(c)) deck[id] = qty;
+        }
+      }
+      return true;
+    }
+    function shareLink(){
+      if(!leader){ flash('Choose a Leader and add cards first, then share.'); return; }
+      const url = location.origin + location.pathname + '#d=' + encodeURIComponent(encodeDeck());
+      const done = ()=>flash('Share link copied! Anyone who opens it sees this exact deck.', 'good');
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(done).catch(()=>{ prompt('Copy this link:', url); });
+      } else { prompt('Copy this link:', url); }
+    }
+
+    /* ---------- share: image ---------- */
+    function shareImage(){
+      if(!leader){ flash('Choose a Leader and add cards first, then export.'); return; }
+      if(!deckCount()){ flash('Add some cards first — nothing to picture yet.'); return; }
+      flash('Rendering image… hold on.', 'good');
+      const node = buildExportCard();
+      document.body.appendChild(node);
+      const imgs = Array.from(node.querySelectorAll('img'));
+      // Wait for every image, but never hang on a slow/stuck one (8s cap each).
+      Promise.all(imgs.map(im => (im.complete && im.naturalWidth) ? Promise.resolve()
+          : new Promise(r=>{ const t=setTimeout(r,8000); im.onload=im.onerror=()=>{clearTimeout(t);r();}; }))).then(()=>{
+        return html2canvas(node, {backgroundColor:'#09090b', scale:2, useCORS:true, logging:false});
+      }).then(canvas => {
+        node.remove();
+        canvas.toBlob(blob => {
+          if(!blob){ flash('Could not create the image.'); return; }
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `grandline-deck-${leader.card_id}.png`;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+          flash('Deck image downloaded! Share it anywhere.', 'good');
+        }, 'image/png');
+      }).catch(err => { node.remove(); flash('Image export failed — try again.'); console.error(err); });
+    }
+    // Card art lives on optcgapi.com (no CORS), so route export images through
+    // the site's own same-origin /img proxy — otherwise html2canvas taints the
+    // canvas and can't produce a PNG.
+    function px(url){ return url ? ('/img?u=' + encodeURIComponent(url)) : url; }
+    // Off-screen board rendered to PNG: leader + every copy as a grid of card images.
+    function buildExportCard(){
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:900px;padding:28px;background:#09090b;font-family:Inter,sans-serif;color:#f4f4f5';
+      const ids = Object.keys(deck).sort((a,b)=>{
+        const ca=cardsById[a], cb=cardsById[b];
+        return TYPE_ORDER.indexOf(ca.card_type)-TYPE_ORDER.indexOf(cb.card_type)
+            || (parseInt(ca.card_cost)||0)-(parseInt(cb.card_cost)||0) || ca.name.localeCompare(cb.name);
+      });
+      let tiles = '';
+      for(const id of ids){
+        const c = cardsById[id];
+        for(let i=0;i<deck[id];i++){
+          tiles += c.image_url
+            ? `<div style="position:relative"><img src="${esc(px(c.image_url))}" style="width:100%;border-radius:7px;display:block" alt=""></div>`
+            : `<div style="aspect-ratio:5/7;border-radius:7px;background:#18181b;border:1px solid #27272a;display:flex;align-items:center;justify-content:center;font-size:10px;color:#a1a1aa;text-align:center;padding:4px">${esc(c.name)}</div>`;
+        }
+      }
+      const lImg = leader.image_url
+        ? `<img src="${esc(px(leader.image_url))}" style="width:150px;border-radius:10px" alt="">`
+        : `<div style="width:150px;aspect-ratio:5/7;border-radius:10px;background:#18181b;display:flex;align-items:center;justify-content:center;font-size:40px">👑</div>`;
+      wrap.innerHTML = `
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:22px">
+          ${lImg}
+          <div>
+            <div style="font-size:30px;font-weight:700;font-family:Fredoka,sans-serif">${esc(leader.name)}</div>
+            <div style="font-size:16px;color:${COLHEX[leaderColors()[0]]||'#a1a1aa'};font-weight:600;margin-top:4px">${esc(leaderColors().join(' / '))} Leader · ${esc(leader.card_id)}</div>
+            <div style="font-size:15px;color:#a1a1aa;margin-top:8px">${deckCount()} cards · built on grandline.id</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:7px">${tiles}</div>
+        <div style="text-align:center;margin-top:20px;color:#f59e0b;font-weight:700;font-size:15px">grandline.id/deck-builder</div>`;
+      return wrap;
+    }
+
+    /* ---------- boot ---------- */
+    window.addEventListener('hashchange', ()=>{ if(suppressHash) return; if(allCards.length && loadFromHash()){ refresh(); } });
+
+    async function load(){
+      try{
+        const res = await fetch('/api/database', {method:'POST', body:'{}'});
+        const data = await res.json();
+        allCards = data.cards || [];
+        cardsById = {};
+        for(const c of allCards) cardsById[c.card_id] = c;
+        leaders = allCards.filter(c => c.card_type === 'Leader')
+                          .sort((a,b)=> a.card_id.localeCompare(b.card_id));
+        buildFilterOptions();
+        if(loadFromHash()){ refresh(); }
+        else { renderLeaderBox(); renderDeck(); updateValidity(); applyFilters(); }
+      }catch(e){
+        document.getElementById('content').innerHTML = 'Error loading cards. Please refresh.';
+        console.error(e);
+      }
+    }
+    load();
+  </script>
+
+  <footer class="gl-footer">
+    <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
+      ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
+    </a>
+    <div class="foot-row"><div class="foot-disc">Grand Line is a fan-made project, not endorsed by, affiliated with, or sponsored by Bandai Namco or Toei Animation. One Piece and all related card images and names are the property of their respective owners. Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.</div><nav class="foot-links"><a href="https://en.onepiece-cardgame.com/rules/faq/" target="_blank" rel="noopener">Rules &amp; FAQ</a><a href="/about">About</a><a href="mailto:contact@grandline.id">Contact</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div>
+  </footer>
+</body>
+</html>

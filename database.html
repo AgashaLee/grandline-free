@@ -45,6 +45,19 @@
           flex-wrap:wrap;gap:16px;position:sticky;top:0;z-index:100;}
   .header > div:first-child{display:flex;flex-direction:column;gap:2px;}
   .header > div:last-child{display:flex;gap:8px;flex-wrap:wrap}
+  /* When the window is too narrow to fit all nav buttons on one line, lay them
+     out in an even grid instead of a ragged wrap: 6 section buttons in tidy
+     rows, with the gold "Get the Tracker" CTA spanning full width underneath. */
+  @media(max-width:1040px){
+    .header{flex-direction:column;align-items:stretch;gap:14px}
+    .header > div:last-child{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .header > div:last-child a{display:block}
+    .header > div:last-child button{width:100%;padding:10px 8px}
+    .header > div:last-child a:last-child{grid-column:1 / -1}
+  }
+  @media(max-width:520px){
+    .header > div:last-child{grid-template-columns:repeat(2,1fr)}
+  }
   .header h1{font-size:22px;font-weight:600;color:#fff;line-height:1;}
   .sub{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
 
@@ -136,6 +149,7 @@
       <a href="/database"><button class="primary">🗃️ Card Database</button></a>
       <a href="/market"><button>📈 Market Watch</button></a>
       <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/deck-builder"><button>🛠️ Deck Builder</button></a>
       <a href="/news"><button>📰 News</button></a>
       <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
     </div>

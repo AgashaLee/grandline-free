@@ -59,11 +59,16 @@
     .header .nav-btns button.cta { background: var(--gold); border-color: var(--gold); color: #4a2f10; }
     .header .nav-btns button.cta:hover { background: #fbbf24; border-color: #fbbf24; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.15); }
 
-    @media (max-width: 640px) {
-      .header { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; }
-      .header .nav-btns { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; padding-bottom: 4px; }
-      .header .nav-btns::-webkit-scrollbar { height: 0; }
-      .header .nav-btns button { white-space: nowrap; flex: 0 0 auto; }
+    /* Narrow screens: tidy even grid for the nav, gold CTA full-width underneath. */
+    @media(max-width:1040px){
+      .header{flex-direction:column;align-items:stretch;gap:14px}
+      .header .nav-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+      .header .nav-btns a{display:block}
+      .header .nav-btns button{width:100%;padding:10px 8px}
+      .header .nav-btns a:last-child{grid-column:1 / -1}
+    }
+    @media(max-width:520px){
+      .header .nav-btns{grid-template-columns:repeat(2,1fr)}
     }
 
     .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
@@ -256,6 +261,7 @@
       <a href="/database"><button>🗃️ Card Database</button></a>
       <a href="/market"><button>📈 Market Watch</button></a>
       <a href="/meta"><button class="primary">🏆 Meta Decks</button></a>
+      <a href="/deck-builder"><button>🛠️ Deck Builder</button></a>
       <a href="/news"><button>📰 News</button></a>
       <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
     </div>

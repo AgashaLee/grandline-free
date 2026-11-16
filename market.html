@@ -49,6 +49,17 @@
   .header h1{font-size:22px;font-weight:600;color:#fff;line-height:1;}
   .sub{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
   .nav{display:flex;gap:8px;flex-wrap:wrap}
+  /* Narrow screens: tidy even grid for the nav, gold CTA full-width underneath. */
+  @media(max-width:1040px){
+    .header{flex-direction:column;align-items:stretch;gap:14px}
+    .nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .nav a{display:block}
+    .nav button{width:100%;padding:10px 8px}
+    .nav a:last-child{grid-column:1 / -1}
+  }
+  @media(max-width:520px){
+    .nav{grid-template-columns:repeat(2,1fr)}
+  }
 
   button{background:var(--btn-bg);color:var(--ink);border:1px solid var(--line);
          border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;cursor:pointer;
@@ -157,6 +168,7 @@
       <a href="/database"><button>🗃️ Card Database</button></a>
       <a href="/market"><button class="primary">📈 Market Watch</button></a>
       <a href="/meta"><button>🏆 Meta Decks</button></a>
+      <a href="/deck-builder"><button>🛠️ Deck Builder</button></a>
       <a href="/news"><button>📰 News</button></a>
       <a href="{{WHOP_URL}}" target="_blank" rel="noopener"><button class="cta">★ Get the Tracker</button></a>
     </div>
