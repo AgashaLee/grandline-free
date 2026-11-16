@@ -398,7 +398,7 @@
     function fmtEffect(text) {
       if (!text || String(text).trim().toUpperCase() === 'NULL') return '';
       let t = esc(text).trim();
-      t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
+      t = t.replace(/DON!!\s*(\d+)(?=\s*[(:])/g, 'DON!! -$1');
       t = t.replace(/(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)(?!\s+or\s+(?:less|more|higher|lower|greater))/g, '$1-$2$3');
       t = t.replace(/\s*\[Trigger\]/gi, '\n[Trigger]');
       t = t.replace(/\[([^\[\]]{1,40})\]/g, function (m, kw) {

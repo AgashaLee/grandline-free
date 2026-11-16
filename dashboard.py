@@ -1224,7 +1224,7 @@ def _fmt_effect_html(text: str | None) -> str:
     t = _clean_effect_text(text) or ""
     if not t.strip():
         return ""
-    t = re.sub(r"DON!!\s*(\d+)\s*:", r"DON!! -\1:", t)
+    t = re.sub(r"DON!!\s*(\d+)(?=\s*[(:])", r"DON!! -\1", t)
     # Restore the minus the source drops on opponent power DEBUFFS (e.g. "give ...
     # -2000 power"), but NOT on THRESHOLDS like "3000 power or less" (which target
     # characters whose power is at/under that value and are correctly positive).
@@ -1694,6 +1694,22 @@ def _printings(db, code: str, c: dict) -> list[dict]:
     return rows
 
 
+def _set_name_for(db, prefix: str) -> str:
+    """Canonical display name for a set code (e.g. OP07 -> '500 Years in the
+    Future'): the MOST COMMON set_name among that code's cards. A card reprinted
+    under a different product (a starter deck, an extra booster) carries that
+    product's set_name on the same OP-NN code, so using any one card's set_name
+    made the label inconsistent — the majority name is the real set."""
+    try:
+        r = db.execute(
+            "SELECT set_name, COUNT(*) AS c FROM cards WHERE card_id LIKE ? "
+            "AND set_name IS NOT NULL AND set_name<>'' GROUP BY set_name "
+            "ORDER BY c DESC LIMIT 1", (prefix + "-%",)).fetchone()
+        return (r["set_name"] if r else None) or prefix
+    except Exception:
+        return prefix
+
+
 def render_card_page(code: str) -> bytes | None:
     db = get_db()
     c = db.execute(
@@ -1704,6 +1720,7 @@ def render_card_page(code: str) -> bytes | None:
         return None
     c = dict(c)
     name = _clean_card_name(c["name"])
+    set_disp = _set_name_for(db, code.split("-")[0])   # consistent set name for crumbs/links
     # Base price (prefer the plain-base variant, else the catalog value).
     price = None
     try:
@@ -1806,7 +1823,7 @@ def render_card_page(code: str) -> bytes | None:
     setline = f' · {_h(c["set_name"])}' if c.get("set_name") else ""
     body = (
         f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / '
-        f'<a href="/set/{_h(code.split("-")[0])}">{_h(c.get("set_name") or code.split("-")[0])}</a> / {_h(code)}</div>'
+        f'<a href="/set/{_h(code.split("-")[0])}">{_h(set_disp)}</a> / {_h(code)}</div>'
         f'<div class="top"><div>{img}</div><div>'
         f'<h1>{_h(name)}</h1><div class="sub">{_h(code)}{setline}</div>'
         f'{price_html}<div class="chips">{"".join(chips)}</div>{traits_html}'
@@ -1815,7 +1832,7 @@ def render_card_page(code: str) -> bytes | None:
         f'</div></div>{effect_html}{decks_html}'
         '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
         f'<a href="/set/{_h(code.split("-")[0])}" style="color:var(--gold)">'
-        f'← Back to all {_h(c.get("set_name") or code.split("-")[0])} cards</a></p>'
+        f'← Back to all {_h(set_disp)} cards</a></p>'
         '<script>function _pick(el){'
         "document.querySelectorAll('.vthumb').forEach(function(t){t.classList.remove('sel')});"
         "el.classList.add('sel');"
@@ -2002,7 +2019,7 @@ def render_set_page(prefix: str) -> bytes | None:
     if not rows:
         return None
     rows = [dict(r) for r in rows]
-    set_name = next((r["set_name"] for r in rows if r.get("set_name")), prefix)
+    set_name = _set_name_for(db, prefix)
     n = len(rows)
     minis = "".join(
         f'<a class="mini" href="/card/{_h(r["card_id"])}">'

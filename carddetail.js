@@ -226,7 +226,7 @@ window.CardDetail = (function () {
     let t = esc(text).trim();
     // the card API drops the minus in the DON!! activation cost ("DON!! 2:" should be
     // "DON!! -2:"). That cost is always negative (you return DON), so restore it.
-    t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
+    t = t.replace(/DON!!\s*(\d+)(?=\s*[(:])/g, 'DON!! -$1');
     // The card API also drops the minus on opponent power debuffs
     // ("your opponent's Characters -1000 power" -> "1000 power"), which reverses
     // the meaning. You only ever REDUCE an opponent's power, so restore the minus --
