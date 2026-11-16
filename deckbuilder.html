@@ -131,9 +131,15 @@
   /* Deck sidebar */
   .deckpanel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
              padding:16px;box-shadow:var(--shadow-sm);position:sticky;top:88px}
-  @media(max-width:900px){ .deckpanel{position:static} }
+  /* On phones/tablets the deck panel moves ABOVE the catalog so the "Choose
+     Leader" button + count are reachable without scrolling past the catalog. */
+  @media(max-width:900px){ .deckpanel{position:static;order:-1} }
   .leaderbox{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);
              border-radius:var(--radius-md);background:var(--page-bg);margin-bottom:14px}
+  .leaderbox .lb-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+  .leaderbox .lb-actions button{padding:7px 12px;font-size:12px;white-space:nowrap}
+  .leaderbox .lb-remove{color:#fca5a5;border-color:rgba(239,68,68,.4)}
+  .leaderbox .lb-remove:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.6);color:#fecaca}
   .leaderbox img{width:58px;aspect-ratio:5/7;object-fit:contain;border-radius:6px;border:1px solid var(--line)}
   .leaderbox .nolead{width:58px;aspect-ratio:5/7;border-radius:6px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted)}
   .leaderbox .meta{flex:1;min-width:0}
@@ -492,7 +498,17 @@
           <div class="nm" title="${esc(leader.name)}">${esc(leader.name)}</div>
           <div class="sub" style="color:${COLHEX[leaderColors()[0]]||'var(--muted)'}">${esc(leaderColors().join(' / '))} · ${esc(leader.card_id)}</div>
         </div>
-        <button onclick="openPicker()">Change</button>`;
+        <div class="lb-actions">
+          <button onclick="openPicker()">Change</button>
+          <button class="lb-remove" onclick="removeLeader()" title="Remove leader & reset">✕ Remove</button>
+        </div>`;
+    }
+    function removeLeader(){
+      if(!leader) return;
+      if(deckCount() && !confirm('Remove your Leader and clear the deck? This starts over.')) return;
+      leader = null; deck = {};
+      refresh();
+      flash('Leader removed — pick a new one to start again.', 'good');
     }
     function updateValidity(){
       const n = deckCount();
