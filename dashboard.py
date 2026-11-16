@@ -1214,8 +1214,10 @@ def _h(s) -> str:
 
 
 def _fmt_effect_html(text: str | None) -> str:
-    """Plain, readable effect text for SEO pages: strip errata, restore the
-    minus signs the source drops, escape, and turn newlines into <br>."""
+    """Readable effect text for SEO pages: strip errata, restore the minus signs
+    the source drops, escape, then badge the game keywords ([On Play], [DON!! -1],
+    [Once Per Turn], [Blocker]...) and {traits} like the printed card. Mirrors
+    carddetail.js formatCardText so pages and the popup read the same."""
     if not text or str(text).strip().upper() == "NULL":
         return ""
     t = _clean_effect_text(text) or ""
@@ -1227,7 +1229,31 @@ def _fmt_effect_html(text: str | None) -> str:
     # characters whose power is at/under that value and are correctly positive).
     t = re.sub(r"(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)"
                r"(?!\s+or\s+(?:less|more|higher|lower|greater))", r"\1-\2\3", t)
-    return _h(t).replace("\n", "<br>")
+    t = _h(t)  # escape first; [] {} survive, so the badge regexes below still match
+    t = re.sub(r"\s*\[Trigger\]", r"\n[Trigger]", t, flags=re.I)  # [Trigger] on its own line
+
+    def _kw(m):
+        low = m.group(1).lower().strip()
+        if "don!!" in low:
+            cls = "kw kw-don"
+        elif "once per" in low:
+            cls = "kw kw-once"
+        elif "trigger" in low:
+            cls = "kw kw-trig"
+        elif "counter" in low:
+            cls = "kw kw-counter"
+        elif re.fullmatch(r"(blocker|rush|double attack|banish)", low):
+            cls = "kw kw-ability"
+        else:
+            cls = "kw"
+        return f'<span class="{cls}">{m.group(1)}</span>'
+
+    # Only SHORT, self-contained "[...]" become badges (a malformed, never-closed
+    # bracket in the source must not swallow a whole sentence into one badge).
+    t = re.sub(r"\[([^\[\]]{1,40})\]", _kw, t)
+    t = t.replace("[", "").replace("]", "")                          # orphan brackets
+    t = re.sub(r"\{([^}]+)\}", r'<span class="trait">\1</span>', t)  # {traits}
+    return t.replace("\n", "<br>")
 
 
 def _buy_query(code: str, name: str | None, with_code: bool = True) -> str:
@@ -1315,7 +1341,14 @@ h1{font-size:28px;color:#fff;margin-bottom:4px}
 .vthumb.sel{border-color:var(--sea)}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:22px 0}
 .box h2{font-size:16px;color:#fff;margin-bottom:12px}
-.effect{line-height:1.7;font-size:13px}
+.effect{line-height:1.9;font-size:13px}
+.effect .kw{display:inline-block;font-size:11px;font-weight:700;line-height:1.4;padding:1px 7px;border-radius:5px;margin:0 2px;background:rgba(59,130,246,.16);color:#93c5fd;border:1px solid rgba(59,130,246,.32);white-space:nowrap}
+.effect .kw-don{background:rgba(234,179,8,.16);color:#fde047;border-color:rgba(234,179,8,.32)}
+.effect .kw-once{background:rgba(168,85,247,.16);color:#d8b4fe;border-color:rgba(168,85,247,.32)}
+.effect .kw-trig{background:rgba(34,197,94,.16);color:#86efac;border-color:rgba(34,197,94,.32)}
+.effect .kw-counter{background:rgba(249,115,22,.16);color:#fdba74;border-color:rgba(249,115,22,.32)}
+.effect .kw-ability{background:rgba(239,68,68,.16);color:#fca5a5;border-color:rgba(239,68,68,.32)}
+.effect .trait{font-weight:600;color:#fff}
 .buyrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
 .buybtn{flex:1;min-width:150px;text-align:center;color:#fff;font-weight:700;font-size:13px;padding:12px;border-radius:9px}
 .buynote{color:var(--muted);font-size:11px;margin-top:8px;font-style:italic}
@@ -1776,8 +1809,8 @@ def render_card_page(code: str) -> bytes | None:
         '<div class="buynote">Opens a marketplace search for this card. Prices vary by seller.</div>'
         f'</div></div>{effect_html}{decks_html}'
         '<p style="color:var(--muted);font-size:12px;margin-top:20px">'
-        f'<a href="/database#{_h(code.split("-")[0])}" style="color:var(--gold)">'
-        '← Back to the full card database</a></p>'
+        f'<a href="/set/{_h(code.split("-")[0])}" style="color:var(--gold)">'
+        f'← Back to all {_h(c.get("set_name") or code.split("-")[0])} cards</a></p>'
         '<script>function _pick(el){'
         "document.querySelectorAll('.vthumb').forEach(function(t){t.classList.remove('sel')});"
         "el.classList.add('sel');"
