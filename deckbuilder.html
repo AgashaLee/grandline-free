@@ -119,9 +119,18 @@
   .cardtile.addable:hover img{border-color:var(--sea);box-shadow:var(--shadow-md);transform:translateY(-3px)}
   .cardtile.offcolor{opacity:0.4;filter:grayscale(0.7)}
   .cardtile .code{color:var(--muted);font-size:10px;font-weight:600;text-align:center;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cardtile .qbadge{position:absolute;top:6px;right:6px;background:var(--sea);color:#fff;font-size:12px;font-weight:700;
-                    min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;
-                    box-shadow:0 2px 6px rgba(0,0,0,.4);padding:0 6px}
+  /* In-deck quantity stepper, shown on the card tile itself so you can add or
+     remove copies without going to the deck list. */
+  .cardtile .qstep{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:4;
+                   display:flex;align-items:center;background:rgba(9,9,11,.9);border:1px solid var(--line);
+                   border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.5);overflow:hidden}
+  .cardtile .qstep button{background:transparent;border:none;width:28px;height:28px;font-size:17px;line-height:1;
+                   padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .cardtile .qstep button:hover{background:var(--btn-hover)}
+  .cardtile .qstep button:disabled{opacity:.3;cursor:not-allowed}
+  .cardtile .qstep .qdec{color:#fca5a5}
+  .cardtile .qstep .qinc{color:#86efac}
+  .cardtile .qstep .qn{min-width:22px;text-align:center;font-weight:700;font-size:13px;color:#fff}
   .cardtile .zoom{position:absolute;bottom:34px;right:6px;background:rgba(0,0,0,.65);color:#fff;border:none;
                   width:24px;height:24px;border-radius:6px;font-size:13px;line-height:1;cursor:zoom-in;padding:0;display:none}
   .cardtile:hover .zoom{display:block}
@@ -358,10 +367,14 @@
         ? `<img src="${esc(c.image_url)}" loading="lazy" decoding="async" alt="${esc(c.name)}"
                 onerror="this.outerHTML='<div class=&quot;noimg&quot;>No image</div>'">`
         : '<div class="noimg">No image</div>';
-      const badge = inDeck ? `<div class="qbadge">${inDeck}</div>` : '';
+      const step = inDeck ? `<div class="qstep">
+          <button class="qdec" onclick="event.stopPropagation();removeCard('${esc(c.card_id)}')" title="Remove one" aria-label="Remove one">−</button>
+          <span class="qn">${inDeck}</span>
+          <button class="qinc" onclick="event.stopPropagation();addCard('${esc(c.card_id)}')" title="Add one" aria-label="Add one" ${inDeck>=MAX_COPIES?'disabled':''}>+</button>
+        </div>` : '';
       const onclick = legal ? `onclick="addCard('${esc(c.card_id)}')"` : `onclick="tryOffColor('${esc(c.card_id)}')"`;
       return `<div class="${cls}" ${onclick} title="${esc(c.name)}">
-        ${colorBarHTML(c)}${badge}
+        ${colorBarHTML(c)}${step}
         ${img}
         <button class="zoom" onclick="event.stopPropagation();zoom('${esc(c.card_id)}')" title="Zoom">🔍</button>
         <div class="code">${esc(c.card_id)}</div>
