@@ -307,6 +307,8 @@ window.CardDetail = (function () {
 
   .cd-traits{font-size:13px;color:#18181b;margin:-8px 0 20px}
   .cd-traits b{color:#71717a;font-weight:600;}
+  .cd-traits a{color:#2563eb;text-decoration:none}
+  .cd-traits a:hover{text-decoration:underline}
 
   .cd-prices{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px;margin-bottom:24px;box-shadow:0 1px 2px rgba(0,0,0,0.05);}
   .cd-prices-h{font-size:11px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px}
@@ -428,7 +430,7 @@ window.CardDetail = (function () {
 
     const traitList = splitTraits(c.sub_types);
     const traitsHtml = traitList.length
-      ? `<div class="cd-traits"><b>Traits:</b> ${traitList.map(esc).join(' / ')}</div>` : '';
+      ? `<div class="cd-traits"><b>Traits:</b> ${traitList.map(t => `<a href="/database#q=${encodeURIComponent(t)}">${esc(t)}</a>`).join(' / ')}</div>` : '';
 
     // Effect text -- empty (incl. the card API's "NULL") hides the box entirely.
     const cardTextInner = formatCardText(c.card_text);

@@ -179,7 +179,14 @@
     // Open a specific set's card grid if the URL points to one
     // (e.g. /database#OP01 — used by "Back to database" links from card pages).
     function renderFromHash() {
-      const set = decodeURIComponent((location.hash || '').replace(/^#/, '')).trim().toUpperCase();
+      const raw = (location.hash || '').replace(/^#/, '');
+      if (raw.toLowerCase().startsWith('q=')) {   // #q=<term> -> run a search (e.g. a trait link)
+        const term = decodeURIComponent(raw.slice(2));
+        const inp = document.getElementById('fSearch'); if (inp) inp.value = term;
+        doSearch();
+        return;
+      }
+      const set = decodeURIComponent(raw).trim().toUpperCase();
       if (set && globalCardsBySet[set]) { renderCards(set); }
       else { renderSets(); }
     }
@@ -311,7 +318,7 @@
       const rarity = document.getElementById('fRarity').value;
       if(!(q || color || type || cost || power || rarity)){ renderSets(); return; }
       const res = globalDataCards.filter(c => {
-        if(q){ const hay = (c.card_id + ' ' + (c.name||'')).toLowerCase(); if(!hay.includes(q)) return false; }
+        if(q){ const hay = (c.card_id + ' ' + (c.name||'') + ' ' + (c.sub_types||'')).toLowerCase(); if(!hay.includes(q)) return false; }
         if(color && !(c.card_color||'').split(/[\s\/]+/).includes(color)) return false;
         if(type && c.card_type !== type) return false;
         if(cost && String(c.card_cost) !== cost) return false;
@@ -371,7 +378,7 @@
     <a href="{{WHOP_URL}}" target="_blank" rel="noopener" class="gl-cta">
       ★ Track your collection with the Grand Line tracker &mdash; $1.99/mo
     </a>
-    <div class="foot-row"><div class="foot-disc">Grand Line is a fan-made project, not endorsed by, affiliated with, or sponsored by Bandai Namco or Toei Animation. One Piece and all related card images and names are the property of their respective owners. Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.</div><nav class="foot-links"><a href="/about">About</a><a href="mailto:contact@grandline.id">Contact</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div>
+    <div class="foot-row"><div class="foot-disc">Grand Line is a fan-made project, not endorsed by, affiliated with, or sponsored by Bandai Namco or Toei Animation. One Piece and all related card images and names are the property of their respective owners. Some links are affiliate links &mdash; buying through them supports the site at no extra cost to you.</div><nav class="foot-links"><a href="https://en.onepiece-cardgame.com/rules/faq/" target="_blank" rel="noopener">Rules &amp; FAQ</a><a href="/about">About</a><a href="mailto:contact@grandline.id">Contact</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div>
   </footer>
 </body>
 </html>

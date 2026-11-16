@@ -18,6 +18,7 @@ import os
 import re
 import threading
 import time
+import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -1331,6 +1332,8 @@ h1{font-size:28px;color:#fff;margin-bottom:4px}
 .chip b{color:var(--muted);font-weight:600;margin-right:4px}
 .traits{color:var(--muted);font-size:13px;margin-bottom:16px}
 .traits b{color:var(--ink)}
+.traits a{color:#7dd3fc;text-decoration:none}
+.traits a:hover{text-decoration:underline}
 .price{font-size:22px;font-weight:800;color:#fff;margin-bottom:2px}
 .price small{font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
 .jpline{color:var(--muted);font-size:13px;font-weight:600;margin-bottom:14px}
@@ -1420,6 +1423,7 @@ def _seo_shell(title: str, description: str, canonical: str, body: str,
         'Bandai Namco or Toei Animation. Card images and names are the property of their respective '
         'owners. Some links are affiliate links — buying through them supports the site at no extra cost.</div>'
         '<nav class="foot-links">'
+        '<a href="https://en.onepiece-cardgame.com/rules/faq/" target="_blank" rel="noopener">Rules &amp; FAQ</a>'
         '<a href="/about">About</a>'
         '<a href="mailto:contact@grandline.id">Contact</a>'
         '<a href="/privacy">Privacy Policy</a>'
@@ -1741,8 +1745,9 @@ def render_card_page(code: str) -> bytes | None:
         chips.append(f'<span class="chip"><b>Counter</b>+{_h(int(str(c["counter"]).strip("+")))}</span>')
     _rawtr = (c.get("sub_types") or "").strip()
     traits = [t.strip() for t in _rawtr.split("/") if t.strip()] if "/" in _rawtr else ([_rawtr] if _rawtr else [])
-    traits_html = (f'<div class="traits"><b>Traits:</b> {" / ".join(_h(t) for t in traits)}</div>'
-                   if traits else "")
+    traits_html = (('<div class="traits"><b>Traits:</b> '
+                    + " / ".join(f'<a href="/database#q={urllib.parse.quote(t)}">{_h(t)}</a>' for t in traits)
+                    + '</div>') if traits else "")
     effect = _fmt_effect_html(c.get("card_text"))
     effect_html = f'<div class="box"><h2>Effect</h2><div class="effect">{effect}</div></div>' if effect else ""
 
