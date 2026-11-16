@@ -135,7 +135,14 @@
     .daily-img img { width: 100%; display: block; }
     .daily-info h4 { font-size: 22px; color: #fff; line-height: 1.2; }
     .daily-info .meta { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6; }
-    .daily-info .effect { color: var(--ink); font-size: 13.5px; line-height: 1.65; margin-top: 12px; }
+    .daily-info .effect { color: var(--ink); font-size: 13.5px; line-height: 1.9; margin-top: 12px; }
+    .daily-info .effect .kw { display: inline-block; font-size: 11px; font-weight: 700; line-height: 1.4; padding: 1px 7px; border-radius: 5px; margin: 0 2px; background: rgba(59,130,246,.16); color: #93c5fd; border: 1px solid rgba(59,130,246,.32); white-space: nowrap; }
+    .daily-info .effect .kw-don { background: rgba(234,179,8,.16); color: #fde047; border-color: rgba(234,179,8,.32); }
+    .daily-info .effect .kw-once { background: rgba(168,85,247,.16); color: #d8b4fe; border-color: rgba(168,85,247,.32); }
+    .daily-info .effect .kw-trig { background: rgba(34,197,94,.16); color: #86efac; border-color: rgba(34,197,94,.32); }
+    .daily-info .effect .kw-counter { background: rgba(249,115,22,.16); color: #fdba74; border-color: rgba(249,115,22,.32); }
+    .daily-info .effect .kw-ability { background: rgba(239,68,68,.16); color: #fca5a5; border-color: rgba(239,68,68,.32); }
+    .daily-info .effect .trait { font-weight: 600; color: #fff; }
     .daily-info a.more { display: inline-block; margin-top: 12px; color: var(--gold); font-weight: 600; font-size: 13px; cursor: pointer; }
     .daily-info a.more:hover { color: #fbbf24; }
     @media(max-width:560px){
@@ -386,6 +393,28 @@
         <div class="img">${img}${overlay || ''}</div>
         <div class="cap">${capHtml}</div></div>`;
     }
+    // Badge effect-text keywords ([On Play], [DON!! -1], [Blocker]...) and {traits}
+    // like the card pages / popup, so the Card of the day reads the same.
+    function fmtEffect(text) {
+      if (!text || String(text).trim().toUpperCase() === 'NULL') return '';
+      let t = esc(text).trim();
+      t = t.replace(/DON!!\s*(\d+)\s*:/g, 'DON!! -$1:');
+      t = t.replace(/(opponent['’]?s?\s+[Cc]haracters?\b[^.\n]*?)(\d+)(\s*power)(?!\s+or\s+(?:less|more|higher|lower|greater))/g, '$1-$2$3');
+      t = t.replace(/\s*\[Trigger\]/gi, '\n[Trigger]');
+      t = t.replace(/\[([^\[\]]{1,40})\]/g, function (m, kw) {
+        const low = kw.toLowerCase().trim();
+        const cls = /don!!/.test(low) ? 'kw kw-don'
+                  : /once per/.test(low) ? 'kw kw-once'
+                  : /trigger/.test(low) ? 'kw kw-trig'
+                  : /counter/.test(low) ? 'kw kw-counter'
+                  : /^(blocker|rush|double attack|banish)$/.test(low) ? 'kw kw-ability'
+                  : 'kw';
+        return '<span class="' + cls + '">' + kw + '</span>';
+      });
+      t = t.replace(/[\[\]]/g, '');
+      t = t.replace(/\{([^}]+)\}/g, '<span class="trait">$1</span>');
+      return t.replace(/\n/g, '<br>');
+    }
     const RANK = { SEC:0, L:1, SP:2, SR:3, R:4, UC:5, C:6, P:7 };
 
     // 1) Catalog -> counters, cardsById, newest-set showcase
@@ -434,7 +463,7 @@
           + `</div><div class="daily-info"><h4>${esc(dc.name)}</h4>`
           + `<div class="meta">${esc(dc.card_id)} &middot; ${esc(dc.set_name || '')}`
           + `${dc.rarity ? ' &middot; ' + esc(dc.rarity) : ''}${dc.card_type ? ' &middot; ' + esc(dc.card_type) : ''}</div>`
-          + (dc.card_text ? `<div class="effect">${esc(dc.card_text)}</div>` : '')
+          + (dc.card_text ? `<div class="effect">${fmtEffect(dc.card_text)}</div>` : '')
           + `<a class="more" onclick="openCard('${esc(dc.card_id)}')">View card &rarr;</a></div>`;
         document.getElementById('scDaily').hidden = false;
       }
