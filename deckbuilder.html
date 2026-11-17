@@ -71,9 +71,12 @@
 
   .wrap{max-width:1280px;margin:24px auto;padding:0 24px}
 
-  /* Two-pane layout: catalog + deck sidebar */
-  .layout{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
-  @media(max-width:900px){ .layout{grid-template-columns:1fr} }
+  /* Two-pane layout: catalog + deck sidebar.
+     minmax(0,1fr) (not plain 1fr) lets the catalog column shrink to the
+     viewport instead of growing to its content's min-width, which on narrow
+     Android screens pushed the card grid past the edge (clipped by overflow). */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}
+  @media(max-width:900px){ .layout{grid-template-columns:minmax(0,1fr)} }
 
   /* Filter bar */
   .filterbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);
@@ -367,18 +370,33 @@
         ? `<img src="${esc(c.image_url)}" loading="lazy" decoding="async" alt="${esc(c.name)}"
                 onerror="this.outerHTML='<div class=&quot;noimg&quot;>No image</div>'">`
         : '<div class="noimg">No image</div>';
-      const step = inDeck ? `<div class="qstep">
-          <button class="qdec" onclick="event.stopPropagation();removeCard('${esc(c.card_id)}')" title="Remove one" aria-label="Remove one">−</button>
-          <span class="qn">${inDeck}</span>
-          <button class="qinc" onclick="event.stopPropagation();addCard('${esc(c.card_id)}')" title="Add one" aria-label="Add one" ${inDeck>=MAX_COPIES?'disabled':''}>+</button>
-        </div>` : '';
       const onclick = legal ? `onclick="addCard('${esc(c.card_id)}')"` : `onclick="tryOffColor('${esc(c.card_id)}')"`;
-      return `<div class="${cls}" ${onclick} title="${esc(c.name)}">
-        ${colorBarHTML(c)}${step}
+      return `<div class="${cls}" data-id="${esc(c.card_id)}" ${onclick} title="${esc(c.name)}">
+        ${colorBarHTML(c)}${stepHTML(c)}
         ${img}
         <button class="zoom" onclick="event.stopPropagation();zoom('${esc(c.card_id)}')" title="Zoom">🔍</button>
         <div class="code">${esc(c.card_id)}</div>
       </div>`;
+    }
+    // The in-deck +/- stepper for one card (empty string when not in the deck).
+    function stepHTML(c){
+      const inDeck = deck[c.card_id] || 0;
+      if(!inDeck) return '';
+      return `<div class="qstep">
+          <button class="qdec" onclick="event.stopPropagation();removeCard('${esc(c.card_id)}')" title="Remove one" aria-label="Remove one">−</button>
+          <span class="qn">${inDeck}</span>
+          <button class="qinc" onclick="event.stopPropagation();addCard('${esc(c.card_id)}')" title="Add one" aria-label="Add one" ${inDeck>=MAX_COPIES?'disabled':''}>+</button>
+        </div>`;
+    }
+    // Update just ONE card tile's stepper in place — far cheaper than
+    // re-rendering the whole catalog on every +/- during deck building.
+    function syncTile(id){
+      const sel = (window.CSS && CSS.escape) ? CSS.escape(id) : id;
+      const tile = document.querySelector('#content .cardtile[data-id="' + sel + '"]');
+      if(!tile) return;
+      const old = tile.querySelector('.qstep'); if(old) old.remove();
+      const html = stepHTML(cardsById[id]);
+      if(html) tile.insertAdjacentHTML('afterbegin', html);
     }
     function renderResults(cards){
       const legalOnly = document.getElementById('fLegal').checked;
@@ -453,12 +471,20 @@
       if(have >= MAX_COPIES){ flash(`Max ${MAX_COPIES} copies of ${c.name} — can’t add a 5th.`); return; }
       if(deckCount() >= DECK_SIZE){ flash(`Deck is already ${DECK_SIZE} cards. Remove one to add another.`); return; }
       deck[id] = have + 1;
-      refresh();
+      afterDeckChange(id);
     }
     function removeCard(id){
       if(!deck[id]) return;
       deck[id]--; if(deck[id] <= 0) delete deck[id];
-      refresh();
+      afterDeckChange(id);
+    }
+    // Deck changed for one card: update that tile + the deck panel only, NOT
+    // the whole catalog (which would rebuild thousands of nodes each click).
+    function afterDeckChange(id){
+      syncTile(id);
+      renderDeck();
+      updateValidity();
+      writeHash();
     }
 
     /* ---------- deck sidebar ---------- */
