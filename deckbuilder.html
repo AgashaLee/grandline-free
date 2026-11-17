@@ -207,6 +207,25 @@
   .lpick .lp-sub{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:3px}
   .lpick .lp-sub .lp-code{font-size:10px;color:var(--muted);font-weight:600}
 
+  /* Save / My Decks overlay */
+  .save-row{display:flex;gap:8px;margin-bottom:10px}
+  .save-row input{flex:1;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      font-size:14px;color:var(--ink);background:var(--page-bg);font-family:'Inter',sans-serif}
+  .save-row input:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 1px var(--sea)}
+  .save-row button{white-space:nowrap}
+  .saved-note{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+  #savedList{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow-y:auto}
+  .saved-row{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);
+      border-radius:var(--radius-md);background:var(--page-bg)}
+  .saved-row img{width:40px;aspect-ratio:5/7;object-fit:contain;border-radius:5px;border:1px solid var(--line);flex-shrink:0}
+  .saved-row .nolead{width:40px;aspect-ratio:5/7;border-radius:5px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);flex-shrink:0}
+  .saved-meta{flex:1;min-width:0}
+  .saved-meta .sv-nm{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .saved-meta .sv-sub{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .saved-act{display:flex;gap:6px;flex-shrink:0}
+  .saved-act button{padding:7px 12px;font-size:12px}
+  #decksCount{color:var(--muted);font-weight:600;margin-left:4px}
+
   /* Zoom modal (lightweight; carddetail.js provides the rich one) */
   .zoommodal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
   .zoommodal.show{display:flex}
@@ -292,7 +311,8 @@
           <button onclick="shareLink()" id="btnLink">🔗 Copy share link</button>
         </div>
         <div class="actions">
-          <button onclick="clearDeck()" style="flex:1">🗑️ Clear deck</button>
+          <button onclick="openDecks()" style="flex:1">📁 Save / My Decks<span id="decksCount"></span></button>
+          <button onclick="clearDeck()">🗑️ Clear</button>
         </div>
         <div class="msg" id="msg"></div>
       </div>
@@ -311,6 +331,23 @@
         <button type="button" class="lsearch-clear" id="lClear" onclick="clearLeaderSearch()" title="Clear search" aria-label="Clear search">✕</button>
       </div>
       <div class="lgrid" id="lgrid"></div>
+    </div>
+  </div>
+
+  <!-- Save / My Decks -->
+  <div class="overlay" id="decksOverlay" onclick="if(event.target===this)closeDecks()">
+    <div class="picker">
+      <div class="phead">
+        <h2>📁 My Decks</h2>
+        <button onclick="closeDecks()">✕ Close</button>
+      </div>
+      <div class="save-row">
+        <input type="text" id="deckName" placeholder="Name this deck (e.g. Red/Black Aggro)"
+               onkeydown="if(event.key==='Enter')saveCurrentDeck()">
+        <button class="cta" onclick="saveCurrentDeck()">💾 Save</button>
+      </div>
+      <div class="saved-note">Decks are saved in this browser only (no login). Use “Copy share link” to move a deck to another device or a friend.</div>
+      <div id="savedList"></div>
     </div>
   </div>
 
@@ -603,6 +640,86 @@
       deck = {}; refresh();
     }
 
+    /* ---------- Save / My Decks (saved in this browser via localStorage) ---------- */
+    const DECKS_KEY = 'gl_decks';
+    let currentDeckName = '';   // name of the loaded/last-saved deck, for easy re-save
+    function loadDecks(){
+      try{ const a = JSON.parse(localStorage.getItem(DECKS_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+      catch(e){ return []; }
+    }
+    function persistDecks(arr){
+      try{ localStorage.setItem(DECKS_KEY, JSON.stringify(arr)); return true; }
+      catch(e){ return false; }
+    }
+    function updateDecksCount(){
+      const el = document.getElementById('decksCount'); if(!el) return;
+      const n = loadDecks().length; el.textContent = n ? ` (${n})` : '';
+    }
+    function openDecks(){
+      document.getElementById('decksOverlay').classList.add('show');
+      const inp = document.getElementById('deckName');
+      if(inp && !inp.value) inp.value = currentDeckName || '';
+      renderSavedList();
+      setTimeout(()=>{ const i=document.getElementById('deckName'); if(i) i.focus(); }, 50);
+    }
+    function closeDecks(){ document.getElementById('decksOverlay').classList.remove('show'); }
+    function saveCurrentDeck(){
+      if(!leader){ flash('Pick a Leader before saving a deck.'); return; }
+      const inp = document.getElementById('deckName');
+      let name = (inp.value || '').trim() || leader.name;
+      const decks = loadDecks();
+      const existing = decks.find(d => (d.name||'').toLowerCase() === name.toLowerCase());
+      if(existing){ existing.leader = leader.card_id; existing.cards = {...deck}; existing.ts = Date.now(); }
+      else { decks.unshift({ id: 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+                             name, leader: leader.card_id, cards: {...deck}, ts: Date.now() }); }
+      if(!persistDecks(decks)){ flash('Could not save — your browser is blocking storage (private mode?).'); return; }
+      currentDeckName = name;
+      updateDecksCount(); renderSavedList();
+      flash(`Saved “${name}”.`, 'good');
+    }
+    function renderSavedList(){
+      const box = document.getElementById('savedList');
+      const decks = loadDecks().sort((a,b)=> (b.ts||0)-(a.ts||0));
+      if(!decks.length){ box.innerHTML = '<div class="emptydeck">No saved decks yet. Build a deck, name it above, and tap Save.</div>'; return; }
+      box.innerHTML = decks.map(d => {
+        const lc = cardsById[d.leader];
+        const img = (lc && lc.image_url) ? `<img src="${esc(lc.image_url)}" loading="lazy" alt="">` : '<div class="nolead">👑</div>';
+        const n = Object.values(d.cards||{}).reduce((a,b)=>a+(+b||0),0);
+        const col = lc ? colorsOf(lc).join('/') : '';
+        return `<div class="saved-row">
+          ${img}
+          <div class="saved-meta">
+            <div class="sv-nm">${esc(d.name)}</div>
+            <div class="sv-sub">${lc?esc(lc.name):'Unknown leader'}${col?' · '+esc(col):''} · ${n}/50</div>
+          </div>
+          <div class="saved-act">
+            <button class="cta" onclick="loadSavedDeck('${esc(d.id)}')">Load</button>
+            <button class="lb-remove" onclick="deleteSavedDeck('${esc(d.id)}')" title="Delete">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function loadSavedDeck(id){
+      const d = loadDecks().find(x => x.id === id);
+      if(!d) return;
+      const lc = cardsById[d.leader];
+      if(!lc || lc.card_type !== 'Leader'){ flash('That deck’s Leader is no longer in the card list.'); return; }
+      leader = lc; deck = {};
+      for(const cid of Object.keys(d.cards||{})){
+        const c = cardsById[cid]; const q = Math.min(MAX_COPIES, +d.cards[cid]||0);
+        if(c && c.card_type !== 'Leader' && q>0 && isLegal(c)) deck[cid] = q;
+      }
+      currentDeckName = d.name;
+      closeDecks(); refresh();
+      flash(`Loaded “${d.name}”.`, 'good');
+    }
+    function deleteSavedDeck(id){
+      const decks = loadDecks(); const d = decks.find(x=>x.id===id); if(!d) return;
+      if(!confirm(`Delete saved deck “${d.name}”?`)) return;
+      persistDecks(decks.filter(x=>x.id!==id));
+      updateDecksCount(); renderSavedList();
+    }
+
     /* ---------- share: URL ---------- */
     // Hash format:  #d=<leaderId>|<cardId>:<qty>,<cardId>:<qty>,...
     function encodeDeck(){
@@ -720,6 +837,7 @@
         leaders = allCards.filter(c => c.card_type === 'Leader')
                           .sort((a,b)=> a.card_id.localeCompare(b.card_id));
         buildFilterOptions();
+        updateDecksCount();
         if(loadFromHash()){ refresh(); }
         else { renderLeaderBox(); renderDeck(); updateValidity(); applyFilters(); }
       }catch(e){
