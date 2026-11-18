@@ -2118,8 +2118,13 @@ def render_sitemap() -> bytes:
         (_SITE_URL + p, today)
         for p in ("/", "/database", "/market", "/meta", "/deck-builder", "/news", "/about", "/privacy", "/terms")]
     try:
+        # Exclude variant-printing codes (e.g. P-029_R1): those URLs 301-redirect
+        # to the base card, so listing them in the sitemap just advertises
+        # redirects. Only the canonical base codes (no "_") get their own page.
         entries += [(f"{_SITE_URL}/card/{r[0]}", last_priced.get(r[0], today))
-                    for r in db.execute("SELECT card_id FROM cards ORDER BY card_id")]
+                    for r in db.execute(
+                        "SELECT card_id FROM cards WHERE instr(card_id, '_') = 0 "
+                        "ORDER BY card_id")]
         entries += [(f"{_SITE_URL}/leader/{r[0]}", today)
                     for r in db.execute(
                         "SELECT DISTINCT leader_id FROM meta_decks WHERE leader_id<>''")]
