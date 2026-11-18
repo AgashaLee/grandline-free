@@ -1359,8 +1359,10 @@ a{color:inherit;text-decoration:none}
 .nav a{padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;color:var(--ink)}
 .nav a.cta{background:var(--gold);color:#4a2f10;border-color:var(--gold)}
 .wrap{max-width:1000px;margin:28px auto;padding:0 20px}
-.crumb{color:var(--muted);font-size:12px;margin-bottom:18px}
+.crumb{color:var(--muted);font-size:12px;margin-bottom:12px}
 .crumb a:hover{color:var(--ink)}
+.backbtn{display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;padding:8px 14px;background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-weight:600;font-size:13px;text-decoration:none}
+.backbtn:hover{border-color:#3f3f46;background:#27272a}
 .top{display:grid;grid-template-columns:300px 1fr;gap:28px}
 @media(max-width:720px){.top{grid-template-columns:1fr}}
 .cardimg{width:100%;max-width:300px;border-radius:14px;border:1px solid var(--line);background:var(--surface);aspect-ratio:5/7;object-fit:contain}
@@ -1863,6 +1865,7 @@ def render_card_page(code: str) -> bytes | None:
     body = (
         f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / '
         f'<a href="/set/{_h(code.split("-")[0])}">{_h(set_disp)}</a> / {_h(code)}</div>'
+        f'<a class="backbtn" href="/set/{_h(code.split("-")[0])}">← Back to {_h(set_disp)} cards</a>'
         f'<div class="top"><div>{img}</div><div>'
         f'<h1>{_h(name)}</h1><div class="sub">{_h(code)}{setline}</div>'
         f'{price_html}<div class="chips">{"".join(chips)}</div>{traits_html}'
@@ -1990,6 +1993,7 @@ def render_leader_page(code: str) -> bytes | None:
     canonical = f"{_SITE_URL}/leader/{code}"
     body = (
         f'<div class="crumb"><a href="/">Home</a> / <a href="/meta">Meta Decks</a> / {_h(name)}</div>'
+        f'<a class="backbtn" href="/meta">← Back to Meta Decks</a>'
         f'<div class="top"><div>{imgtag}</div><div>'
         f'<h1>{_h(name)} Deck</h1><div class="sub">{_h(code)}{(" · "+_h(color)) if color else ""} · One Piece TCG meta</div>'
         '<div class="statrow">'
