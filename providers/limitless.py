@@ -226,6 +226,98 @@ def fetch_recent_decklists(max_decks: int = 8) -> list[dict]:
     return decks
 
 
+# --------------------------------------------------------------------------
+# play.limitlesstcg.com — the CURRENT tournament platform.
+#
+# As of late 2026 Limitless moved live tournaments off onepiece.limitlesstcg.com
+# (now a frozen archive ending ~Jul 2026) onto play.limitlesstcg.com, which uses
+# hash tournament ids and server-rendered decklists. These functions scrape the
+# current West/English meta from there:
+#   /tournaments/completed?game=OP        -> completed tournaments
+#   /tournament/<hash>/standings?game=OP  -> players + placements
+#   /tournament/<hash>/player/<slug>/decklist -> the decklist (leader + cards)
+# --------------------------------------------------------------------------
+PLAY_BASE = "https://play.limitlesstcg.com"
+
+
+def _ordinal(n: int) -> str:
+    """1 -> '1st', 2 -> '2nd', 11 -> '11th', ..."""
+    if 10 <= (n % 100) <= 20:
+        suf = "th"
+    else:
+        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suf}"
+
+
+def play_completed_tournaments(limit: int = 30, min_players: int = 8) -> list[dict]:
+    """Recent *completed* OP tournaments from play.limitlesstcg.com.
+
+    Returns [{hash, date (ISO), name, players}], newest first, filtered to
+    events with at least ``min_players`` real entrants.
+    """
+    try:
+        html = _fetch(f"{PLAY_BASE}/tournaments/completed?game=OP")
+    except Exception as e:
+        logger.error(f"Failed to fetch completed tournaments: {e}")
+        return []
+    out = []
+    for attrs, inner in re.findall(r'<tr ([^>]*data-date=[^>]*)>(.*?)</tr>', html, re.DOTALL):
+        d = dict(re.findall(r'data-(\w+)="([^"]*)"', attrs))
+        m = re.search(r'/tournament/([a-f0-9]+)/', inner)
+        if not m:
+            continue
+        try:
+            players = int(d.get("players", "0"))
+        except ValueError:
+            players = 0
+        if players < min_players:
+            continue
+        out.append({"hash": m.group(1), "date": d.get("date", ""),
+                    "name": d.get("name", ""), "players": players})
+    out.sort(key=lambda t: t["date"], reverse=True)
+    return out[:limit]
+
+
+def play_standings(thash: str, top: int = 8) -> list[dict]:
+    """Top-placing players of a tournament: [{placing, name, slug}]."""
+    try:
+        html = _fetch(f"{PLAY_BASE}/tournament/{thash}/standings?game=OP")
+    except Exception as e:
+        logger.warning(f"standings {thash}: {e}")
+        return []
+    out = []
+    for placing, name, inner in re.findall(
+            r'<tr data-placing="(\d+)" data-name="([^"]*)"[^>]*>(.*?)</tr>', html, re.DOTALL):
+        slug = re.search(r'/player/([^"/?]+)"', inner)
+        if slug:
+            out.append({"placing": int(placing), "name": name.strip(), "slug": slug.group(1)})
+    out.sort(key=lambda r: r["placing"])
+    return out[:top]
+
+
+def play_decklist(thash: str, slug: str) -> dict | None:
+    """Scrape one player's decklist. Returns {leader_id, leader_name, cards:[{card_id,quantity}]}."""
+    try:
+        html = _fetch(f"{PLAY_BASE}/tournament/{thash}/player/{slug}/decklist")
+    except Exception as e:
+        logger.warning(f"decklist {thash}/{slug}: {e}")
+        return None
+    # Each card: <a href=".../cards/<CODE>">N Name</a>; the leader has no qty.
+    leader_id, leader_name = "", ""
+    qty: dict[str, int] = {}
+    for code, n, nm in re.findall(r'/cards/([A-Z0-9-]+)"[^>]*>\s*(\d*)\s*([^<]*)</a>', html):
+        if n == "":                      # no quantity -> the leader card
+            if not leader_id:
+                leader_id = code
+                leader_name = re.sub(r'\s*\([A-Za-z0-9-]+\)\s*$', '', nm).strip()
+        else:
+            qty[code] = qty.get(code, 0) + int(n)
+    cards = [{"card_id": k, "quantity": v} for k, v in qty.items()]
+    if not cards:
+        return None
+    return {"leader_id": leader_id, "leader_name": leader_name, "cards": cards}
+
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO)
