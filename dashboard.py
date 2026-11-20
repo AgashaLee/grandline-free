@@ -1478,7 +1478,13 @@ def _seo_shell(title: str, description: str, canonical: str, body: str,
         f'{_og_tags(title, description, canonical, image, og_type)}'
         '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
         f'{schema}'
-        f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}{_CF_ANALYTICS}</body></html>')
+        f'<style>{_SEO_CSS}</style></head><body>{nav}<main class="wrap">{body}</main>{foot}'
+        # "Back" buttons use this: if we arrived from the target page (e.g. the
+        # set list), go back through history so the browser restores the scroll
+        # position; otherwise let the link navigate normally.
+        '<script>function _goBack(p){try{var r=document.referrer||"";'
+        'if(r&&r.indexOf(location.origin+p)===0){history.back();return false;}}catch(e){}return true;}</script>'
+        f'{_CF_ANALYTICS}</body></html>')
     return doc.encode("utf-8")
 
 
@@ -1865,7 +1871,8 @@ def render_card_page(code: str) -> bytes | None:
     body = (
         f'<div class="crumb"><a href="/">Home</a> / <a href="/database">Card Database</a> / '
         f'<a href="/set/{_h(code.split("-")[0])}">{_h(set_disp)}</a> / {_h(code)}</div>'
-        f'<a class="backbtn" href="/set/{_h(code.split("-")[0])}">← Back to {_h(set_disp)} cards</a>'
+        f'<a class="backbtn" href="/set/{_h(code.split("-")[0])}" '
+        f'onclick="return _goBack(\'/set/{_h(code.split("-")[0])}\')">← Back to {_h(set_disp)} cards</a>'
         f'<div class="top"><div>{img}</div><div>'
         f'<h1>{_h(name)}</h1><div class="sub">{_h(code)}{setline}</div>'
         f'{price_html}<div class="chips">{"".join(chips)}</div>{traits_html}'
@@ -1993,7 +2000,7 @@ def render_leader_page(code: str) -> bytes | None:
     canonical = f"{_SITE_URL}/leader/{code}"
     body = (
         f'<div class="crumb"><a href="/">Home</a> / <a href="/meta">Meta Decks</a> / {_h(name)}</div>'
-        f'<a class="backbtn" href="/meta">← Back to Meta Decks</a>'
+        f'<a class="backbtn" href="/meta" onclick="return _goBack(\'/meta\')">← Back to Meta Decks</a>'
         f'<div class="top"><div>{imgtag}</div><div>'
         f'<h1>{_h(name)} Deck</h1><div class="sub">{_h(code)}{(" · "+_h(color)) if color else ""} · One Piece TCG meta</div>'
         '<div class="statrow">'
